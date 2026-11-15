@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Photo Editor MVP</title>
+    <!-- Подключаем библиотеку Telegram -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #121212);
+            color: var(--tg-theme-text-color, #ffffff);
+            margin: 0; padding: 20px; text-align: center;
+        }
+        .container { max-width: 500px; margin: 0 auto; }
+        
+        /* Контейнер фото для реализации "До/После" */
+        #photo-container {
+            width: 100%;
+            height: 300px;
+            background-color: #222;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            touch-action: none; /* Запрет скролла при удержании */
+        }
+        #photo-preview {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: filter 0.1s;
+        }
+        .hint { font-size: 12px; color: #888; margin-bottom: 20px; }
+        
+        .controls-group { margin-bottom: 20px; text-align: left; }
+        label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
+        input[type="range"] { width: 100%; margin-bottom: 15px; }
+        
+        .premium-lock { color: #f39c12; font-size: 12px; float: right; }
+        .disabled-slider { opacity: 0.5; pointer-events: none; }
+        
+        .btn {
+            background-color: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none; padding: 12px 20px; border-radius: 8px;
+            font-size: 16px; width: 100%; cursor: pointer; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <p id="user-info" style="font-size: 14px; font-weight: bold;"></p>
+    
+    <!-- Загрузка фото -->
+    <input type="file" id="upload" accept="image/*" style="display: none;">
+    <button class="btn" onclick="document.getElementById('upload').click()" style="margin-bottom: 15px;">📁 Загрузить фото</button>
+
+    <div id="photo-container">
+        <span id="placeholder" style="color: #666;">Фото не выбрано</span>
+        <img id="photo-preview" src="" style="display: none;">
+    </div>
+    <div class="hint">👆 Удерживайте фото, чтобы увидеть оригинал</div>
+
+    <!-- Бесплатные настройки -->
+    <div class="controls-group">
+        <h3>Бесплатные настройки</h3>
+        <label>Яркость <span id="bright-val">100%</span></label>
+        <input type="range" id="brightness" min="50" max="150" value="100">
+
+        <label>Контраст <span id="contrast-val">100%</span></label>
+        <input type="range" id="contrast" min="50" max="150" value="100">
+    </div>
+
+    <!-- Premium настройки -->
+    <div class="controls-group" id="premium-controls">
+        <h3>Сложные фильтры <span class="premium-lock" id="premium-badge">🔒 Premium</span></h3>
+        <label>Насыщенность (Saturate) <span id="sat-val">100%</span></label>
+        <input type="range" id="saturate" min="0" max="200" value="100">
+
+        <label>Тонирование (Hue) <span id="hue-val">0deg</span></label>
+        <input type="range" id="hue" min="0" max="360" value="0">
+    </div>
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Разворачиваем на весь экран
+
+    // Читаем параметры из URL, которые передал бот
+    const urlParams = new URLSearchParams(window.location.search);
+    const tgId = urlParams.get('user_id') || tg.initDataUnsafe?.user?.id || "Неизвестно";
+    const isPremium = urlParams.get('premium') === '1';
+
+    // Показываем ID пользователя
+    document.getElementById('user-info').innerText = `Ваш Telegram ID: ${tgId}`;
+
+    // Блокировка премиум-ползунков
+    const premControls = document.getElementById('premium-controls');
+    const premBadge = document.getElementById('premium-badge');
+    if (!isPremium) {
+        premControls.classList.add('disabled-slider');
+    } else {
+        premBadge.innerText = '🔓 Разблокировано';
+    }
+
+    // Элементы
+    const upload = document.getElementById('upload');
+    const preview = document.getElementById('photo-preview');
+    const placeholder = document.getElementById('placeholder');
+    const container = document.getElementById('photo-container');
+
+    const sliders = {
+        brightness: document.getElementById('brightness'),
+        contrast: document.getElementById('contrast'),
+        saturate: document.getElementById('saturate'),
+        hue: document.getElementById('hue')
+    };
+
+    let isHolding = false;
+
+    // Загрузка фото
+    upload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                placeholder.style.display = 'none';
+                applyFilters();
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Функция применения CSS-фильтров
+    function applyFilters() {
+        if (isHolding) {
+            // Если удерживаем палец — показываем оригинал (сбрасываем фильтры)
+            preview.style.filter = 'none';
+        } else {
+            // Применяем значения ползунков
+            const b = sliders.brightness.value;
+            const c = sliders.contrast.value;
+            const s = sliders.saturate.value;
+            const h = sliders.hue.value;
+            preview.style.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${h}deg)`;
+        }
+    }
+
+    // Обновление значений при движении ползунков
+    Object.keys(sliders).forEach(key => {
+        sliders[key].addEventListener('input', (e) => {
+            document.getElementById(key === 'brightness' ? 'bright-val' : 
+                                    key === 'contrast' ? 'contrast-val' : 
+                                    key === 'saturate' ? 'sat-val' : 'hue-val').innerText = 
+            key === 'hue' ? `${e.target.value}deg` : `${e.target.value}%`;
+            
+            applyFilters();
+        });
+    });
+
+    // Логика "Удерживай для оригинала"
+    // Используем pointer events для поддержки и мыши, и сенсоров телефонов
+    container.addEventListener('pointerdown', (e) => {
+        if (preview.src) { isHolding = true; applyFilters(); }
+    });
+    
+    container.addEventListener('pointerup', (e) => {
+        isHolding = false; applyFilters();
+    });
+    
+    container.addEventListener('pointerleave', (e) => {
+        isHolding = false; applyFilters();
+    });
+    
+    container.addEventListener('contextmenu', e => e.preventDefault()); // Отключаем меню по долгому тапу
+</script>
+</body>
+</html>
