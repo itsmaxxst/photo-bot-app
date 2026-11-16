@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Photo Editor WebGL</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Подключаем glfx.js для WebGL-фильтров -->
     <script src="https://evanw.github.io/glfx.js/glfx.js"></script>
     <style>
         :root {
@@ -174,7 +173,6 @@
     let currentTab = 'presets';
     let favoritePresets = JSON.parse(localStorage.getItem('favoritePresets')) || [];
 
-    // Добавлены новые параметры: vibrance (сочность), blur (размытие), denoise (шумоподавление)
     const defaultSettings = { 
         brightness: 0, contrast: 0, hue: 0, saturation: 0, 
         vignette: 0, unsharp: 0, noise: 0, sepia: 0, 
@@ -228,7 +226,6 @@
         { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { ...defaultSettings, brightness: 0, contrast: 0.2, saturation: -0.4, hue: 0.1, sepia: 0.2, vignette: 0.1 } }
     ];
 
-    // Добавлены новые инструменты
     const toolsData = [
         { id: 'brightness', name: 'Экспозиция', icon: '☀', min: -100, max: 100, isPro: false },
         { id: 'contrast', name: 'Контраст', icon: '◐', min: -100, max: 100, isPro: false },
@@ -348,7 +345,6 @@
 
         targetCanvas.draw(texture);
 
-        // Порядок важен: шумоподавление до резкости, блюр, потом цвет
         if (denoiseVal > 0) targetCanvas.denoise(denoiseVal * 50);
         if (blur > 0) targetCanvas.triangleBlur(blur * 30);
 
@@ -398,7 +394,18 @@
         sliderPanel.classList.add('active');
     };
 
-    document.getElementById('btn-cancel-tool').onclick = () => closeSlider();
+    // Обновленная логика для кнопки '✕' (отмена + сброс)
+    document.getElementById('btn-cancel-tool').onclick = () => {
+        if(activeToolKey) {
+            currentSettings[activeToolKey] = 0;
+            activeSlider.value = 0;
+            sliderToolValue.innerText = 0;
+            updatePhotoFilter();
+            updateLockState();
+        }
+        closeSlider();
+    };
+
     document.getElementById('btn-apply-tool').onclick = () => closeSlider();
 
     btnResetTool.onclick = () => {
