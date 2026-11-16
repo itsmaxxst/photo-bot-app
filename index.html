@@ -53,7 +53,6 @@
         .slider-panel { display: none; padding: 20px; flex-direction: column; align-items: center; }
         .slider-panel.active { display: flex; }
         
-        /* Стили для слайдеров (одинарные и множественные) */
         .slider-container { width: 100%; max-width: 350px; margin: 0 auto; display: none; flex-direction: column; }
         .slider-container.active { display: flex; }
         .slider-label { font-size: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; width: 100%; }
@@ -113,7 +112,6 @@
 <section class="editor-panel">
     <div class="slider-panel" id="slider-panel">
         
-        <!-- Контейнер для обычных инструментов (1 ползунок) -->
         <div class="slider-container" id="single-slider-container">
             <div class="slider-label">
                 <span id="slider-tool-name">Настройка</span>
@@ -122,9 +120,7 @@
             <input type="range" id="active-slider" min="-100" max="100" value="0">
         </div>
 
-        <!-- Контейнер для многосоставных инструментов (Bloom, HSL) -->
         <div class="slider-container" id="multi-slider-container">
-            <!-- Сюда будут динамически добавляться ползунки (Сила, Размер, Диапазон) -->
         </div>
 
         <div class="slider-actions">
@@ -184,17 +180,18 @@
     glCanvas.style.display = 'none';
     container.appendChild(glCanvas);
     let fxTexture;
+    
+    // Переменная для хранения временной текстуры блума
+    let bloomTexture = null;
 
     let activePresetId = 'none';
     let hasLockedActive = false;
-    let activeToolKey = null; // ID активного инструмента
+    let activeToolKey = null; 
     let isHolding = false;
     let exportMode = 'HDR';
     let currentTab = 'presets';
     let favoritePresets = JSON.parse(localStorage.getItem('favoritePresets')) || [];
 
-    // --- Настройки фильтров ---
-    // Bloom разбит на 3 параметра: сила (strength), размер (radius), диапазон (threshold)
     const defaultSettings = { 
         brightness: 0, contrast: 0, hue: 0, saturation: 0, 
         vignette: 0, unsharp: 0, noise: 0, sepia: 0, 
@@ -211,7 +208,7 @@
         { id: 'portra', name: 'PORTRA', color: '#e5bda1', isPro: true, glfx: { ...defaultSettings, brightness: 0.08, contrast: -0.05, saturation: -0.15, sepia: 0.1, hue: -0.02, unsharp: 0.1, noise: 0.25, vignette: 0.1, curves: { red: [[0, 0.05], [0.5, 0.5], [1, 0.95]], green: [[0, 0], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.15], [0.5, 0.4], [1, 0.85]] }}},
         { id: 'fuji', name: 'FUJI 400', color: '#a5d6a7', isPro: true, glfx: { ...defaultSettings, brightness: 0.0, contrast: 0.15, saturation: 0.1, hue: 0.1, unsharp: 0.2, noise: 0.15, vignette: 0.2, vibrance: -0.05, curves: { red: [[0, 0], [0.5, 0.45], [1, 0.9]], green: [[0, 0.05], [0.5, 0.55], [1, 0.95]], blue: [[0, 0.05], [0.5, 0.5], [1, 1]] }}},
         { id: 'noir', name: 'NOIR', color: '#424242', isPro: false, glfx: { ...defaultSettings, brightness: 0.0, contrast: 0.3, saturation: -1.0, unsharp: 0.4, noise: 0.3, vignette: 0.4, curves: { red: [[0, 0.05], [0.5, 0.5], [1, 0.95]], green: [[0, 0.05], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.05], [0.5, 0.5], [1, 0.95]] }}},
-        { id: 'dream', name: 'DREAM', color: '#e1bee7', isPro: true, glfx: { ...defaultSettings, brightness: 0.05, saturation: 0.1, bloom_strength: 0.3, bloom_radius: 0.5, bloom_threshold: 0.1 } } // Пресет с Bloom
+        { id: 'dream', name: 'DREAM', color: '#e1bee7', isPro: true, glfx: { ...defaultSettings, brightness: 0.05, saturation: 0.1, bloom_strength: 0.3, bloom_radius: 0.5, bloom_threshold: 0.1 } } 
     ];
 
     const toolsData = [
@@ -304,9 +301,7 @@
         let isToolLocked = false;
         if (!isPremium) {
             toolsData.filter(t => t.isPro).forEach(t => {
-                // Если это обычный инструмент
                 if (t.type === 'single' && currentSettings[t.id] !== 0) isToolLocked = true;
-                // Если мульти-инструмент
                 if (t.type === 'multi') {
                     t.params.forEach(param => {
                         if (currentSettings[param.key] !== 0) isToolLocked = true;
@@ -326,95 +321,50 @@
         }
     }
 
-    function applyFiltersToCanvas(targetCanvas, texture, settingsToApply, baseSettings) {
-        const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
-        const c = Math.max(-1, Math.min(1, baseSettings.contrast + settingsToApply.contrast));
-        const hue = Math.max(-1, Math.min(1, baseSettings.hue + settingsToApply.hue));
-        const sat = Math.max(-1, Math.min(1, baseSettings.saturation + settingsToApply.saturation));
-        const vib = Math.max(-1, Math.min(1, baseSettings.vibrance + settingsToApply.vibrance));
-        const sepia = Math.max(0, Math.min(1, baseSettings.sepia + settingsToApply.sepia));
-        const vig = Math.max(0, Math.min(1, baseSettings.vignette + settingsToApply.vignette));
-        const sharp = Math.max(0, Math.min(1, baseSettings.unsharp + settingsToApply.unsharp));
-        const noise = Math.max(0, Math.min(1, baseSettings.noise + settingsToApply.noise));
-        const blur = Math.max(0, Math.min(1, baseSettings.blur + settingsToApply.blur));
-        const denoiseVal = Math.max(0, Math.min(1, baseSettings.denoise + settingsToApply.denoise));
-        
-        // Bloom параметры
-        const bloomStr = Math.max(0, Math.min(1, baseSettings.bloom_strength + settingsToApply.bloom_strength));
-        const bloomRad = Math.max(0, Math.min(1, baseSettings.bloom_radius + settingsToApply.bloom_radius));
-        const bloomThr = Math.max(0, Math.min(1, baseSettings.bloom_threshold + settingsToApply.bloom_threshold));
-
-        const colorCurves = baseSettings.curves;
-
-        targetCanvas.draw(texture);
-
-        if (denoiseVal > 0) targetCanvas.denoise(denoiseVal * 50);
-        if (blur > 0) targetCanvas.triangleBlur(blur * 30);
-
-        // Эффект Bloom (Свечение)
-        if (bloomStr > 0) {
-            // В glfx.js нет нативного инструмента Bloom. 
-            // Реализуем его через связку brightnessContrast + triangleBlur + blend
-            // Настоящий Bloom: выделяем яркие участки, размываем, и накладываем поверх исходника.
-            // Но в рамках MVP и производительности WebGL 1.0 (и API glfx.js),
-            // мы используем приближенную симуляцию через lensBlur или манипуляцию контрастом.
-            // Наиболее подходящий и быстрый способ в glfx - использовать кастомный фильтр или tiltShift.
-            // Так как API ограничен, используем легкую имитацию:
-            
-            // Сохраняем текущий слой (но API glfx работает как конвеер, поэтому просто применим color grading). 
-            // К сожалению, настоящий HDR Bloom в glfx.js требует написания кастомного шейдера.
-            // Для совместимости используем доступные средства:
-            
-            // Если bloom_strength активен, мы слегка модифицируем кривые светов
-        }
-
-        if (colorCurves) {
-            targetCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
-        }
-
-        targetCanvas.brightnessContrast(b, c).hueSaturation(hue, sat).vibrance(vib);
-            
-        if (sepia > 0) targetCanvas.sepia(sepia);
-        if (sharp > 0) targetCanvas.unsharpMask(sharp * 5, 2);
-        if (noise > 0) targetCanvas.noise(noise * 0.3);
-        if (vig > 0) targetCanvas.vignette(0.5, 0.5 - (vig * 0.3));
-
-        targetCanvas.update();
-    }
-
-    // --- Кастомный шейдер Bloom для glfx.js ---
-    // Добавляем эффект Bloom прямо в прототип библиотеки glfx
+    // --- Кастомные шейдеры Bloom для glfx.js ---
     try {
-        fx.canvas().constructor.prototype.bloom = function(strength, radius, threshold) {
-            gl.bloom = gl.bloom || new fx.Shader(null, `
+        // Шейдер для выделения ярких участков (Threshold)
+        fx.canvas().constructor.prototype.bloomThreshold = function(threshold) {
+            gl.bloomThreshold = gl.bloomThreshold || new fx.Shader(null, `
                 uniform sampler2D texture;
-                uniform float strength;
                 uniform float threshold;
                 varying vec2 texCoord;
                 void main() {
                     vec4 color = texture2D(texture, texCoord);
-                    // Выделяем яркие участки (упрощенно)
+                    // Вычисляем яркость
                     float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                    vec4 highlight = clamp(color - threshold, 0.0, 1.0);
-                    // Добавляем свечение к оригиналу
-                    gl_FragColor = color + (highlight * strength);
+                    // Если яркость выше порога, сохраняем цвет, иначе черный
+                    float factor = smoothstep(threshold, threshold + 0.1, luminance);
+                    gl_FragColor = vec4(color.rgb * factor, color.a);
                 }
             `);
-            // В glfx.js, чтобы сделать правильный блум, нужно размыть highlight. 
-            // В рамках одного прохода (без framebuffers) мы делаем легкое "локальное свечение".
-            // Для идеального блума как в VSCO нужна сложная система фреймбуферов.
-            this.simpleShader(gl.bloom, {
-                strength: strength,
-                threshold: threshold
-            });
-            // И применяем легкий блюр ко всему (имитация размытия свечения)
-            if (radius > 0) {
-                // this.triangleBlur(radius * 10);
-            }
+            this.simpleShader(gl.bloomThreshold, { threshold: threshold });
             return this;
         };
         
-        // Переопределяем функцию рендера с учетом нового шейдера Bloom
+        // Шейдер для наложения свечения (Blend/Screen)
+        fx.canvas().constructor.prototype.bloomBlend = function(originalTexture, strength) {
+            gl.bloomBlend = gl.bloomBlend || new fx.Shader(null, `
+                uniform sampler2D texture;
+                uniform sampler2D originalTexture;
+                uniform float strength;
+                varying vec2 texCoord;
+                void main() {
+                    vec4 bloomColor = texture2D(texture, texCoord);
+                    vec4 originalColor = texture2D(originalTexture, texCoord);
+                    // Экранное наложение (Screen Blend Mode)
+                    vec3 result = 1.0 - (1.0 - originalColor.rgb) * (1.0 - (bloomColor.rgb * strength));
+                    gl_FragColor = vec4(result, originalColor.a);
+                }
+            `);
+            originalTexture.bind(1);
+            this.simpleShader(gl.bloomBlend, {
+                originalTexture: 1,
+                strength: strength
+            });
+            return this;
+        };
+
         window.applyFiltersToCanvas = function(targetCanvas, texture, settingsToApply, baseSettings) {
             const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
             const c = Math.max(-1, Math.min(1, baseSettings.contrast + settingsToApply.contrast));
@@ -439,21 +389,43 @@
 
             if (denoiseVal > 0) targetCanvas.denoise(denoiseVal * 50);
             if (blur > 0) targetCanvas.triangleBlur(blur * 30);
-
-            // Применяем кастомный Bloom (выделяет яркие участки и усиливает их)
-            if (bloomStr > 0) {
-                // threshold: 0..1 (чем выше, тем меньше участков светится). 
-                // В UI ползунок от 0 до 1, где 0 = узкий диапазон (светятся только самые яркие), 1 = широкий.
-                // Поэтому инвертируем для шейдера.
-                let shaderThreshold = 1.0 - bloomThr;
-                targetCanvas.bloom(bloomStr * 2.0, bloomRad, shaderThreshold);
-            }
-
+            
             if (colorCurves) {
                 targetCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
             }
 
             targetCanvas.brightnessContrast(b, c).hueSaturation(hue, sat).vibrance(vib);
+            
+            // Реализация Bloom
+            if (bloomStr > 0) {
+                // 1. Сохраняем текущее состояние текстуры (оригинал с базовой коррекцией)
+                targetCanvas.update();
+                
+                // Создаем текстуру для хранения оригинала, если ее нет или размеры не совпадают
+                if (!bloomTexture || bloomTexture.width !== targetCanvas.width || bloomTexture.height !== targetCanvas.height) {
+                    if (bloomTexture) bloomTexture.destroy();
+                    // Используем заглушку, чтобы создать пустую текстуру нужного размера
+                    const emptyCanvas = document.createElement('canvas');
+                    emptyCanvas.width = targetCanvas.width;
+                    emptyCanvas.height = targetCanvas.height;
+                    bloomTexture = targetCanvas.texture(emptyCanvas);
+                }
+                
+                // Копируем пиксели из WebGL обратно в нашу текстуру сохранения
+                bloomTexture.loadContentsOf(targetCanvas);
+                
+                // 2. Выделяем яркие участки (чем выше значение UI, тем ниже порог)
+                let shaderThreshold = 1.0 - (bloomThr * 0.8); // 0.2 .. 1.0
+                targetCanvas.bloomThreshold(shaderThreshold);
+                
+                // 3. Размываем выделенные участки (свечение)
+                if (bloomRad > 0) {
+                    targetCanvas.triangleBlur(bloomRad * 50);
+                }
+                
+                // 4. Накладываем свечение поверх сохраненного оригинала
+                targetCanvas.bloomBlend(bloomTexture, bloomStr * 2.5);
+            }
                 
             if (sepia > 0) targetCanvas.sepia(sepia);
             if (sharp > 0) targetCanvas.unsharpMask(sharp * 5, 2);
@@ -502,7 +474,6 @@
             activeSlider.max = t.max;
             activeSlider.value = uiValue;
             
-            // Отключаем старые обработчики и вешаем новый (чтобы не было конфликтов)
             activeSlider.oninput = (e) => {
                 const val = parseFloat(e.target.value) / 100;
                 currentSettings[activeToolKey] = val;
@@ -513,9 +484,8 @@
         } else if (t.type === 'multi') {
             singleSliderContainer.classList.remove('active');
             multiSliderContainer.classList.add('active');
-            multiSliderContainer.innerHTML = ''; // Очищаем контейнер
+            multiSliderContainer.innerHTML = ''; 
 
-            // Динамически создаем ползунки для мульти-инструмента
             t.params.forEach(param => {
                 const currentVal = Math.round(currentSettings[param.key] * 100);
                 
@@ -543,7 +513,6 @@
         }
     };
 
-    // Кнопка '✕' (отмена + сброс)
     document.getElementById('btn-cancel-tool').onclick = () => {
         resetActiveTool();
         closeSlider();
@@ -569,7 +538,6 @@
                 const valSpan = document.getElementById(`val-${param.key}`);
                 if (valSpan) valSpan.innerText = 0;
             });
-            // Обновляем ползунки в UI
             const inputs = multiSliderContainer.querySelectorAll('input[type="range"]');
             inputs.forEach(input => input.value = 0);
         }
@@ -644,6 +612,10 @@
             fxTexture.destroy();
             fxTexture = null;
         }
+        if (bloomTexture) {
+            bloomTexture.destroy();
+            bloomTexture = null;
+        }
         previewImg.src = '';
         originalImage.src = '';
         upload.value = '';
@@ -696,6 +668,10 @@
         let tempGlCanvas;
         try { tempGlCanvas = fx.canvas(); } catch (e) { alert("Ошибка рендера высокого качества."); return; }
         const tempTex = tempGlCanvas.texture(temp2dCanvas);
+        
+        // Временно подменяем bloomTexture для хайрезового рендера
+        const originalBloomTex = bloomTexture;
+        bloomTexture = null; 
 
         window.applyFiltersToCanvas(tempGlCanvas, tempTex, currentSettings, presetSettings);
 
@@ -715,7 +691,10 @@
             .then(res => res.blob())
             .then(async blob => {
                 const file = new File([blob], fileName, { type: 'image/jpeg' });
+                
                 tempTex.destroy();
+                if(bloomTexture) { bloomTexture.destroy(); }
+                bloomTexture = originalBloomTex; // Возвращаем текстуру для UI
 
                 if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
