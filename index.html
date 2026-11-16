@@ -188,8 +188,31 @@
     // Canon 2: Exposure +0.15, Contrast +28, Vignette -15, Texture +15
     const presetsData = [
         { id: 'none', name: 'ORIG', color: '#999', isPro: false, glfx: { ...defaultSettings } },
-        { id: 'canon1', name: 'CANON 1', color: '#ffcc80', isPro: true, glfx: { brightness: 0.15, contrast: 0.15, saturation: -0.05, sepia: 0.1, hue: -0.05, unsharp: 0.25, noise: 0.1, vignette: 0.2 } },
-        { id: 'canon2', name: 'CANON 2', color: '#ffab40', isPro: true, glfx: { brightness: 0.1, contrast: 0.28, saturation: 0.05, sepia: 0.15, hue: 0.05, unsharp: 0.3, noise: 0.1, vignette: 0.4 } },
+        
+        { id: 'canon1', name: 'CANON 1', color: '#ffcc80', isPro: true, glfx: { 
+            brightness: 0.10, contrast: -0.05, saturation: 0.10, sepia: 0.05, hue: 0, unsharp: 0.25, noise: 0.0, vignette: 0.1,
+            // Имитация Canon 1 (Сплит-тонирование + Матовые тени):
+            // Red: чуть опущены тени, подняты света
+            // Green: S-образная кривая
+            // Blue: приподняты тени (Shadows hue 205), опущены света (Midtones/Highlights теплые)
+            curves: {
+                red: [[0, 0.05], [0.3, 0.25], [0.7, 0.75], [1, 0.95]],
+                green: [[0, 0.02], [0.5, 0.5], [1, 0.95]],
+                blue: [[0, 0.15], [0.4, 0.35], [0.8, 0.70], [1, 0.85]]
+            }
+        }},
+        
+        { id: 'canon2', name: 'CANON 2', color: '#ffab40', isPro: true, glfx: { 
+            brightness: 0.15, contrast: 0.15, saturation: 0.15, sepia: 0.1, hue: -0.02, unsharp: 0.3, noise: 0.0, vignette: 0.15,
+            // Имитация Canon 2 (Контрастная вспышка):
+            // Более жесткая S-кривая для контраста + теплые света
+            curves: {
+                red: [[0, 0], [0.4, 0.35], [0.8, 0.85], [1, 1]],
+                green: [[0, 0], [0.5, 0.45], [0.8, 0.75], [1, 0.95]],
+                blue: [[0, 0.08], [0.5, 0.4], [0.8, 0.65], [1, 0.80]]
+            }
+        }},
+        
         { id: 'g3', name: 'G3', color: '#cddc39', isPro: false, glfx: { brightness: 0, contrast: 0.1, saturation: 0.2, hue: 0, sepia: 0, vignette: 0, unsharp: 0, noise: 0 } },
         { id: 'hb2', name: 'HB2', color: '#90caf9', isPro: false, glfx: { brightness: -0.05, contrast: 0.2, saturation: -0.2, hue: 0, sepia: 0, vignette: 0.3, unsharp: 0, noise: 0 } },
         { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { brightness: 0, contrast: 0.2, saturation: -0.4, hue: 0.1, sepia: 0.2, vignette: 0.1, unsharp: 0, noise: 0 } }
@@ -315,10 +338,16 @@
         const vig = Math.max(0, Math.min(1, presetSettings.vignette + currentSettings.vignette));
         const sharp = Math.max(0, Math.min(1, presetSettings.unsharp + currentSettings.unsharp));
         const noise = Math.max(0, Math.min(1, presetSettings.noise + currentSettings.noise));
+        const colorCurves = presetSettings.curves; // кастомные цветовые кривые (имитация сплит-тонинга)
 
-        glCanvas.draw(fxTexture)
-            .brightnessContrast(b, c)
-            .hueSaturation(hue, sat);
+        glCanvas.draw(fxTexture);
+
+        // Для Canon пресетов применяем специфичный Color Grading (сплит-тонирование) через кривые glfx
+        if (colorCurves) {
+            glCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
+        }
+
+        glCanvas.brightnessContrast(b, c).hueSaturation(hue, sat);
             
         if (sepia > 0) glCanvas.sepia(sepia);
         if (sharp > 0) glCanvas.unsharpMask(sharp * 5, 2);
@@ -447,22 +476,20 @@
             else alert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
             return;
         }
-        if (!fxTexture || !glCanvas) {
+        if (!fxTexture) {
             if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
             else alert("Сначала загрузите фото!");
             return;
         }
 
-        // Заставляем WebGL отрисовать картинку прямо сейчас, перед самым сохранением.
-        // Иначе буфер очистится и сохранится черный квадрат.
-        updatePhotoFilter();
-
+        // WebGL canvas сам содержит уже отрендеренные пиксели
         let quality = exportMode === 'HDR' ? 1.0 : 0.85;
         const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const isTelegramMiniApp = Boolean(tg && tg.initData);
 
-        // Переносим свежий кадр на 2D Canvas для 100% надежности на iOS
+        // На iOS WebGL canvas может отдавать черный экран при toDataURL, если буфер (drawing buffer) уже очищен.
+        // Надежнее всего перенести отрендеренное изображение на временный 2D canvas перед сохранением.
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = glCanvas.width;
         tempCanvas.height = glCanvas.height;
@@ -497,7 +524,7 @@
                 document.getElementById('export-preview').src = dataUrl;
                 document.getElementById('save-hint-text').innerText = isMobile
                     ? "👆 Удерживайте фото, чтобы сохранить в галерею"
-                    : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...» (или перетащите на рабочий стол)";
+                    : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...»";
                 document.getElementById('save-overlay').classList.add('active');
                 resetEditor();
             });
