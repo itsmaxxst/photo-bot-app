@@ -476,7 +476,7 @@
             else alert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
             return;
         }
-        if (!fxTexture) {
+        if (!fxTexture || !glCanvas) {
             if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
             else alert("Сначала загрузите фото!");
             return;
@@ -486,14 +486,12 @@
         // Иначе буфер очистится и сохранится черный квадрат.
         updatePhotoFilter();
 
-        // WebGL canvas сам содержит уже отрендеренные пиксели
         let quality = exportMode === 'HDR' ? 1.0 : 0.85;
         const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const isTelegramMiniApp = Boolean(tg && tg.initData);
 
-        // На iOS WebGL canvas может отдавать черный экран при toDataURL, если буфер (drawing buffer) уже очищен.
-        // Надежнее всего перенести отрендеренное изображение на временный 2D canvas перед сохранением.
+        // Переносим свежий кадр на 2D Canvas для 100% надежности на iOS
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = glCanvas.width;
         tempCanvas.height = glCanvas.height;
@@ -528,7 +526,7 @@
                 document.getElementById('export-preview').src = dataUrl;
                 document.getElementById('save-hint-text').innerText = isMobile
                     ? "👆 Удерживайте фото, чтобы сохранить в галерею"
-                    : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...»";
+                    : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...» (или перетащите на рабочий стол)";
                 document.getElementById('save-overlay').classList.add('active');
                 resetEditor();
             });
