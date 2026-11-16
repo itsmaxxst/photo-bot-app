@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Photo Editor WebGL</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Рабочая ссылка на движок WebGL (glfx.js) -->
-    <script src="https://cdn.jsdelivr.net/gh/evanw/glfx.js@master/glfx.js"></script>
+    <!-- Подключаем glfx.js для WebGL-фильтров -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/glfx.js/0.0.1/glfx.min.js"></script>
     <style>
         :root {
             --bg-color: #000000;
@@ -161,21 +161,14 @@
     const btnSave = document.getElementById('btn-save');
     const hdrSdrBadges = document.querySelectorAll('#hdr-sdr-toggle .badge');
 
-    // Инициализация WebGL (glfx.js) с улучшенным отловом ошибок
+    // Инициализация WebGL (glfx.js)
     let glCanvas;
-    try { 
-        if (typeof fx === 'undefined') {
-            throw new Error("Библиотека glfx не загрузилась. Проверьте интернет-соединение.");
-        }
-        glCanvas = fx.canvas(); 
-        glCanvas.id = 'glfx-canvas';
-        glCanvas.style.display = 'none';
-        container.appendChild(glCanvas);
-    } catch (e) { 
-        alert("Ошибка инициализации WebGL: " + e.message); 
-    }
-    
+    try { glCanvas = fx.canvas(); } catch (e) { alert("WebGL не поддерживается вашим браузером"); }
+    glCanvas.id = 'glfx-canvas';
+    glCanvas.style.display = 'none';
+    container.appendChild(glCanvas);
     let fxTexture;
+
     let activePresetId = 'none';
     let hasLockedActive = false;
     let activeToolKey = null;
@@ -185,10 +178,14 @@
     let favoritePresets = JSON.parse(localStorage.getItem('favoritePresets')) || [];
 
     // Структура WebGL-настроек. 
+    // Значения от -1 до 1 (или 0 до 1), для UI конвертируем в -100..100.
     const defaultSettings = { brightness: 0, contrast: 0, hue: 0, saturation: 0, vignette: 0, unsharp: 0, noise: 0, sepia: 0 };
     let currentSettings = { ...defaultSettings };
     let presetSettings = { ...defaultSettings };
 
+    // Пресеты
+    // Canon 1: Exposure +0.20, Contrast +15, Shadows +35 (simulate with brightness/contrast balance), Vibrance/Sat (saturation), Texture (unsharp)
+    // Canon 2: Exposure +0.15, Contrast +28, Vignette -15, Texture +15
     const presetsData = [
         { id: 'none', name: 'ORIG', color: '#999', isPro: false, glfx: { ...defaultSettings } },
         { id: 'canon1', name: 'CANON 1', color: '#ffcc80', isPro: true, glfx: { brightness: 0.15, contrast: 0.15, saturation: -0.05, sepia: 0.1, hue: -0.05, unsharp: 0.25, noise: 0.1, vignette: 0.2 } },
@@ -248,6 +245,8 @@
             const isFav = favoritePresets.includes(p.id);
             const favIcon = p.id !== 'none' ? `<div class="fav-icon" onclick="toggleFavorite(event, '${p.id}')">${isFav ? '★' : '☆'}</div>` : '';
             
+            // В WebGL MVP мы не рендерим миниатюры для каждого пресета ради скорости, 
+            // используем цвет фона (как в VSCO X)
             itemsContainer.innerHTML += `
                 <div class="preset-item ${isLocked ? 'locked' : ''}" onclick="applyPreset('${p.id}')">
                     <div class="preset-thumb" style="background-color: ${p.color}; opacity: 0.8;"></div>
@@ -278,6 +277,7 @@
         const p = presetsData.find(x => x.id === activePresetId);
         const isPresetLocked = p && p.isPro && !isPremium;
         
+        // Инструмент заблокирован, если его значение != 0 и он платный
         let isToolLocked = false;
         if (!isPremium) {
             toolsData.filter(t => t.isPro).forEach(t => {
@@ -296,14 +296,17 @@
         }
     }
 
+    // --- Логика WebGL Рендера ---
     function updatePhotoFilter() {
-        if (!fxTexture || !glCanvas) return;
+        if (!fxTexture) return;
         
         if (isHolding) {
+            // Оригинал
             glCanvas.draw(fxTexture).update();
             return;
         }
 
+        // Суммируем пресет + ручные настройки
         const b = Math.max(-1, Math.min(1, presetSettings.brightness + currentSettings.brightness));
         const c = Math.max(-1, Math.min(1, presetSettings.contrast + currentSettings.contrast));
         const hue = Math.max(-1, Math.min(1, presetSettings.hue + currentSettings.hue));
@@ -329,6 +332,7 @@
         const p = presetsData.find(x => x.id === id);
         activePresetId = id;
         presetSettings = { ...p.glfx };
+        // Сбрасываем ручные настройки при выборе нового пресета (классика фоторедакторов)
         currentSettings = { ...defaultSettings };
         updatePhotoFilter();
         updateLockState();
@@ -388,21 +392,18 @@
         });
     });
 
+    // Загрузка фото в WebGL
     upload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 previewImg.onload = function() {
-                    try {
-                        if (fxTexture) fxTexture.destroy();
-                        fxTexture = glCanvas.texture(previewImg);
-                        glCanvas.style.display = 'block';
-                        placeholder.classList.add('hidden');
-                        updatePhotoFilter();
-                    } catch (err) {
-                        alert("Ошибка обработки фото WebGL: " + err.message);
-                    }
+                    if (fxTexture) fxTexture.destroy();
+                    fxTexture = glCanvas.texture(previewImg);
+                    glCanvas.style.display = 'block';
+                    placeholder.classList.add('hidden');
+                    updatePhotoFilter();
                 };
                 previewImg.src = e.target.result;
             }
@@ -415,24 +416,27 @@
     container.addEventListener('pointerleave', () => { isHolding = false; updatePhotoFilter(); });
     container.addEventListener('contextmenu', e => e.preventDefault());
 
+    // Экспорт из WebGL
     btnSave.addEventListener('click', () => {
         if (hasLockedActive) {
             if(tg.showAlert) tg.showAlert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
             else alert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
             return;
         }
-        if (!fxTexture || !glCanvas) {
+        if (!fxTexture) {
             if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
             else alert("Сначала загрузите фото!");
             return;
         }
 
+        // WebGL canvas сам содержит уже отрендеренные пиксели
         let quality = exportMode === 'HDR' ? 1.0 : 0.85;
         const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const isTelegramMiniApp = Boolean(tg && tg.initData);
 
-        const dataUrl = glCanvas.toDataURL('image/jpeg');
+        // В WebGL мы берем данные напрямую из glCanvas.toDataURL (которая использует встроенный canvas)
+        const dataUrl = glCanvas.toDataURL('image/jpeg'); // Для генерации Blob конвертируем base64 в blob
         
         fetch(dataUrl)
             .then(res => res.blob())
