@@ -91,8 +91,9 @@
 
 <header class="top-bar">
     <div class="top-badges" id="hdr-sdr-toggle">
-        <span class="badge" data-mode="HDR">HDR</span>
-        <span class="badge active" data-mode="SDR">SDR</span>
+        <span class="badge" data-mode="2K">2K</span>
+        <span class="badge active" data-mode="HDR">HDR</span>
+        <span class="badge" data-mode="SDR">SDR</span>
     </div>
     <div style="display: flex; gap: 15px;">
         <button class="icon-btn" onclick="document.getElementById('upload').click()" title="Загрузить фото"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
@@ -173,7 +174,7 @@
     let hasLockedActive = false;
     let activeToolKey = null;
     let isHolding = false;
-    let exportMode = 'SDR';
+    let exportMode = 'HDR';
     let currentTab = 'presets';
     let favoritePresets = JSON.parse(localStorage.getItem('favoritePresets')) || [];
 
@@ -422,19 +423,40 @@
     });
 
     // Загрузка фото в WebGL
+    let originalImage = new Image(); // Храним оригинал в максимальном качестве
     upload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                previewImg.onload = function() {
-                    if (fxTexture) fxTexture.destroy();
-                    fxTexture = glCanvas.texture(previewImg);
-                    glCanvas.style.display = 'block';
-                    placeholder.classList.add('hidden');
-                    updatePhotoFilter();
+                originalImage.onload = function() {
+                    // Для превью на экране (чтобы не убить память телефона 4К текстурой) 
+                    // мы создадим уменьшенную копию (max 1080p).
+                    const maxPreviewDim = 1080;
+                    let pw = originalImage.width;
+                    let ph = originalImage.height;
+                    
+                    if (pw > maxPreviewDim || ph > maxPreviewDim) {
+                        const ratio = Math.min(maxPreviewDim / pw, maxPreviewDim / ph);
+                        pw = Math.round(pw * ratio);
+                        ph = Math.round(ph * ratio);
+                    }
+                    
+                    const downscaleCanvas = document.createElement('canvas');
+                    downscaleCanvas.width = pw;
+                    downscaleCanvas.height = ph;
+                    downscaleCanvas.getContext('2d').drawImage(originalImage, 0, 0, pw, ph);
+                    
+                    previewImg.onload = function() {
+                        if (fxTexture) fxTexture.destroy();
+                        fxTexture = glCanvas.texture(previewImg); // Текстура для UI
+                        glCanvas.style.display = 'block';
+                        placeholder.classList.add('hidden');
+                        updatePhotoFilter();
+                    };
+                    previewImg.src = downscaleCanvas.toDataURL('image/jpeg', 0.9);
                 };
-                previewImg.src = e.target.result;
+                originalImage.src = e.target.result;
             }
             reader.readAsDataURL(file);
         }
@@ -470,7 +492,7 @@
         renderPresets('presets');
     }
 
-    btnSave.addEventListener('click', () => {
+btnSave.addEventListener('click', () => {
         if (hasLockedActive) {
             if(tg.showAlert) tg.showAlert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
             else alert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
@@ -486,7 +508,7 @@
         // Иначе буфер очистится и сохранится черный квадрат.
         updatePhotoFilter();
 
-        let quality = exportMode === 'HDR' ? 1.0 : 0.85;
+        let quality = exportMode === '2K' ? 1.0 : 0.90;
         const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const isTelegramMiniApp = Boolean(tg && tg.initData);
