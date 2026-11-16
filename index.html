@@ -482,6 +482,10 @@
             return;
         }
 
+        // Заставляем WebGL отрисовать картинку прямо сейчас, перед самым сохранением.
+        // Иначе буфер очистится и сохранится черный квадрат.
+        updatePhotoFilter();
+
         // WebGL canvas сам содержит уже отрендеренные пиксели
         let quality = exportMode === 'HDR' ? 1.0 : 0.85;
         const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
