@@ -173,14 +173,12 @@
 
 <!-- Верхняя панель -->
 <header class="top-bar">
-    <button class="icon-btn">✕</button>
     <div class="top-badges">
         <span class="badge">HDR</span>
         <span class="badge active">SDR</span>
     </div>
     <div style="display: flex; gap: 15px;">
         <button class="icon-btn" onclick="document.getElementById('upload').click()">📁</button> <!-- Загрузить фото -->
-        <button class="icon-btn">⭱</button>
     </div>
 </header>
 
@@ -218,9 +216,6 @@
     <nav class="bottom-nav">
         <div class="nav-item active" data-tab="presets">❐</div> <!-- Пресеты -->
         <div class="nav-item" data-tab="tools">⚲</div> <!-- Инструменты (Ползунки) -->
-        <div class="nav-item">FX</div>
-        <div class="nav-item">✨</div>
-        <div class="nav-item">≡</div>
     </nav>
 </section>
 
@@ -275,8 +270,7 @@
     // --- Логика рендера UI ---
     function renderPresets() {
         subTabsContainer.innerHTML = `
-            <div class="sub-tab">ВСЕ ФИЛЬТРЫ</div>
-            <div class="sub-tab active">ДЛЯ ЭТОЙ ФОТОГРАФИИ</div>
+            <div class="sub-tab active">ПРЕСЕТЫ</div>
             <div class="sub-tab">ИЗБРАННОЕ</div>
         `;
         
@@ -298,9 +292,6 @@
     function renderTools() {
         subTabsContainer.innerHTML = `
             <div class="sub-tab active">ВСЕ ИНСТРУМЕНТЫ</div>
-            <div class="sub-tab">САМОЕ НУЖНОЕ</div>
-            <div class="sub-tab">СВЕТЛАЯ</div>
-            <div class="sub-tab">ЦВЕТ</div>
         `;
 
         itemsContainer.innerHTML = '';
