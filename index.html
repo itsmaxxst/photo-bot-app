@@ -184,6 +184,14 @@
         .save-hint { color: white; margin-top: 25px; font-size: 16px; font-weight: bold; text-align: center; }
         .close-overlay { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; border: none; background: none; cursor: pointer; padding: 10px; }
 
+        
+        /* Премиум баннер */
+        #premium-banner {
+            background: linear-gradient(90deg, #ff8a00, #e52e71);
+            color: white; padding: 10px 15px; font-size: 13px; font-weight: bold;
+            display: flex; justify-content: center; align-items: center;
+        }
+
         /* Скрытый canvas для экспорта */
         #export-canvas { display: none; }
     </style>
@@ -236,7 +244,12 @@
         </div>
     </div>
 
+    
+    <div id="premium-banner" class="hidden">
+        <span>⭐️ Эффект Premium. Сохранение недоступно.</span>
+    </div>
     <nav class="bottom-nav">
+
         <div class="nav-item active" data-tab="presets"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
         <div class="nav-item" data-tab="tools"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></div>
     </nav>
@@ -271,6 +284,8 @@
         brightness: 100, contrast: 100, saturate: 100, hue: 0,
         presetFilter: '' 
     };
+    let activePresetId = 'none';
+    let hasLockedActive = false;
     let activeToolKey = null;
     let isHolding = false;
     let exportMode = 'SDR';
@@ -372,26 +387,33 @@
     }
 
     // --- Взаимодействие с инструментами ---
+
+    function updateLockState() {
+        const p = presetsData.find(x => x.id === activePresetId);
+        const isPresetLocked = p && p.isPro && !isPremium;
+        
+        // Считаем инструмент заблокированным, если его значение изменено и он платный
+        const isToolLocked = !isPremium && (currentSettings.saturate != 100 || currentSettings.hue != 0);
+        
+        if (isPresetLocked || isToolLocked) {
+            hasLockedActive = true;
+            document.getElementById('premium-banner').classList.remove('hidden');
+        } else {
+            hasLockedActive = false;
+            document.getElementById('premium-banner').classList.add('hidden');
+        }
+    }
+
     window.applyPreset = function(id) {
         const p = presetsData.find(x => x.id === id);
-        if (p.isPro && !isPremium) {
-            if(tg.showAlert) tg.showAlert("Этот пресет доступен только в Premium версии.");
-            else alert("Этот пресет доступен только в Premium версии.");
-            return;
-        }
-        
+        activePresetId = id;
         currentSettings.presetFilter = p.filter === 'none' ? '' : p.filter;
         updatePhotoFilter();
+        updateLockState();
     };
 
     window.openTool = function(id) {
         const t = toolsData.find(x => x.id === id);
-        if (t.isPro && !isPremium) {
-            if(tg.showAlert) tg.showAlert("Этот инструмент доступен только в Premium версии.");
-            else alert("Этот инструмент доступен только в Premium версии.");
-            return;
-        }
-
         activeToolKey = id;
         sliderToolName.innerText = t.name;
         activeSlider.min = t.min;
@@ -409,6 +431,7 @@
         if(activeToolKey) {
             currentSettings[activeToolKey] = e.target.value;
             updatePhotoFilter();
+            updateLockState();
         }
     });
 
@@ -469,6 +492,11 @@
 
     // --- Сохранение/Экспорт фото (с поддержкой iOS) ---
     btnSave.addEventListener('click', () => {
+        if (hasLockedActive) {
+            if(tg.showAlert) tg.showAlert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
+            else alert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
+            return;
+        }
         if (!preview.src || preview.src === window.location.href) {
             if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
             else alert("Сначала загрузите фото!");
