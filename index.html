@@ -3,206 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Photo Editor</title>
+    <title>Photo Editor WebGL</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Подключаем glfx.js для WebGL-фильтров -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/glfx.js/0.0.1/glfx.min.js"></script>
     <style>
         :root {
             --bg-color: #000000;
             --panel-bg: #121212;
             --text-main: #ffffff;
             --text-muted: #888888;
-            --accent: #ffffff;
-            --lock-color: #ffffff;
         }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0; 
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-            user-select: none;
-            -webkit-user-select: none;
+            background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0;
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none;
         }
-
-        /* Верхняя панель (Header) */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            background: var(--bg-color);
-            z-index: 10;
-        }
-        .icon-btn {
-            background: none; border: none; color: white;
-            font-size: 24px; cursor: pointer; padding: 0;
-        }
-        .top-badges {
-            display: flex; gap: 5px; background: #222;
-            border-radius: 15px; padding: 3px;
-        }
-        .badge {
-            font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 12px; color: #888;
-            cursor: pointer;
-        }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; z-index: 10; }
+        .icon-btn { background: none; border: none; color: white; cursor: pointer; padding: 0; }
+        .top-badges { display: flex; gap: 5px; background: #222; border-radius: 15px; padding: 3px; }
+        .badge { font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 12px; color: #888; cursor: pointer; }
         .badge.active { background: white; color: black; }
-
-        /* Контейнер фото */
-        .photo-area {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
-            touch-action: none;
-        }
-        #photo-preview {
-            max-width: 100%; max-height: 100%;
-            object-fit: contain;
-            transition: filter 0.1s;
-        }
-        .placeholder-text {
-            color: var(--text-muted); font-size: 16px;
-            position: absolute; cursor: pointer; padding: 20px; z-index: 5;
-        }
-
-        /* Редактор (нижняя часть) */
-        .editor-panel {
-            background: var(--bg-color);
-            padding-bottom: 20px;
-            display: flex; flex-direction: column;
-        }
-
-        /* Саб-табы */
-        .sub-tabs {
-            display: flex; gap: 15px; padding: 10px 15px;
-            overflow-x: auto; white-space: nowrap;
-            border-bottom: 1px solid #222;
-        }
-        .sub-tabs::-webkit-scrollbar { display: none; }
-        .sub-tab {
-            font-size: 11px; font-weight: 600; text-transform: uppercase;
-            color: var(--text-muted); padding: 6px 12px; border-radius: 4px; cursor: pointer;
-        }
-        .sub-tab.active { background: white; color: black; }
-
-        /* Горизонтальный скролл */
-        .items-scroll {
-            display: flex; gap: 15px; padding: 20px 15px;
-            overflow-x: auto; white-space: nowrap;
-            min-height: 80px; align-items: flex-end;
-        }
-        .items-scroll::-webkit-scrollbar { display: none; }
-
-        /* Дизайн пресетов */
-        .preset-item {
-            display: flex; flex-direction: column; align-items: center; cursor: pointer;
-            position: relative;
-        }
-        .preset-thumb {
-            width: 60px; height: 60px; background-color: #222;
-            border-radius: 2px 2px 0 0; background-size: cover; background-position: center;
-        }
-        .preset-label {
-            width: 60px; text-align: center; font-size: 10px; font-weight: bold;
-            padding: 4px 0; border-radius: 0 0 2px 2px; color: black;
-        }
-        .lock-icon {
-            position: absolute; top: 4px; right: 4px;
-            background: rgba(0,0,0,0.5); border-radius: 50%; width: 16px; height: 16px;
-            display: flex; align-items: center; justify-content: center; font-size: 10px;
-        }
-        .fav-icon {
-            position: absolute; top: 4px; left: 4px;
-            width: 16px; height: 16px;
-            display: flex; align-items: center; justify-content: center; font-size: 12px;
-            color: gold; text-shadow: 0 0 2px black;
-        }
-
-        /* Дизайн инструментов */
-        .tool-item {
-            display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer;
-            position: relative; width: 65px;
-        }
-        .tool-icon {
-            width: 40px; height: 40px; border-radius: 50%; border: 1px solid #fff;
-            display: flex; align-items: center; justify-content: center; font-size: 20px;
-        }
-        .tool-name {
-            font-size: 10px; color: white; white-space: normal; text-align: center; line-height: 1.1;
-        }
-        .tool-item .lock-icon { top: -5px; right: 5px; }
-
-        /* Панель активного слайдера */
-        .slider-panel {
-            display: none; padding: 20px; flex-direction: column; align-items: center;
-        }
-        .slider-panel.active { display: flex; }
         
-        input[type="range"] {
-            width: 100%; -webkit-appearance: none; background: transparent; margin-bottom: 20px;
+        .photo-area {
+            flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden;
+            position: relative; touch-action: none;
         }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 20px; width: 20px;
-            border-radius: 50%; background: white; cursor: pointer; margin-top: -8px;
-        }
-        input[type="range"]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; cursor: pointer; background: #444; border-radius: 2px;
-        }
+        
+        /* Скрываем оригинальный img, показываем WebGL canvas */
+        #photo-preview { display: none; }
+        #glfx-canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+        
+        .placeholder-text { color: var(--text-muted); font-size: 16px; position: absolute; cursor: pointer; padding: 20px; z-index: 5; }
+
+        .editor-panel { background: var(--bg-color); padding-bottom: 20px; display: flex; flex-direction: column; }
+        .sub-tabs { display: flex; gap: 15px; padding: 10px 15px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #222; }
+        .sub-tabs::-webkit-scrollbar { display: none; }
+        .sub-tab { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .sub-tab.active { background: white; color: black; }
+        .items-scroll { display: flex; gap: 15px; padding: 20px 15px; overflow-x: auto; white-space: nowrap; min-height: 80px; align-items: flex-end; }
+        .items-scroll::-webkit-scrollbar { display: none; }
+        .preset-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; position: relative; }
+        .preset-thumb { width: 60px; height: 60px; background-color: #222; border-radius: 2px 2px 0 0; background-size: cover; background-position: center; }
+        .preset-label { width: 60px; text-align: center; font-size: 10px; font-weight: bold; padding: 4px 0; border-radius: 0 0 2px 2px; color: black; }
+        .lock-icon { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.5); border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+        .fav-icon { position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: gold; text-shadow: 0 0 2px black; }
+        .tool-item { display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; position: relative; width: 65px; }
+        .tool-icon { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .tool-name { font-size: 10px; color: white; white-space: normal; text-align: center; line-height: 1.1; }
+        .tool-item .lock-icon { top: -5px; right: 5px; }
+        .slider-panel { display: none; padding: 20px; flex-direction: column; align-items: center; }
+        .slider-panel.active { display: flex; }
+        input[type="range"] { width: 100%; -webkit-appearance: none; background: transparent; margin-bottom: 20px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: white; cursor: pointer; margin-top: -8px; }
+        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #444; border-radius: 2px; }
         .slider-actions { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 350px; margin: 0 auto; }
         .slider-label { font-size: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; width: 100%; max-width: 350px; margin: 0 auto 15px auto; }
         .action-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
-
-        /* Нижняя навигация */
-        .bottom-nav {
-            display: flex; justify-content: space-around; padding: 15px 0 25px 0;
-            border-top: 1px solid #111;
-        }
-        .nav-item {
-            color: #555; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-        }
+        .bottom-nav { display: flex; justify-content: space-around; padding: 15px 0 25px 0; border-top: 1px solid #111; }
+        .nav-item { color: #555; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .nav-item.active { color: white; }
-
-        /* Утилиты */
         .hidden { display: none !important; }
         .locked { opacity: 0.7; }
         
-        /* Оверлей для сохранения (iOS + Telegram Desktop) */
-        #save-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 9999;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px; box-sizing: border-box;
-        }
+        #save-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
         #save-overlay.active { display: flex; }
-        #save-overlay img {
-            max-width: 90%; max-height: 75%; border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            user-select: auto; -webkit-user-select: auto; -webkit-touch-callout: default;
-        }
+        #save-overlay img { max-width: 90%; max-height: 75%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); user-select: auto; -webkit-user-select: auto; -webkit-touch-callout: default; }
         .save-hint { color: white; margin-top: 20px; font-size: 15px; font-weight: bold; text-align: center; line-height: 1.4; }
         .close-overlay { position: absolute; top: 15px; right: 20px; color: white; font-size: 30px; border: none; background: none; cursor: pointer; padding: 10px; }
-
-        /* Премиум баннер */
-        #premium-banner {
-            background: linear-gradient(90deg, #ff8a00, #e52e71);
-            color: white; padding: 10px 15px; font-size: 13px; font-weight: bold;
-            display: flex; justify-content: center; align-items: center;
-        }
-
-        #watermark-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 10; display: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' transform='rotate(-45 70 70)' font-size='18' fill='rgba(255,255,255,0.5)' font-weight='bold' font-family='sans-serif'%3EPREMIUM%3C/text%3E%3C/svg%3E");
-        }
+        
+        #premium-banner { background: linear-gradient(90deg, #ff8a00, #e52e71); color: white; padding: 10px 15px; font-size: 13px; font-weight: bold; display: flex; justify-content: center; align-items: center; }
+        #watermark-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' transform='rotate(-45 70 70)' font-size='18' fill='rgba(255,255,255,0.5)' font-weight='bold' font-family='sans-serif'%3EPREMIUM%3C/text%3E%3C/svg%3E"); }
         #watermark-overlay.active { display: block; }
-
         #export-canvas { display: none; }
     </style>
 </head>
@@ -211,7 +83,6 @@
 <input type="file" id="upload" accept="image/*" class="hidden">
 <canvas id="export-canvas"></canvas>
 
-<!-- Оверлей для 100% сохранения -->
 <div id="save-overlay">
     <button class="close-overlay" onclick="document.getElementById('save-overlay').classList.remove('active')">✕</button>
     <img id="export-preview" src="">
@@ -224,28 +95,26 @@
         <span class="badge active" data-mode="SDR">SDR</span>
     </div>
     <div style="display: flex; gap: 15px;">
-        <button class="icon-btn" onclick="document.getElementById('upload').click()" title="Загрузить фото">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        </button>
-        <button class="icon-btn" id="btn-save" title="Сохранить">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        </button>
+        <button class="icon-btn" onclick="document.getElementById('upload').click()" title="Загрузить фото"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+        <button class="icon-btn" id="btn-save" title="Сохранить"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
     </div>
 </header>
 
 <main class="photo-area" id="photo-container">
     <div id="watermark-overlay"></div>
     <div class="placeholder-text" id="placeholder" onclick="document.getElementById('upload').click()">Нажмите здесь, чтобы загрузить фото</div>
-    <img id="photo-preview" src="" class="hidden">
+    <!-- Скрытый img источник -->
+    <img id="photo-preview" src="">
+    <!-- WebGL Canvas будет добавлен сюда через JS -->
 </main>
 
 <section class="editor-panel">
     <div class="slider-panel" id="slider-panel">
         <div class="slider-label">
             <span id="slider-tool-name">Настройка</span>
-            <span id="slider-tool-value">100</span>
+            <span id="slider-tool-value">0</span>
         </div>
-        <input type="range" id="active-slider" min="50" max="150" value="100" style="max-width: 350px; margin: 0 auto 20px auto;">
+        <input type="range" id="active-slider" min="-100" max="100" value="0" style="max-width: 350px; margin: 0 auto 20px auto;">
         <div class="slider-actions">
             <button class="action-btn" id="btn-cancel-tool">✕</button>
             <button class="action-btn" id="btn-reset-tool" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
@@ -262,12 +131,8 @@
         <span>⭐️ Эффект Premium. Сохранение недоступно.</span>
     </div>
     <nav class="bottom-nav">
-        <div class="nav-item active" data-tab="presets">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-        </div>
-        <div class="nav-item" data-tab="tools">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-        </div>
+        <div class="nav-item active" data-tab="presets"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+        <div class="nav-item" data-tab="tools"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></div>
     </nav>
 </section>
 
@@ -279,7 +144,7 @@
     const isPremium = urlParams.get('premium') === '1';
 
     const upload = document.getElementById('upload');
-    const preview = document.getElementById('photo-preview');
+    const previewImg = document.getElementById('photo-preview');
     const placeholder = document.getElementById('placeholder');
     const container = document.getElementById('photo-container');
     
@@ -293,39 +158,51 @@
     const sliderToolName = document.getElementById('slider-tool-name');
     const sliderToolValue = document.getElementById('slider-tool-value');
     const btnResetTool = document.getElementById('btn-reset-tool');
-    
     const btnSave = document.getElementById('btn-save');
-    const exportCanvas = document.getElementById('export-canvas');
     const hdrSdrBadges = document.querySelectorAll('#hdr-sdr-toggle .badge');
 
-    let currentSettings = {
-        brightness: 100, contrast: 100, saturate: 100, hue: 0,
-        presetFilter: '' 
-    };
+    // Инициализация WebGL (glfx.js)
+    let glCanvas;
+    try { glCanvas = fx.canvas(); } catch (e) { alert("WebGL не поддерживается вашим браузером"); }
+    glCanvas.id = 'glfx-canvas';
+    glCanvas.style.display = 'none';
+    container.appendChild(glCanvas);
+    let fxTexture;
+
     let activePresetId = 'none';
     let hasLockedActive = false;
     let activeToolKey = null;
     let isHolding = false;
     let exportMode = 'SDR';
     let currentTab = 'presets';
-    
     let favoritePresets = JSON.parse(localStorage.getItem('favoritePresets')) || [];
 
+    // Структура WebGL-настроек. 
+    // Значения от -1 до 1 (или 0 до 1), для UI конвертируем в -100..100.
+    const defaultSettings = { brightness: 0, contrast: 0, hue: 0, saturation: 0, vignette: 0, unsharp: 0, noise: 0, sepia: 0 };
+    let currentSettings = { ...defaultSettings };
+    let presetSettings = { ...defaultSettings };
+
+    // Пресеты
+    // Canon 1: Exposure +0.20, Contrast +15, Shadows +35 (simulate with brightness/contrast balance), Vibrance/Sat (saturation), Texture (unsharp)
+    // Canon 2: Exposure +0.15, Contrast +28, Vignette -15, Texture +15
     const presetsData = [
-        { id: 'none', name: 'ORIG', color: '#999', filter: 'none', isPro: false },
-        { id: 'g3', name: 'G3', color: '#cddc39', filter: 'contrast(110%) saturate(120%)', isPro: false },
-        { id: 'hb2', name: 'HB2', color: '#90caf9', filter: 'contrast(120%) saturate(80%) brightness(95%)', isPro: false },
-        { id: 'a1', name: 'A1 PRO', color: '#e57373', filter: 'sepia(30%) contrast(110%) brightness(105%)', isPro: true },
-        { id: 'c8', name: 'C8 PRO', color: '#ffb74d', filter: 'contrast(130%) saturate(140%) hue-rotate(-10deg)', isPro: true },
-        { id: 'g6', name: 'G6 PRO', color: '#ffeb3b', filter: 'brightness(110%) contrast(105%) saturate(130%)', isPro: true },
-        { id: 'm5', name: 'M5 PRO', color: '#4db6ac', filter: 'saturate(60%) contrast(120%) sepia(20%)', isPro: true },
+        { id: 'none', name: 'ORIG', color: '#999', isPro: false, glfx: { ...defaultSettings } },
+        { id: 'canon1', name: 'CAN 1', color: '#ffcc80', isPro: true, glfx: { brightness: 0.15, contrast: 0.15, saturation: -0.05, sepia: 0.1, hue: -0.05, unsharp: 0.25, noise: 0.1, vignette: 0.2 } },
+        { id: 'canon2', name: 'CAN 2', color: '#ffab40', isPro: true, glfx: { brightness: 0.1, contrast: 0.28, saturation: 0.05, sepia: 0.15, hue: 0.05, unsharp: 0.3, noise: 0.1, vignette: 0.4 } },
+        { id: 'g3', name: 'G3', color: '#cddc39', isPro: false, glfx: { brightness: 0, contrast: 0.1, saturation: 0.2, hue: 0, sepia: 0, vignette: 0, unsharp: 0, noise: 0 } },
+        { id: 'hb2', name: 'HB2', color: '#90caf9', isPro: false, glfx: { brightness: -0.05, contrast: 0.2, saturation: -0.2, hue: 0, sepia: 0, vignette: 0.3, unsharp: 0, noise: 0 } },
+        { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { brightness: 0, contrast: 0.2, saturation: -0.4, hue: 0.1, sepia: 0.2, vignette: 0.1, unsharp: 0, noise: 0 } }
     ];
 
     const toolsData = [
-        { id: 'brightness', name: 'Экспозиция', icon: '☀', min: 50, max: 150, def: 100, isPro: false },
-        { id: 'contrast', name: 'Контраст', icon: '◐', min: 50, max: 150, def: 100, isPro: false },
-        { id: 'saturate', name: 'Насыщенность', icon: '⏺', min: 0, max: 200, def: 100, isPro: true },
-        { id: 'hue', name: 'Тон', icon: 'H', min: 0, max: 360, def: 0, isPro: true }
+        { id: 'brightness', name: 'Экспозиция', icon: '☀', min: -100, max: 100, isPro: false },
+        { id: 'contrast', name: 'Контраст', icon: '◐', min: -100, max: 100, isPro: false },
+        { id: 'saturation', name: 'Насыщенность', icon: '⏺', min: -100, max: 100, isPro: true },
+        { id: 'hue', name: 'Тон', icon: 'H', min: -100, max: 100, isPro: true },
+        { id: 'vignette', name: 'Виньетка', icon: '◎', min: 0, max: 100, isPro: true },
+        { id: 'unsharp', name: 'Резкость', icon: '△', min: 0, max: 100, isPro: true },
+        { id: 'noise', name: 'Зерно', icon: '▤', min: 0, max: 100, isPro: true }
     ];
 
     hdrSdrBadges.forEach(badge => {
@@ -365,13 +242,14 @@
 
         presetsToShow.forEach(p => {
             const isLocked = p.isPro && !isPremium;
-            const bgImg = preview.src ? `background-image: url(${preview.src});` : '';
             const isFav = favoritePresets.includes(p.id);
             const favIcon = p.id !== 'none' ? `<div class="fav-icon" onclick="toggleFavorite(event, '${p.id}')">${isFav ? '★' : '☆'}</div>` : '';
             
+            // В WebGL MVP мы не рендерим миниатюры для каждого пресета ради скорости, 
+            // используем цвет фона (как в VSCO X)
             itemsContainer.innerHTML += `
                 <div class="preset-item ${isLocked ? 'locked' : ''}" onclick="applyPreset('${p.id}')">
-                    <div class="preset-thumb" style="${bgImg} filter: ${p.filter};"></div>
+                    <div class="preset-thumb" style="background-color: ${p.color}; opacity: 0.8;"></div>
                     <div class="preset-label" style="background-color: ${p.color};">${p.name}</div>
                     ${favIcon}
                     ${isLocked ? '<div class="lock-icon">🔒</div>' : ''}
@@ -398,7 +276,14 @@
     function updateLockState() {
         const p = presetsData.find(x => x.id === activePresetId);
         const isPresetLocked = p && p.isPro && !isPremium;
-        const isToolLocked = !isPremium && (currentSettings.saturate != 100 || currentSettings.hue != 0);
+        
+        // Инструмент заблокирован, если его значение != 0 и он платный
+        let isToolLocked = false;
+        if (!isPremium) {
+            toolsData.filter(t => t.isPro).forEach(t => {
+                if (currentSettings[t.id] !== 0) isToolLocked = true;
+            });
+        }
         
         if (isPresetLocked || isToolLocked) {
             hasLockedActive = true;
@@ -411,10 +296,44 @@
         }
     }
 
+    // --- Логика WebGL Рендера ---
+    function updatePhotoFilter() {
+        if (!fxTexture) return;
+        
+        if (isHolding) {
+            // Оригинал
+            glCanvas.draw(fxTexture).update();
+            return;
+        }
+
+        // Суммируем пресет + ручные настройки
+        const b = Math.max(-1, Math.min(1, presetSettings.brightness + currentSettings.brightness));
+        const c = Math.max(-1, Math.min(1, presetSettings.contrast + currentSettings.contrast));
+        const hue = Math.max(-1, Math.min(1, presetSettings.hue + currentSettings.hue));
+        const sat = Math.max(-1, Math.min(1, presetSettings.saturation + currentSettings.saturation));
+        const sepia = presetSettings.sepia;
+        const vig = Math.max(0, Math.min(1, presetSettings.vignette + currentSettings.vignette));
+        const sharp = Math.max(0, Math.min(1, presetSettings.unsharp + currentSettings.unsharp));
+        const noise = Math.max(0, Math.min(1, presetSettings.noise + currentSettings.noise));
+
+        glCanvas.draw(fxTexture)
+            .brightnessContrast(b, c)
+            .hueSaturation(hue, sat);
+            
+        if (sepia > 0) glCanvas.sepia(sepia);
+        if (sharp > 0) glCanvas.unsharpMask(sharp * 5, 2);
+        if (noise > 0) glCanvas.noise(noise * 0.3);
+        if (vig > 0) glCanvas.vignette(0.5, 0.5 - (vig * 0.3));
+
+        glCanvas.update();
+    }
+
     window.applyPreset = function(id) {
         const p = presetsData.find(x => x.id === id);
         activePresetId = id;
-        currentSettings.presetFilter = p.filter === 'none' ? '' : p.filter;
+        presetSettings = { ...p.glfx };
+        // Сбрасываем ручные настройки при выборе нового пресета (классика фоторедакторов)
+        currentSettings = { ...defaultSettings };
         updatePhotoFilter();
         updateLockState();
     };
@@ -423,10 +342,11 @@
         const t = toolsData.find(x => x.id === id);
         activeToolKey = id;
         sliderToolName.innerText = t.name;
-        sliderToolValue.innerText = currentSettings[id];
+        const uiValue = Math.round(currentSettings[id] * 100);
+        sliderToolValue.innerText = uiValue;
         activeSlider.min = t.min;
         activeSlider.max = t.max;
-        activeSlider.value = currentSettings[id];
+        activeSlider.value = uiValue;
         
         selectionPanel.classList.add('hidden');
         sliderPanel.classList.add('active');
@@ -437,10 +357,9 @@
 
     btnResetTool.onclick = () => {
         if(activeToolKey) {
-            const t = toolsData.find(x => x.id === activeToolKey);
-            currentSettings[activeToolKey] = t.def;
-            activeSlider.value = t.def;
-            sliderToolValue.innerText = t.def;
+            currentSettings[activeToolKey] = 0;
+            activeSlider.value = 0;
+            sliderToolValue.innerText = 0;
             updatePhotoFilter();
             updateLockState();
         }
@@ -448,7 +367,8 @@
 
     activeSlider.addEventListener('input', (e) => {
         if(activeToolKey) {
-            currentSettings[activeToolKey] = e.target.value;
+            const val = parseFloat(e.target.value) / 100;
+            currentSettings[activeToolKey] = val;
             sliderToolValue.innerText = e.target.value;
             updatePhotoFilter();
             updateLockState();
@@ -459,19 +379,6 @@
         sliderPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
         activeToolKey = null;
-    }
-
-    function updatePhotoFilter() {
-        if (isHolding) {
-            preview.style.filter = 'none';
-        } else {
-            const b = currentSettings.brightness;
-            const c = currentSettings.contrast;
-            const s = currentSettings.saturate;
-            const h = currentSettings.hue;
-            let filterStr = currentSettings.presetFilter + ` brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${h}deg)`;
-            preview.style.filter = filterStr;
-        }
     }
 
     navItems.forEach(item => {
@@ -485,159 +392,79 @@
         });
     });
 
+    // Загрузка фото в WebGL
     upload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                preview.src = e.target.result;
-                preview.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-                if(document.querySelector('.nav-item.active').getAttribute('data-tab') === 'presets') {
-                    renderPresets(currentTab);
-                }
+                previewImg.onload = function() {
+                    if (fxTexture) fxTexture.destroy();
+                    fxTexture = glCanvas.texture(previewImg);
+                    glCanvas.style.display = 'block';
+                    placeholder.classList.add('hidden');
+                    updatePhotoFilter();
+                };
+                previewImg.src = e.target.result;
             }
             reader.readAsDataURL(file);
         }
     });
 
-    container.addEventListener('pointerdown', () => { if(preview.src) { isHolding = true; updatePhotoFilter(); } });
+    container.addEventListener('pointerdown', () => { if(fxTexture) { isHolding = true; updatePhotoFilter(); } });
     container.addEventListener('pointerup', () => { isHolding = false; updatePhotoFilter(); });
     container.addEventListener('pointerleave', () => { isHolding = false; updatePhotoFilter(); });
     container.addEventListener('contextmenu', e => e.preventDefault());
 
-    // --- Универсальный пиксельный обработчик (работает в любом WebView без ctx.filter) ---
-    function renderFilteredCanvas(img, canvas) {
-        const w = img.naturalWidth;
-        const h = img.naturalHeight;
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-
-        // Собираем все активные фильтры (из пресета + ручные ползунки)
-        const fullStr = (currentSettings.presetFilter ? currentSettings.presetFilter + ' ' : '') +
-                        `brightness(${currentSettings.brightness}%) contrast(${currentSettings.contrast}%) saturate(${currentSettings.saturate}%) hue-rotate(${currentSettings.hue}deg)`;
-
-        const ops = [];
-        const regex = /(brightness|contrast|saturate|hue-rotate|sepia)\(([^)]+)\)/g;
-        let match;
-        while ((match = regex.exec(fullStr)) !== null) {
-            const type = match[1];
-            const raw = match[2].trim();
-            let val = parseFloat(raw);
-            if (raw.endsWith('%')) val /= 100;
-            ops.push({ type, val });
-        }
-
-        const imageData = ctx.getImageData(0, 0, w, h);
-        const data = imageData.data;
-
-        for (let i = 0; i < data.length; i += 4) {
-            let r = data[i];
-            let g = data[i + 1];
-            let b = data[i + 2];
-
-            for (let j = 0; j < ops.length; j++) {
-                const { type, val } = ops[j];
-                if (type === 'brightness') {
-                    r *= val; g *= val; b *= val;
-                } else if (type === 'contrast') {
-                    r = (r - 128) * val + 128;
-                    g = (g - 128) * val + 128;
-                    b = (b - 128) * val + 128;
-                } else if (type === 'saturate') {
-                    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                    r = lum + (r - lum) * val;
-                    g = lum + (g - lum) * val;
-                    b = lum + (b - lum) * val;
-                } else if (type === 'sepia') {
-                    const sr = r * 0.393 + g * 0.769 + b * 0.189;
-                    const sg = r * 0.349 + g * 0.686 + b * 0.168;
-                    const sb = r * 0.272 + g * 0.534 + b * 0.131;
-                    r = r * (1 - val) + sr * val;
-                    g = g * (1 - val) + sg * val;
-                    b = b * (1 - val) + sb * val;
-                } else if (type === 'hue-rotate') {
-                    const rad = val * Math.PI / 180;
-                    const cos = Math.cos(rad);
-                    const sin = Math.sin(rad);
-                    const nr = r * (0.213 + cos * 0.787 - sin * 0.213) + g * (0.715 - cos * 0.715 - sin * 0.715) + b * (0.072 - cos * 0.072 + sin * 0.928);
-                    const ng = r * (0.213 - cos * 0.213 + sin * 0.143) + g * (0.715 + cos * 0.285 + sin * 0.140) + b * (0.072 - cos * 0.072 - sin * 0.283);
-                    const nb = r * (0.213 - cos * 0.213 - sin * 0.787) + g * (0.715 - cos * 0.715 + sin * 0.715) + b * (0.072 + cos * 0.928 + sin * 0.072);
-                    r = nr; g = ng; b = nb;
-                }
-            }
-
-            data[i] = r < 0 ? 0 : (r > 255 ? 255 : r);
-            data[i + 1] = g < 0 ? 0 : (g > 255 ? 255 : g);
-            data[i + 2] = b < 0 ? 0 : (b > 255 ? 255 : b);
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-    }
-
-    // --- Сохранение/Экспорт фото ---
+    // Экспорт из WebGL
     btnSave.addEventListener('click', () => {
         if (hasLockedActive) {
             if(tg.showAlert) tg.showAlert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
             else alert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
             return;
         }
-        if (!preview.src || preview.src === window.location.href) {
+        if (!fxTexture) {
             if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
             else alert("Сначала загрузите фото!");
             return;
         }
 
-        // Применяем эффекты попиксельно
-        renderFilteredCanvas(preview, exportCanvas);
-        
+        // WebGL canvas сам содержит уже отрендеренные пиксели
         let quality = exportMode === 'HDR' ? 1.0 : 0.85;
         const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
-
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const isTelegramMiniApp = Boolean(tg && tg.initData);
 
-        exportCanvas.toBlob(async (blob) => {
-            if (!blob) return;
-            const file = new File([blob], fileName, { type: 'image/jpeg' });
+        // В WebGL мы берем данные напрямую из glCanvas.toDataURL (которая использует встроенный canvas)
+        const dataUrl = glCanvas.toDataURL('image/jpeg'); // Для генерации Blob конвертируем base64 в blob
+        
+        fetch(dataUrl)
+            .then(res => res.blob())
+            .then(async blob => {
+                const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-            // 1. Нативный Share API на телефонах (вызывает меню "Сохранить изображение")
-            if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({
-                        files: [file],
-                        title: 'Фото из редактора'
-                    });
-                    return;
-                } catch (error) {
-                    if (error.name === 'AbortError') return;
+                if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({ files: [file], title: 'Фото из редактора' });
+                        return;
+                    } catch (error) { if (error.name === 'AbortError') return; }
                 }
-            }
 
-            // 2. Обычный браузер на ПК (не внутри Telegram Desktop)
-            if (!isMobile && !isTelegramMiniApp) {
-                const dataUrl = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.download = fileName;
-                link.href = dataUrl;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(dataUrl);
-                return;
-            }
+                if (!isMobile && !isTelegramMiniApp) {
+                    const objectUrl = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = fileName; link.href = objectUrl;
+                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                    URL.revokeObjectURL(objectUrl);
+                    return;
+                }
 
-            // 3. Оверлей для Telegram Desktop (где заблокирован <a download>) и iOS fallback
-            const dataUrlBase64 = exportCanvas.toDataURL('image/jpeg', quality);
-            document.getElementById('export-preview').src = dataUrlBase64;
-            document.getElementById('save-hint-text').innerText = isMobile
-                ? "👆 Удерживайте фото, чтобы сохранить в галерею"
-                : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...» (или перетащите на рабочий стол)";
-            document.getElementById('save-overlay').classList.add('active');
-
-        }, 'image/jpeg', quality);
+                document.getElementById('export-preview').src = dataUrl;
+                document.getElementById('save-hint-text').innerText = isMobile
+                    ? "👆 Удерживайте фото, чтобы сохранить в галерею"
+                    : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...»";
+                document.getElementById('save-overlay').classList.add('active');
+            });
     });
 
     renderPresets();
