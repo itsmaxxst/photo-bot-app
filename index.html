@@ -170,11 +170,21 @@
     const btnSave = document.getElementById('btn-save');
     const hdrSdrBadges = document.querySelectorAll('#hdr-sdr-toggle .badge');
 
+    // Инициализация WebGL
     let glCanvas;
-    try { glCanvas = fx.canvas(); } catch (e) { alert("WebGL не поддерживается вашим браузером"); }
-    glCanvas.id = 'glfx-canvas';
-    glCanvas.style.display = 'none';
-    container.appendChild(glCanvas);
+    let bloomCanvas; // Дополнительный невидимый WebGL-контекст для генерации маски свечения
+    
+    try { 
+        glCanvas = fx.canvas(); 
+        glCanvas.id = 'glfx-canvas';
+        glCanvas.style.display = 'none';
+        container.appendChild(glCanvas);
+        
+        bloomCanvas = fx.canvas(); // Не добавляем в DOM, используем только в памяти
+    } catch (e) { 
+        alert("WebGL не поддерживается вашим браузером"); 
+    }
+    
     let fxTexture;
     
     let activePresetId = 'none';
@@ -339,25 +349,25 @@
         }
 
         if (!CanvasProto.bloomBlend) {
-            CanvasProto.bloomBlend = function(originalTexture, strength) {
+            CanvasProto.bloomBlend = function(maskTexture, strength) {
                 if (!this._bloomBlendShader) {
                     this._bloomBlendShader = new fx.Shader(null, `
                         uniform sampler2D texture;
-                        uniform sampler2D originalTexture;
+                        uniform sampler2D maskTexture;
                         uniform float strength;
                         varying vec2 texCoord;
                         void main() {
-                            vec4 bloomColor = texture2D(texture, texCoord);
-                            vec4 originalColor = texture2D(originalTexture, texCoord);
-                            vec3 bloom = clamp(bloomColor.rgb * strength, 0.0, 1.0);
-                            vec3 result = 1.0 - (1.0 - originalColor.rgb) * (1.0 - bloom);
+                            vec4 originalColor = texture2D(texture, texCoord);
+                            vec4 maskColor = texture2D(maskTexture, texCoord);
+                            vec3 bloom = clamp(maskColor.rgb * strength, 0.0, 1.0);
+                            vec3 result = 1.0 - (1.0 - originalColor.rgb) * (1.0 - bloom); // Screen Blend
                             gl_FragColor = vec4(result, originalColor.a);
                         }
                     `);
                 }
-                originalTexture.bind(1);
+                maskTexture.bind(1);
                 this.simpleShader(this._bloomBlendShader, {
-                    originalTexture: 1,
+                    maskTexture: 1,
                     strength: strength
                 });
                 return this;
@@ -367,7 +377,8 @@
         console.error("Shader injection failed:", e);
     }
 
-    window.applyFiltersToCanvas = function(targetCanvas, texture, settingsToApply, baseSettings) {
+    // Оптимизированная логика рендера с 100% рабочим Bloom
+    window.applyFiltersToCanvas = function(targetCanvas, maskCanvas, texture, settingsToApply, baseSettings) {
         const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
         const c = Math.max(-1, Math.min(1, baseSettings.contrast + settingsToApply.contrast));
         const hue = Math.max(-1, Math.min(1, baseSettings.hue + settingsToApply.hue));
@@ -380,63 +391,43 @@
         const blur = Math.max(0, Math.min(1, baseSettings.blur + settingsToApply.blur));
         const denoiseVal = Math.max(0, Math.min(1, baseSettings.denoise + settingsToApply.denoise));
         
-        // Bloom
+        // Значения Bloom
         const bloomStr = Math.max(0, Math.min(1, baseSettings.bloom_strength + settingsToApply.bloom_strength));
         const bloomThr = Math.max(0, Math.min(1, baseSettings.bloom_threshold + settingsToApply.bloom_threshold));
         const bloomRad = Math.max(0, Math.min(1, baseSettings.bloom_radius + settingsToApply.bloom_radius));
-
         const colorCurves = baseSettings.curves;
 
-        targetCanvas.draw(texture);
+        // --- 1. ГЕНЕРИРУЕМ МАСКУ СВЕЧЕНИЯ (на втором контексте) ---
+        let maskTex = null;
+        if (bloomStr > 0) {
+            maskCanvas.draw(texture);
+            if (colorCurves) maskCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
+            maskCanvas.brightnessContrast(b, c).hueSaturation(hue, sat).vibrance(vib);
+            
+            let shaderThreshold = 1.0 - (bloomThr * 0.8);
+            maskCanvas.bloomThreshold(shaderThreshold);
+            if (bloomRad > 0) maskCanvas.triangleBlur(bloomRad * 50);
+            
+            maskCanvas.update(); // Рендерим маску во внутренний Canvas
+            maskTex = targetCanvas.texture(maskCanvas); // Превращаем этот холст в текстуру для основного рендера
+        }
 
+        // --- 2. ОСНОВНОЙ РЕНДЕР (на главном контексте) ---
+        targetCanvas.draw(texture);
+        
         if (denoiseVal > 0) targetCanvas.denoise(denoiseVal * 50);
         if (blur > 0) targetCanvas.triangleBlur(blur * 30);
-        
         if (colorCurves) targetCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
-
+        
         targetCanvas.brightnessContrast(b, c).hueSaturation(hue, sat).vibrance(vib);
         
-        // --- ЛОГИКА BLOOM ---
-        if (bloomStr > 0) {
-            // 1. Отрисовываем текущий результат конвейера
-            targetCanvas.update();
-            
-            // 2. Создаем 2D Canvas для копирования текущего кадра (оригинал с цветокоррекцией)
-            if (!targetCanvas._bloom2d) {
-                targetCanvas._bloom2d = document.createElement('canvas');
-            }
-            if (targetCanvas._bloom2d.width !== targetCanvas.width || targetCanvas._bloom2d.height !== targetCanvas.height) {
-                targetCanvas._bloom2d.width = targetCanvas.width;
-                targetCanvas._bloom2d.height = targetCanvas.height;
-            }
-            
-            const ctx2d = targetCanvas._bloom2d.getContext('2d', { willReadFrequently: true });
-            ctx2d.drawImage(targetCanvas, 0, 0);
-            
-            // 3. Сохраняем это в WebGL текстуру
-            if (!targetCanvas._bloomTex || targetCanvas._bloomTex.width !== targetCanvas.width || targetCanvas._bloomTex.height !== targetCanvas.height) {
-                if (targetCanvas._bloomTex) targetCanvas._bloomTex.destroy();
-                targetCanvas._bloomTex = targetCanvas.texture(targetCanvas._bloom2d);
-            } else {
-                targetCanvas._bloomTex.loadContentsOf(targetCanvas._bloom2d);
-            }
-
-            // 4. Запускаем конвейер заново, передав туда сохраненную текстуру
-            targetCanvas.draw(targetCanvas._bloomTex);
-            
-            // 5. Выделяем яркие участки
-            let shaderThreshold = 1.0 - (bloomThr * 0.8);
-            targetCanvas.bloomThreshold(shaderThreshold);
-            
-            // 6. Размываем свечение
-            if (bloomRad > 0) {
-                targetCanvas.triangleBlur(bloomRad * 80);
-            }
-            
-            // 7. Накладываем светящуюся маску поверх оригинала
-            targetCanvas.bloomBlend(targetCanvas._bloomTex, bloomStr * 2.5);
+        // --- 3. НАКЛАДЫВАЕМ МАСКУ СВЕЧЕНИЯ ---
+        if (bloomStr > 0 && maskTex) {
+            targetCanvas.bloomBlend(maskTex, bloomStr * 2.5);
+            maskTex.destroy(); // Сразу чистим память видеокарты
         }
             
+        // --- 4. ПОСТ-ЭФФЕКТЫ ---
         if (sepia > 0) targetCanvas.sepia(sepia);
         if (sharp > 0) targetCanvas.unsharpMask(sharp * 5, 2);
         if (noise > 0) targetCanvas.noise(noise * 0.3);
@@ -451,7 +442,8 @@
             glCanvas.draw(fxTexture).update();
             return;
         }
-        window.applyFiltersToCanvas(glCanvas, fxTexture, currentSettings, presetSettings);
+        // Передаем оба канваса (главный и масочный)
+        window.applyFiltersToCanvas(glCanvas, bloomCanvas, fxTexture, currentSettings, presetSettings);
     }
 
     window.applyPreset = function(id) {
@@ -619,10 +611,6 @@
             fxTexture.destroy();
             fxTexture = null;
         }
-        if (glCanvas && glCanvas._bloomTex) {
-            glCanvas._bloomTex.destroy();
-            glCanvas._bloomTex = null;
-        }
         previewImg.src = '';
         originalImage.src = '';
         upload.value = '';
@@ -672,11 +660,16 @@
         temp2dCanvas.height = th;
         temp2dCanvas.getContext('2d').drawImage(originalImage, 0, 0, tw, th);
 
-        let tempGlCanvas;
-        try { tempGlCanvas = fx.canvas(); } catch (e) { alert("Ошибка рендера высокого качества."); return; }
+        let tempGlCanvas, tempBloomCanvas;
+        try { 
+            tempGlCanvas = fx.canvas(); 
+            tempBloomCanvas = fx.canvas();
+        } catch (e) { alert("Ошибка рендера высокого качества."); return; }
+        
         const tempTex = tempGlCanvas.texture(temp2dCanvas);
 
-        window.applyFiltersToCanvas(tempGlCanvas, tempTex, currentSettings, presetSettings);
+        // Для экспорта передаем временные канвасы с полным разрешением
+        window.applyFiltersToCanvas(tempGlCanvas, tempBloomCanvas, tempTex, currentSettings, presetSettings);
 
         const exportCanvas = document.createElement('canvas');
         exportCanvas.width = tempGlCanvas.width;
@@ -696,7 +689,6 @@
                 const file = new File([blob], fileName, { type: 'image/jpeg' });
                 
                 tempTex.destroy();
-                if(tempGlCanvas._bloomTex) tempGlCanvas._bloomTex.destroy();
 
                 if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
