@@ -184,33 +184,61 @@
     let currentSettings = { ...defaultSettings };
     let presetSettings = { ...defaultSettings };
 
-    // Пресеты
-    // Canon 1: Exposure +0.20, Contrast +15, Shadows +35 (simulate with brightness/contrast balance), Vibrance/Sat (saturation), Texture (unsharp)
-    // Canon 2: Exposure +0.15, Contrast +28, Vignette -15, Texture +15
+    // Пресеты с улучшенными премиальными настройками
     const presetsData = [
         { id: 'none', name: 'ORIG', color: '#999', isPro: false, glfx: { ...defaultSettings } },
         
-        { id: 'canon1', name: 'CANON 1', color: '#ffcc80', isPro: true, glfx: { 
-            brightness: 0.10, contrast: -0.05, saturation: 0.10, sepia: 0.05, hue: 0, unsharp: 0.25, noise: 0.0, vignette: 0.1,
-            // Имитация Canon 1 (Сплит-тонирование + Матовые тени):
-            // Red: чуть опущены тени, подняты света
-            // Green: S-образная кривая
-            // Blue: приподняты тени (Shadows hue 205), опущены света (Midtones/Highlights теплые)
+        { id: 'canon1', name: 'CANON S', color: '#ffcc80', isPro: true, glfx: { 
+            brightness: 0.05, contrast: 0.05, saturation: -0.05, sepia: 0.05, hue: -0.05, unsharp: 0.2, noise: 0.05, vignette: 0.15,
             curves: {
-                red: [[0, 0.05], [0.3, 0.25], [0.7, 0.75], [1, 0.95]],
-                green: [[0, 0.02], [0.5, 0.5], [1, 0.95]],
-                blue: [[0, 0.15], [0.4, 0.35], [0.8, 0.70], [1, 0.85]]
+                red: [[0, 0], [0.3, 0.35], [0.7, 0.75], [1, 1]],
+                green: [[0, 0], [0.5, 0.5], [1, 1]],
+                blue: [[0, 0.1], [0.5, 0.45], [1, 0.95]]
             }
         }},
         
-        { id: 'canon2', name: 'CANON 2', color: '#ffab40', isPro: true, glfx: { 
-            brightness: 0.15, contrast: 0.15, saturation: 0.15, sepia: 0.1, hue: -0.02, unsharp: 0.3, noise: 0.0, vignette: 0.15,
-            // Имитация Canon 2 (Контрастная вспышка):
-            // Более жесткая S-кривая для контраста + теплые света
+        { id: 'canon2', name: 'CANON L', color: '#ffab40', isPro: true, glfx: { 
+            brightness: 0.05, contrast: 0.20, saturation: 0.15, sepia: 0.0, hue: 0.02, unsharp: 0.35, noise: 0.0, vignette: 0.2,
             curves: {
-                red: [[0, 0], [0.4, 0.35], [0.8, 0.85], [1, 1]],
-                green: [[0, 0], [0.5, 0.45], [0.8, 0.75], [1, 0.95]],
-                blue: [[0, 0.08], [0.5, 0.4], [0.8, 0.65], [1, 0.80]]
+                red: [[0, 0], [0.25, 0.15], [0.75, 0.85], [1, 1]],
+                green: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]],
+                blue: [[0, 0], [0.25, 0.15], [0.75, 0.85], [1, 1]]
+            }
+        }},
+        
+        { id: 'portra', name: 'PORTRA', color: '#e5bda1', isPro: true, glfx: { 
+            brightness: 0.08, contrast: -0.05, saturation: -0.15, sepia: 0.1, hue: -0.02, unsharp: 0.1, noise: 0.25, vignette: 0.1,
+            curves: {
+                red: [[0, 0.05], [0.5, 0.5], [1, 0.95]],
+                green: [[0, 0], [0.5, 0.5], [1, 0.95]],
+                blue: [[0, 0.15], [0.5, 0.4], [1, 0.85]]
+            }
+        }},
+
+        { id: 'fuji', name: 'FUJI 400', color: '#a5d6a7', isPro: true, glfx: { 
+            brightness: 0.0, contrast: 0.15, saturation: 0.1, sepia: 0.0, hue: 0.1, unsharp: 0.2, noise: 0.15, vignette: 0.2,
+            curves: {
+                red: [[0, 0], [0.5, 0.45], [1, 0.9]],
+                green: [[0, 0.05], [0.5, 0.55], [1, 0.95]],
+                blue: [[0, 0.05], [0.5, 0.5], [1, 1]]
+            }
+        }},
+
+        { id: 'noir', name: 'NOIR', color: '#424242', isPro: false, glfx: { 
+            brightness: 0.0, contrast: 0.3, saturation: -1.0, sepia: 0.0, hue: 0.0, unsharp: 0.4, noise: 0.3, vignette: 0.4,
+            curves: {
+                red: [[0, 0.05], [0.5, 0.5], [1, 0.95]],
+                green: [[0, 0.05], [0.5, 0.5], [1, 0.95]],
+                blue: [[0, 0.05], [0.5, 0.5], [1, 0.95]]
+            }
+        }},
+
+        { id: 'tealorange', name: 'TEAL&ORG', color: '#00acc1', isPro: true, glfx: { 
+            brightness: -0.05, contrast: 0.2, saturation: 0.15, sepia: 0.0, hue: 0.0, unsharp: 0.2, noise: 0.0, vignette: 0.3,
+            curves: {
+                red: [[0, 0], [0.5, 0.55], [1, 1]],
+                green: [[0, 0], [0.5, 0.45], [1, 1]],
+                blue: [[0, 0.1], [0.5, 0.4], [1, 0.9]]
             }
         }},
         
@@ -269,8 +297,6 @@
             const isFav = favoritePresets.includes(p.id);
             const favIcon = p.id !== 'none' ? `<div class="fav-icon" onclick="toggleFavorite(event, '${p.id}')">${isFav ? '★' : '☆'}</div>` : '';
             
-            // В WebGL MVP мы не рендерим миниатюры для каждого пресета ради скорости, 
-            // используем цвет фона (как в VSCO X)
             itemsContainer.innerHTML += `
                 <div class="preset-item ${isLocked ? 'locked' : ''}" onclick="applyPreset('${p.id}')">
                     <div class="preset-thumb" style="background-color: ${p.color}; opacity: 0.8;"></div>
@@ -301,7 +327,6 @@
         const p = presetsData.find(x => x.id === activePresetId);
         const isPresetLocked = p && p.isPro && !isPremium;
         
-        // Инструмент заблокирован, если его значение != 0 и он платный
         let isToolLocked = false;
         if (!isPremium) {
             toolsData.filter(t => t.isPro).forEach(t => {
@@ -320,49 +345,46 @@
         }
     }
 
-    // --- Логика WebGL Рендера ---
+    function applyFiltersToCanvas(targetCanvas, texture, settingsToApply, baseSettings) {
+        const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
+        const c = Math.max(-1, Math.min(1, baseSettings.contrast + settingsToApply.contrast));
+        const hue = Math.max(-1, Math.min(1, baseSettings.hue + settingsToApply.hue));
+        const sat = Math.max(-1, Math.min(1, baseSettings.saturation + settingsToApply.saturation));
+        const sepia = baseSettings.sepia;
+        const vig = Math.max(0, Math.min(1, baseSettings.vignette + settingsToApply.vignette));
+        const sharp = Math.max(0, Math.min(1, baseSettings.unsharp + settingsToApply.unsharp));
+        const noise = Math.max(0, Math.min(1, baseSettings.noise + settingsToApply.noise));
+        const colorCurves = baseSettings.curves;
+
+        targetCanvas.draw(texture);
+
+        if (colorCurves) {
+            targetCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
+        }
+
+        targetCanvas.brightnessContrast(b, c).hueSaturation(hue, sat);
+            
+        if (sepia > 0) targetCanvas.sepia(sepia);
+        if (sharp > 0) targetCanvas.unsharpMask(sharp * 5, 2);
+        if (noise > 0) targetCanvas.noise(noise * 0.3);
+        if (vig > 0) targetCanvas.vignette(0.5, 0.5 - (vig * 0.3));
+
+        targetCanvas.update();
+    }
+
     function updatePhotoFilter() {
         if (!fxTexture) return;
-        
         if (isHolding) {
-            // Оригинал
             glCanvas.draw(fxTexture).update();
             return;
         }
-
-        // Суммируем пресет + ручные настройки
-        const b = Math.max(-1, Math.min(1, presetSettings.brightness + currentSettings.brightness));
-        const c = Math.max(-1, Math.min(1, presetSettings.contrast + currentSettings.contrast));
-        const hue = Math.max(-1, Math.min(1, presetSettings.hue + currentSettings.hue));
-        const sat = Math.max(-1, Math.min(1, presetSettings.saturation + currentSettings.saturation));
-        const sepia = presetSettings.sepia;
-        const vig = Math.max(0, Math.min(1, presetSettings.vignette + currentSettings.vignette));
-        const sharp = Math.max(0, Math.min(1, presetSettings.unsharp + currentSettings.unsharp));
-        const noise = Math.max(0, Math.min(1, presetSettings.noise + currentSettings.noise));
-        const colorCurves = presetSettings.curves; // кастомные цветовые кривые (имитация сплит-тонинга)
-
-        glCanvas.draw(fxTexture);
-
-        // Для Canon пресетов применяем специфичный Color Grading (сплит-тонирование) через кривые glfx
-        if (colorCurves) {
-            glCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
-        }
-
-        glCanvas.brightnessContrast(b, c).hueSaturation(hue, sat);
-            
-        if (sepia > 0) glCanvas.sepia(sepia);
-        if (sharp > 0) glCanvas.unsharpMask(sharp * 5, 2);
-        if (noise > 0) glCanvas.noise(noise * 0.3);
-        if (vig > 0) glCanvas.vignette(0.5, 0.5 - (vig * 0.3));
-
-        glCanvas.update();
+        applyFiltersToCanvas(glCanvas, fxTexture, currentSettings, presetSettings);
     }
 
     window.applyPreset = function(id) {
         const p = presetsData.find(x => x.id === id);
         activePresetId = id;
         presetSettings = { ...p.glfx };
-        // Сбрасываем ручные настройки при выборе нового пресета (классика фоторедакторов)
         currentSettings = { ...defaultSettings };
         updatePhotoFilter();
         updateLockState();
@@ -422,16 +444,13 @@
         });
     });
 
-    // Загрузка фото в WebGL
-    let originalImage = new Image(); // Храним оригинал в максимальном качестве
+    let originalImage = new Image(); 
     upload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 originalImage.onload = function() {
-                    // Для превью на экране (чтобы не убить память телефона 4К текстурой) 
-                    // мы создадим уменьшенную копию (max 1080p).
                     const maxPreviewDim = 1080;
                     let pw = originalImage.width;
                     let ph = originalImage.height;
@@ -449,7 +468,7 @@
                     
                     previewImg.onload = function() {
                         if (fxTexture) fxTexture.destroy();
-                        fxTexture = glCanvas.texture(previewImg); // Текстура для UI
+                        fxTexture = glCanvas.texture(previewImg);
                         glCanvas.style.display = 'block';
                         placeholder.classList.add('hidden');
                         updatePhotoFilter();
@@ -467,15 +486,14 @@
     container.addEventListener('pointerleave', () => { isHolding = false; updatePhotoFilter(); });
     container.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Экспорт из WebGL
-    
     function resetEditor() {
         if (fxTexture) {
             fxTexture.destroy();
             fxTexture = null;
         }
         previewImg.src = '';
-        upload.value = ''; // Сбрасываем input чтобы можно было загрузить ту же фотку заново
+        originalImage.src = '';
+        upload.value = '';
         glCanvas.style.display = 'none';
         placeholder.classList.remove('hidden');
 
@@ -486,46 +504,70 @@
         closeSlider();
         updateLockState();
         
-        // Возвращаемся на главную вкладку пресетов
         navItems.forEach(n => n.classList.remove('active'));
         navItems[0].classList.add('active');
         renderPresets('presets');
     }
 
-btnSave.addEventListener('click', () => {
+    btnSave.addEventListener('click', () => {
         if (hasLockedActive) {
             if(tg.showAlert) tg.showAlert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
             else alert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
             return;
         }
-        if (!fxTexture || !glCanvas) {
+        if (!originalImage.src || !fxTexture || !glCanvas) {
             if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
             else alert("Сначала загрузите фото!");
             return;
         }
 
-        // Заставляем WebGL отрисовать картинку прямо сейчас, перед самым сохранением.
-        // Иначе буфер очистится и сохранится черный квадрат.
-        updatePhotoFilter();
+        // 1. Определяем нужный размер экспорта
+        let maxDim = 1080; // SDR
+        if (exportMode === 'HDR') maxDim = 1920;
+        if (exportMode === '2K') maxDim = 2560;
+        
+        let ow = originalImage.width;
+        let oh = originalImage.height;
+        let tw = ow, th = oh;
 
-        let quality = exportMode === '2K' ? 1.0 : 0.90;
+        if (ow > maxDim || oh > maxDim) {
+            const ratio = Math.min(maxDim / ow, maxDim / oh);
+            tw = Math.round(ow * ratio);
+            th = Math.round(oh * ratio);
+        }
+
+        // 2. Создаем временный 2D canvas с нужным разрешением (без апскейла)
+        const temp2dCanvas = document.createElement('canvas');
+        temp2dCanvas.width = tw;
+        temp2dCanvas.height = th;
+        temp2dCanvas.getContext('2d').drawImage(originalImage, 0, 0, tw, th);
+
+        // 3. Создаем временный glfx canvas для хайрез рендера
+        let tempGlCanvas;
+        try { tempGlCanvas = fx.canvas(); } catch (e) { alert("Ошибка рендера высокого качества."); return; }
+        const tempTex = tempGlCanvas.texture(temp2dCanvas);
+
+        // 4. Применяем настройки к хайрезу
+        applyFiltersToCanvas(tempGlCanvas, tempTex, currentSettings, presetSettings);
+
+        // 5. Переносим на финальный 2D Canvas для надежности на мобилках
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = tempGlCanvas.width;
+        exportCanvas.height = tempGlCanvas.height;
+        exportCanvas.getContext('2d').drawImage(tempGlCanvas, 0, 0);
+
+        let quality = exportMode === '2K' ? 1.0 : (exportMode === 'HDR' ? 0.95 : 0.85);
+        const dataUrl = exportCanvas.toDataURL('image/jpeg', quality);
         const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
+
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const isTelegramMiniApp = Boolean(tg && tg.initData);
 
-        // Переносим свежий кадр на 2D Canvas для 100% надежности на iOS
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = glCanvas.width;
-        tempCanvas.height = glCanvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(glCanvas, 0, 0);
-        
-        const dataUrl = tempCanvas.toDataURL('image/jpeg', quality);
-        
         fetch(dataUrl)
             .then(res => res.blob())
             .then(async blob => {
                 const file = new File([blob], fileName, { type: 'image/jpeg' });
+                tempTex.destroy(); // очистка памяти видеокарты
 
                 if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
@@ -548,7 +590,7 @@ btnSave.addEventListener('click', () => {
                 document.getElementById('export-preview').src = dataUrl;
                 document.getElementById('save-hint-text').innerText = isMobile
                     ? "👆 Удерживайте фото, чтобы сохранить в галерею"
-                    : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...» (или перетащите на рабочий стол)";
+                    : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...»";
                 document.getElementById('save-overlay').classList.add('active');
                 resetEditor();
             });
