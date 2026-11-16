@@ -6,7 +6,7 @@
     <title>Photo Editor WebGL</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Подключаем glfx.js для WebGL-фильтров -->
-    <script src="https://evanw.github.io/glfx.js/glfx.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/glfx.js/0.0.1/glfx.min.js"></script>
     <style>
         :root {
             --bg-color: #000000;
@@ -417,6 +417,30 @@
     container.addEventListener('contextmenu', e => e.preventDefault());
 
     // Экспорт из WebGL
+    
+    function resetEditor() {
+        if (fxTexture) {
+            fxTexture.destroy();
+            fxTexture = null;
+        }
+        previewImg.src = '';
+        upload.value = ''; // Сбрасываем input чтобы можно было загрузить ту же фотку заново
+        glCanvas.style.display = 'none';
+        placeholder.classList.remove('hidden');
+
+        currentSettings = { ...defaultSettings };
+        presetSettings = { ...defaultSettings };
+        activePresetId = 'none';
+        
+        closeSlider();
+        updateLockState();
+        
+        // Возвращаемся на главную вкладку пресетов
+        navItems.forEach(n => n.classList.remove('active'));
+        navItems[0].classList.add('active');
+        renderPresets('presets');
+    }
+
     btnSave.addEventListener('click', () => {
         if (hasLockedActive) {
             if(tg.showAlert) tg.showAlert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
@@ -436,8 +460,7 @@
         const isTelegramMiniApp = Boolean(tg && tg.initData);
 
         // В WebGL мы берем данные напрямую из glCanvas.toDataURL (которая использует встроенный canvas)
-        updatePhotoFilter();
-        const dataUrl = glCanvas.toDataURL('image/jpeg', quality); // Для генерации Blob конвертируем base64 в blob
+        const dataUrl = glCanvas.toDataURL('image/jpeg'); // Для генерации Blob конвертируем base64 в blob
         
         fetch(dataUrl)
             .then(res => res.blob())
@@ -447,6 +470,7 @@
                 if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
                         await navigator.share({ files: [file], title: 'Фото из редактора' });
+                        resetEditor();
                         return;
                     } catch (error) { if (error.name === 'AbortError') return; }
                 }
@@ -457,6 +481,7 @@
                     link.download = fileName; link.href = objectUrl;
                     document.body.appendChild(link); link.click(); document.body.removeChild(link);
                     URL.revokeObjectURL(objectUrl);
+                    resetEditor();
                     return;
                 }
 
@@ -465,6 +490,7 @@
                     ? "👆 Удерживайте фото, чтобы сохранить в галерею"
                     : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...»";
                 document.getElementById('save-overlay').classList.add('active');
+                resetEditor();
             });
     });
 
