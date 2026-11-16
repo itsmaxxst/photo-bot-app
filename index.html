@@ -30,7 +30,6 @@
             position: relative; touch-action: none;
         }
         
-        /* Скрываем оригинальный img, показываем WebGL canvas */
         #photo-preview { display: none; }
         #glfx-canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
         
@@ -48,7 +47,7 @@
         .preset-label { width: 60px; text-align: center; font-size: 10px; font-weight: bold; padding: 4px 0; border-radius: 0 0 2px 2px; color: black; }
         .lock-icon { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.5); border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; }
         .fav-icon { position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: gold; text-shadow: 0 0 2px black; }
-        .tool-item { display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; position: relative; width: 65px; }
+        .tool-item { display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; position: relative; width: 65px; flex-shrink: 0; }
         .tool-icon { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; }
         .tool-name { font-size: 10px; color: white; white-space: normal; text-align: center; line-height: 1.1; }
         .tool-item .lock-icon { top: -5px; right: 5px; }
@@ -104,9 +103,7 @@
 <main class="photo-area" id="photo-container">
     <div id="watermark-overlay"></div>
     <div class="placeholder-text" id="placeholder" onclick="document.getElementById('upload').click()">Нажмите здесь, чтобы загрузить фото</div>
-    <!-- Скрытый img источник -->
     <img id="photo-preview" src="">
-    <!-- WebGL Canvas будет добавлен сюда через JS -->
 </main>
 
 <section class="editor-panel">
@@ -162,7 +159,6 @@
     const btnSave = document.getElementById('btn-save');
     const hdrSdrBadges = document.querySelectorAll('#hdr-sdr-toggle .badge');
 
-    // Инициализация WebGL (glfx.js)
     let glCanvas;
     try { glCanvas = fx.canvas(); } catch (e) { alert("WebGL не поддерживается вашим браузером"); }
     glCanvas.id = 'glfx-canvas';
@@ -178,83 +174,73 @@
     let currentTab = 'presets';
     let favoritePresets = JSON.parse(localStorage.getItem('favoritePresets')) || [];
 
-    // Структура WebGL-настроек. 
-    // Значения от -1 до 1 (или 0 до 1), для UI конвертируем в -100..100.
-    const defaultSettings = { brightness: 0, contrast: 0, hue: 0, saturation: 0, vignette: 0, unsharp: 0, noise: 0, sepia: 0 };
+    // Добавлены новые параметры: vibrance (сочность), blur (размытие), denoise (шумоподавление)
+    const defaultSettings = { 
+        brightness: 0, contrast: 0, hue: 0, saturation: 0, 
+        vignette: 0, unsharp: 0, noise: 0, sepia: 0, 
+        vibrance: 0, blur: 0, denoise: 0 
+    };
+    
     let currentSettings = { ...defaultSettings };
     let presetSettings = { ...defaultSettings };
 
-    // Пресеты с улучшенными премиальными настройками
     const presetsData = [
         { id: 'none', name: 'ORIG', color: '#999', isPro: false, glfx: { ...defaultSettings } },
         
-        { id: 'canon1', name: 'CANON S', color: '#ffcc80', isPro: true, glfx: { 
-            brightness: 0.05, contrast: 0.05, saturation: -0.05, sepia: 0.05, hue: -0.05, unsharp: 0.2, noise: 0.05, vignette: 0.15,
-            curves: {
-                red: [[0, 0], [0.3, 0.35], [0.7, 0.75], [1, 1]],
-                green: [[0, 0], [0.5, 0.5], [1, 1]],
-                blue: [[0, 0.1], [0.5, 0.45], [1, 0.95]]
-            }
+        { id: 'canon1', name: 'CANON 1', color: '#ffcc80', isPro: true, glfx: { 
+            ...defaultSettings,
+            brightness: 0.05, contrast: 0.05, saturation: -0.05, sepia: 0.05, hue: -0.05, unsharp: 0.2, noise: 0.05, vignette: 0.15, vibrance: 0.1,
+            curves: { red: [[0, 0], [0.3, 0.35], [0.7, 0.75], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.1], [0.5, 0.45], [1, 0.95]] }
         }},
         
-        { id: 'canon2', name: 'CANON L', color: '#ffab40', isPro: true, glfx: { 
-            brightness: 0.05, contrast: 0.20, saturation: 0.15, sepia: 0.0, hue: 0.02, unsharp: 0.35, noise: 0.0, vignette: 0.2,
-            curves: {
-                red: [[0, 0], [0.25, 0.15], [0.75, 0.85], [1, 1]],
-                green: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]],
-                blue: [[0, 0], [0.25, 0.15], [0.75, 0.85], [1, 1]]
-            }
+        { id: 'canon2', name: 'CANON 2', color: '#ffab40', isPro: true, glfx: { 
+            ...defaultSettings,
+            brightness: 0.05, contrast: 0.20, saturation: 0.15, hue: 0.02, unsharp: 0.35, vignette: 0.2, vibrance: 0.15,
+            curves: { red: [[0, 0], [0.25, 0.15], [0.75, 0.85], [1, 1]], green: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]], blue: [[0, 0], [0.25, 0.15], [0.75, 0.85], [1, 1]] }
         }},
         
         { id: 'portra', name: 'PORTRA', color: '#e5bda1', isPro: true, glfx: { 
+            ...defaultSettings,
             brightness: 0.08, contrast: -0.05, saturation: -0.15, sepia: 0.1, hue: -0.02, unsharp: 0.1, noise: 0.25, vignette: 0.1,
-            curves: {
-                red: [[0, 0.05], [0.5, 0.5], [1, 0.95]],
-                green: [[0, 0], [0.5, 0.5], [1, 0.95]],
-                blue: [[0, 0.15], [0.5, 0.4], [1, 0.85]]
-            }
+            curves: { red: [[0, 0.05], [0.5, 0.5], [1, 0.95]], green: [[0, 0], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.15], [0.5, 0.4], [1, 0.85]] }
         }},
 
         { id: 'fuji', name: 'FUJI 400', color: '#a5d6a7', isPro: true, glfx: { 
-            brightness: 0.0, contrast: 0.15, saturation: 0.1, sepia: 0.0, hue: 0.1, unsharp: 0.2, noise: 0.15, vignette: 0.2,
-            curves: {
-                red: [[0, 0], [0.5, 0.45], [1, 0.9]],
-                green: [[0, 0.05], [0.5, 0.55], [1, 0.95]],
-                blue: [[0, 0.05], [0.5, 0.5], [1, 1]]
-            }
+            ...defaultSettings,
+            brightness: 0.0, contrast: 0.15, saturation: 0.1, hue: 0.1, unsharp: 0.2, noise: 0.15, vignette: 0.2, vibrance: -0.05,
+            curves: { red: [[0, 0], [0.5, 0.45], [1, 0.9]], green: [[0, 0.05], [0.5, 0.55], [1, 0.95]], blue: [[0, 0.05], [0.5, 0.5], [1, 1]] }
         }},
 
         { id: 'noir', name: 'NOIR', color: '#424242', isPro: false, glfx: { 
-            brightness: 0.0, contrast: 0.3, saturation: -1.0, sepia: 0.0, hue: 0.0, unsharp: 0.4, noise: 0.3, vignette: 0.4,
-            curves: {
-                red: [[0, 0.05], [0.5, 0.5], [1, 0.95]],
-                green: [[0, 0.05], [0.5, 0.5], [1, 0.95]],
-                blue: [[0, 0.05], [0.5, 0.5], [1, 0.95]]
-            }
+            ...defaultSettings,
+            brightness: 0.0, contrast: 0.3, saturation: -1.0, unsharp: 0.4, noise: 0.3, vignette: 0.4,
+            curves: { red: [[0, 0.05], [0.5, 0.5], [1, 0.95]], green: [[0, 0.05], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.05], [0.5, 0.5], [1, 0.95]] }
         }},
 
         { id: 'tealorange', name: 'TEAL&ORG', color: '#00acc1', isPro: true, glfx: { 
-            brightness: -0.05, contrast: 0.2, saturation: 0.15, sepia: 0.0, hue: 0.0, unsharp: 0.2, noise: 0.0, vignette: 0.3,
-            curves: {
-                red: [[0, 0], [0.5, 0.55], [1, 1]],
-                green: [[0, 0], [0.5, 0.45], [1, 1]],
-                blue: [[0, 0.1], [0.5, 0.4], [1, 0.9]]
-            }
+            ...defaultSettings,
+            brightness: -0.05, contrast: 0.2, saturation: 0.15, unsharp: 0.2, vignette: 0.3, vibrance: 0.2,
+            curves: { red: [[0, 0], [0.5, 0.55], [1, 1]], green: [[0, 0], [0.5, 0.45], [1, 1]], blue: [[0, 0.1], [0.5, 0.4], [1, 0.9]] }
         }},
         
-        { id: 'g3', name: 'G3', color: '#cddc39', isPro: false, glfx: { brightness: 0, contrast: 0.1, saturation: 0.2, hue: 0, sepia: 0, vignette: 0, unsharp: 0, noise: 0 } },
-        { id: 'hb2', name: 'HB2', color: '#90caf9', isPro: false, glfx: { brightness: -0.05, contrast: 0.2, saturation: -0.2, hue: 0, sepia: 0, vignette: 0.3, unsharp: 0, noise: 0 } },
-        { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { brightness: 0, contrast: 0.2, saturation: -0.4, hue: 0.1, sepia: 0.2, vignette: 0.1, unsharp: 0, noise: 0 } }
+        { id: 'g3', name: 'G3', color: '#cddc39', isPro: false, glfx: { ...defaultSettings, brightness: 0, contrast: 0.1, saturation: 0.2 } },
+        { id: 'hb2', name: 'HB2', color: '#90caf9', isPro: false, glfx: { ...defaultSettings, brightness: -0.05, contrast: 0.2, saturation: -0.2, vignette: 0.3 } },
+        { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { ...defaultSettings, brightness: 0, contrast: 0.2, saturation: -0.4, hue: 0.1, sepia: 0.2, vignette: 0.1 } }
     ];
 
+    // Добавлены новые инструменты
     const toolsData = [
         { id: 'brightness', name: 'Экспозиция', icon: '☀', min: -100, max: 100, isPro: false },
         { id: 'contrast', name: 'Контраст', icon: '◐', min: -100, max: 100, isPro: false },
         { id: 'saturation', name: 'Насыщенность', icon: '⏺', min: -100, max: 100, isPro: true },
+        { id: 'vibrance', name: 'Сочность', icon: '🌈', min: -100, max: 100, isPro: true },
         { id: 'hue', name: 'Тон', icon: 'H', min: -100, max: 100, isPro: true },
+        { id: 'sepia', name: 'Сепия', icon: '🎞', min: 0, max: 100, isPro: true },
         { id: 'vignette', name: 'Виньетка', icon: '◎', min: 0, max: 100, isPro: true },
         { id: 'unsharp', name: 'Резкость', icon: '△', min: 0, max: 100, isPro: true },
-        { id: 'noise', name: 'Зерно', icon: '▤', min: 0, max: 100, isPro: true }
+        { id: 'blur', name: 'Размытие', icon: '💧', min: 0, max: 100, isPro: true },
+        { id: 'noise', name: 'Зерно', icon: '▤', min: 0, max: 100, isPro: true },
+        { id: 'denoise', name: 'Антишум', icon: '✨', min: 0, max: 100, isPro: true }
     ];
 
     hdrSdrBadges.forEach(badge => {
@@ -350,19 +336,27 @@
         const c = Math.max(-1, Math.min(1, baseSettings.contrast + settingsToApply.contrast));
         const hue = Math.max(-1, Math.min(1, baseSettings.hue + settingsToApply.hue));
         const sat = Math.max(-1, Math.min(1, baseSettings.saturation + settingsToApply.saturation));
-        const sepia = baseSettings.sepia;
+        const vib = Math.max(-1, Math.min(1, baseSettings.vibrance + settingsToApply.vibrance));
+        const sepia = Math.max(0, Math.min(1, baseSettings.sepia + settingsToApply.sepia));
         const vig = Math.max(0, Math.min(1, baseSettings.vignette + settingsToApply.vignette));
         const sharp = Math.max(0, Math.min(1, baseSettings.unsharp + settingsToApply.unsharp));
         const noise = Math.max(0, Math.min(1, baseSettings.noise + settingsToApply.noise));
+        const blur = Math.max(0, Math.min(1, baseSettings.blur + settingsToApply.blur));
+        const denoiseVal = Math.max(0, Math.min(1, baseSettings.denoise + settingsToApply.denoise));
+        
         const colorCurves = baseSettings.curves;
 
         targetCanvas.draw(texture);
+
+        // Порядок важен: шумоподавление до резкости, блюр, потом цвет
+        if (denoiseVal > 0) targetCanvas.denoise(denoiseVal * 50);
+        if (blur > 0) targetCanvas.triangleBlur(blur * 30);
 
         if (colorCurves) {
             targetCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
         }
 
-        targetCanvas.brightnessContrast(b, c).hueSaturation(hue, sat);
+        targetCanvas.brightnessContrast(b, c).hueSaturation(hue, sat).vibrance(vib);
             
         if (sepia > 0) targetCanvas.sepia(sepia);
         if (sharp > 0) targetCanvas.unsharpMask(sharp * 5, 2);
@@ -521,8 +515,7 @@
             return;
         }
 
-        // 1. Определяем нужный размер экспорта
-        let maxDim = 1080; // SDR
+        let maxDim = 1080;
         if (exportMode === 'HDR') maxDim = 1920;
         if (exportMode === '2K') maxDim = 2560;
         
@@ -536,21 +529,17 @@
             th = Math.round(oh * ratio);
         }
 
-        // 2. Создаем временный 2D canvas с нужным разрешением (без апскейла)
         const temp2dCanvas = document.createElement('canvas');
         temp2dCanvas.width = tw;
         temp2dCanvas.height = th;
         temp2dCanvas.getContext('2d').drawImage(originalImage, 0, 0, tw, th);
 
-        // 3. Создаем временный glfx canvas для хайрез рендера
         let tempGlCanvas;
         try { tempGlCanvas = fx.canvas(); } catch (e) { alert("Ошибка рендера высокого качества."); return; }
         const tempTex = tempGlCanvas.texture(temp2dCanvas);
 
-        // 4. Применяем настройки к хайрезу
         applyFiltersToCanvas(tempGlCanvas, tempTex, currentSettings, presetSettings);
 
-        // 5. Переносим на финальный 2D Canvas для надежности на мобилках
         const exportCanvas = document.createElement('canvas');
         exportCanvas.width = tempGlCanvas.width;
         exportCanvas.height = tempGlCanvas.height;
@@ -567,7 +556,7 @@
             .then(res => res.blob())
             .then(async blob => {
                 const file = new File([blob], fileName, { type: 'image/jpeg' });
-                tempTex.destroy(); // очистка памяти видеокарты
+                tempTex.destroy();
 
                 if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
