@@ -144,7 +144,7 @@
             display: none; padding: 20px; flex-direction: column; align-items: center;
         }
         .slider-panel.active { display: flex; }
-        .slider-label { font-size: 12px; margin-bottom: 15px; }
+        
         input[type="range"] {
             width: 100%; -webkit-appearance: none; background: transparent; margin-bottom: 20px;
         }
@@ -155,7 +155,8 @@
         input[type="range"]::-webkit-slider-runnable-track {
             width: 100%; height: 4px; cursor: pointer; background: #444; border-radius: 2px;
         }
-        .slider-actions { display: flex; justify-content: space-between; width: 100%; }
+        .slider-actions { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 350px; margin: 0 auto; }
+        .slider-label { font-size: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; width: 100%; max-width: 350px; margin: 0 auto 15px auto; }
         .action-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
 
         /* Нижняя навигация (Табы переключения разделов) */
@@ -227,10 +228,14 @@
 
 <section class="editor-panel">
     <div class="slider-panel" id="slider-panel">
-        <div class="slider-label" id="slider-tool-name">Настройка</div>
-        <input type="range" id="active-slider" min="50" max="150" value="100">
+        <div class="slider-label">
+            <span id="slider-tool-name">Настройка</span>
+            <span id="slider-tool-value">100</span>
+        </div>
+        <input type="range" id="active-slider" min="50" max="150" value="100" style="max-width: 350px; margin: 0 auto 20px auto;">
         <div class="slider-actions">
             <button class="action-btn" id="btn-cancel-tool">✕</button>
+            <button class="action-btn" id="btn-reset-tool" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="btn-apply-tool">✓</button>
         </div>
     </div>
@@ -275,6 +280,8 @@
     const sliderPanel = document.getElementById('slider-panel');
     const activeSlider = document.getElementById('active-slider');
     const sliderToolName = document.getElementById('slider-tool-name');
+    const sliderToolValue = document.getElementById('slider-tool-value');
+    const btnResetTool = document.getElementById('btn-reset-tool');
     
     const btnSave = document.getElementById('btn-save');
     const exportCanvas = document.getElementById('export-canvas');
@@ -416,6 +423,7 @@
         const t = toolsData.find(x => x.id === id);
         activeToolKey = id;
         sliderToolName.innerText = t.name;
+        sliderToolValue.innerText = currentSettings[id];
         activeSlider.min = t.min;
         activeSlider.max = t.max;
         activeSlider.value = currentSettings[id];
@@ -427,9 +435,21 @@
     document.getElementById('btn-cancel-tool').onclick = () => closeSlider();
     document.getElementById('btn-apply-tool').onclick = () => closeSlider();
 
+    btnResetTool.onclick = () => {
+        if(activeToolKey) {
+            const t = toolsData.find(x => x.id === activeToolKey);
+            currentSettings[activeToolKey] = t.def;
+            activeSlider.value = t.def;
+            sliderToolValue.innerText = t.def;
+            updatePhotoFilter();
+            updateLockState();
+        }
+    };
+
     activeSlider.addEventListener('input', (e) => {
         if(activeToolKey) {
             currentSettings[activeToolKey] = e.target.value;
+            sliderToolValue.innerText = e.target.value;
             updatePhotoFilter();
             updateLockState();
         }
