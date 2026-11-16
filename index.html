@@ -538,7 +538,16 @@
         // Используем изображение напрямую, без асинхронного onload, чтобы сохранить User Gesture контекст
         exportCanvas.width = preview.naturalWidth;
         exportCanvas.height = preview.naturalHeight;
-        ctx.filter = preview.style.filter;
+        
+        // Явно собираем строку фильтров, так как чтение preview.style.filter 
+        // в некоторых версиях WebKit (iOS) возвращает пустую строку или нормализованные значения
+        const b = currentSettings.brightness;
+        const c = currentSettings.contrast;
+        const s = currentSettings.saturate;
+        const h = currentSettings.hue;
+        const filterStr = (currentSettings.presetFilter ? currentSettings.presetFilter + ' ' : '') + `brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${h}deg)`;
+        
+        ctx.filter = filterStr;
         ctx.drawImage(preview, 0, 0, exportCanvas.width, exportCanvas.height);
         
         let quality = exportMode === 'HDR' ? 1.0 : 0.8;
