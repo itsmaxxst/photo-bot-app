@@ -172,6 +172,18 @@
         .hidden { display: none !important; }
         .locked { opacity: 0.7; }
         
+        
+        /* Оверлей для сохранения (fallback) */
+        #save-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 9999;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #save-overlay.active { display: flex; }
+        #save-overlay img { max-width: 90%; max-height: 80%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .save-hint { color: white; margin-top: 25px; font-size: 16px; font-weight: bold; text-align: center; }
+        .close-overlay { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; border: none; background: none; cursor: pointer; padding: 10px; }
+
         /* Скрытый canvas для экспорта */
         #export-canvas { display: none; }
     </style>
@@ -180,6 +192,14 @@
 
 <input type="file" id="upload" accept="image/*" class="hidden">
 <canvas id="export-canvas"></canvas>
+
+<!-- Оверлей для 100% сохранения на iOS -->
+<div id="save-overlay">
+    <button class="close-overlay" onclick="document.getElementById('save-overlay').classList.remove('active')">✕</button>
+    <img id="export-preview" src="">
+    <div class="save-hint">👆 Удерживайте фото, чтобы сохранить в галерею</div>
+</div>
+
 
 <header class="top-bar">
     <div class="top-badges" id="hdr-sdr-toggle">
@@ -447,7 +467,7 @@
     container.addEventListener('pointerleave', () => { isHolding = false; updatePhotoFilter(); });
     container.addEventListener('contextmenu', e => e.preventDefault());
 
-    // --- Сохранение/Экспорт фото ---
+    // --- Сохранение/Экспорт фото (с поддержкой iOS) ---
     btnSave.addEventListener('click', () => {
         if (!preview.src || preview.src === window.location.href) {
             if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
@@ -456,34 +476,55 @@
         }
 
         const ctx = exportCanvas.getContext('2d');
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.src = preview.src;
+        
+        // Используем изображение напрямую, без асинхронного onload, чтобы сохранить User Gesture контекст
+        exportCanvas.width = preview.naturalWidth;
+        exportCanvas.height = preview.naturalHeight;
+        ctx.filter = preview.style.filter;
+        ctx.drawImage(preview, 0, 0, exportCanvas.width, exportCanvas.height);
+        
+        let quality = exportMode === 'HDR' ? 1.0 : 0.8;
+        const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
 
-        img.onload = () => {
-            exportCanvas.width = img.width;
-            exportCanvas.height = img.height;
+        exportCanvas.toBlob(async (blob) => {
+            if (!blob) return;
+            const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+            // Способ 1: Нативный Share API (Вызывает шторку iOS 'Сохранить изображение')
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Фото из редактора'
+                    });
+                    return; // Успех, выходим
+                } catch (error) {
+                    if (error.name === 'AbortError') return; // Юзер сам закрыл шторку
+                    console.log('Share API error:', error);
+                }
+            }
             
-            // Применяем текущие фильтры к canvas
-            ctx.filter = preview.style.filter;
-            ctx.drawImage(img, 0, 0, exportCanvas.width, exportCanvas.height);
-            
-            // Логика экспорта в зависимости от HDR/SDR
-            // Для реального HDR требуется специфичная работа с цветом в WebGL/Canvas2D с colorSpace: 'display-p3'
-            // В MVP мы имитируем это, сохраняя с разным качеством и, если возможно, цветовым пространством
-            let mimeType = 'image/jpeg';
-            let quality = exportMode === 'HDR' ? 1.0 : 0.8;
-            
-            const dataUrl = exportCanvas.toDataURL(mimeType, quality);
-            
-            // Создаем ссылку для скачивания
-            const link = document.createElement('a');
-            link.download = `edited_photo_${exportMode}_${Date.now()}.jpg`;
-            link.href = dataUrl;
-            link.click();
-            
-            if(tg.showAlert) tg.showAlert(`Фото сохранено в режиме ${exportMode}!`);
-        };
+            // Способ 2: Скачивание (Работает на Android и Telegram Desktop)
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            if (!isIOS) {
+                const dataUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(dataUrl);
+                if(tg.showAlert) tg.showAlert("Фото сохранено!");
+                return;
+            }
+
+            // Способ 3: Железобетонный fallback для iOS, если Share API заблокирован WebView
+            const dataUrlBase64 = exportCanvas.toDataURL('image/jpeg', quality);
+            document.getElementById('export-preview').src = dataUrlBase64;
+            document.getElementById('save-overlay').classList.add('active');
+
+        }, 'image/jpeg', quality);
     });
 
     renderPresets();
