@@ -48,6 +48,7 @@
         }
         .badge {
             font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 12px; color: #888;
+            cursor: pointer;
         }
         .badge.active { background: white; color: black; }
 
@@ -117,6 +118,12 @@
             background: rgba(0,0,0,0.5); border-radius: 50%; width: 16px; height: 16px;
             display: flex; align-items: center; justify-content: center; font-size: 10px;
         }
+        .fav-icon {
+            position: absolute; top: 4px; left: 4px;
+            width: 16px; height: 16px;
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+            color: gold; text-shadow: 0 0 2px black;
+        }
 
         /* Дизайн инструментов */
         .tool-item {
@@ -164,34 +171,33 @@
         /* Утилиты */
         .hidden { display: none !important; }
         .locked { opacity: 0.7; }
+        
+        /* Скрытый canvas для экспорта */
+        #export-canvas { display: none; }
     </style>
 </head>
 <body>
 
-<!-- Скрытый инпут для фото -->
 <input type="file" id="upload" accept="image/*" class="hidden">
+<canvas id="export-canvas"></canvas>
 
-<!-- Верхняя панель -->
 <header class="top-bar">
-    <div class="top-badges">
-        <span class="badge">HDR</span>
-        <span class="badge active">SDR</span>
+    <div class="top-badges" id="hdr-sdr-toggle">
+        <span class="badge" data-mode="HDR">HDR</span>
+        <span class="badge active" data-mode="SDR">SDR</span>
     </div>
     <div style="display: flex; gap: 15px;">
-        <button class="icon-btn" onclick="document.getElementById('upload').click()">📁</button> <!-- Загрузить фото -->
+        <button class="icon-btn" onclick="document.getElementById('upload').click()" title="Загрузить фото">📁</button>
+        <button class="icon-btn" id="btn-save" title="Сохранить">⭱</button>
     </div>
 </header>
 
-<!-- Зона фотографии -->
 <main class="photo-area" id="photo-container">
     <div class="placeholder-text" id="placeholder">Загрузите фото (иконка 📁 сверху)</div>
     <img id="photo-preview" src="" class="hidden">
 </main>
 
-<!-- Панель редактирования -->
 <section class="editor-panel">
-    
-    <!-- Панель активного инструмента (Слайдер) -->
     <div class="slider-panel" id="slider-panel">
         <div class="slider-label" id="slider-tool-name">Настройка</div>
         <input type="range" id="active-slider" min="50" max="150" value="100">
@@ -201,21 +207,18 @@
         </div>
     </div>
 
-    <!-- Основной интерфейс выбора -->
     <div id="selection-panel">
         <div class="sub-tabs" id="sub-tabs-container">
             <!-- Заполняется JS (Вкладки) -->
         </div>
-
         <div class="items-scroll" id="items-container">
             <!-- Заполняется JS (Пресеты или Инструменты) -->
         </div>
     </div>
 
-    <!-- Главная нижняя навигация -->
     <nav class="bottom-nav">
-        <div class="nav-item active" data-tab="presets">❐</div> <!-- Пресеты -->
-        <div class="nav-item" data-tab="tools">⚲</div> <!-- Инструменты (Ползунки) -->
+        <div class="nav-item active" data-tab="presets">❐</div>
+        <div class="nav-item" data-tab="tools">⚲</div>
     </nav>
 </section>
 
@@ -224,9 +227,8 @@
     tg.expand(); 
 
     const urlParams = new URLSearchParams(window.location.search);
-    const isPremium = urlParams.get('premium') === '1'; // Статус Premium от бота
+    const isPremium = urlParams.get('premium') === '1';
 
-    // DOM Элементы
     const upload = document.getElementById('upload');
     const preview = document.getElementById('photo-preview');
     const placeholder = document.getElementById('placeholder');
@@ -240,16 +242,23 @@
     const sliderPanel = document.getElementById('slider-panel');
     const activeSlider = document.getElementById('active-slider');
     const sliderToolName = document.getElementById('slider-tool-name');
+    
+    const btnSave = document.getElementById('btn-save');
+    const exportCanvas = document.getElementById('export-canvas');
+    const hdrSdrBadges = document.querySelectorAll('#hdr-sdr-toggle .badge');
 
-    // Состояние фильтров
     let currentSettings = {
         brightness: 100, contrast: 100, saturate: 100, hue: 0,
-        presetFilter: '' // Сохранение фильтра от пресета
+        presetFilter: '' 
     };
     let activeToolKey = null;
     let isHolding = false;
+    let exportMode = 'SDR';
+    let currentTab = 'presets'; // 'presets' или 'favorites'
+    
+    // Загрузка избранного из localStorage (или пустой массив)
+    let favoritePresets = JSON.parse(localStorage.getItem('favoritePresets')) || [];
 
-    // --- Данные интерфейса ---
     const presetsData = [
         { id: 'none', name: 'ORIG', color: '#999', filter: 'none', isPro: false },
         { id: 'g3', name: 'G3', color: '#cddc39', filter: 'contrast(110%) saturate(120%)', isPro: false },
@@ -267,22 +276,60 @@
         { id: 'hue', name: 'Тон', icon: 'H', min: 0, max: 360, def: 0, isPro: true }
     ];
 
+    // --- Переключение HDR/SDR ---
+    hdrSdrBadges.forEach(badge => {
+        badge.addEventListener('click', () => {
+            hdrSdrBadges.forEach(b => b.classList.remove('active'));
+            badge.classList.add('active');
+            exportMode = badge.getAttribute('data-mode');
+        });
+    });
+
+    // --- Избранное (Добавление/Удаление) ---
+    window.toggleFavorite = function(event, id) {
+        event.stopPropagation(); // Чтобы не применялся сам пресет
+        if (id === 'none') return; // Оригинал нельзя добавить в избранное
+        
+        const index = favoritePresets.indexOf(id);
+        if (index > -1) {
+            favoritePresets.splice(index, 1);
+        } else {
+            favoritePresets.push(id);
+        }
+        localStorage.setItem('favoritePresets', JSON.stringify(favoritePresets));
+        renderPresets(currentTab); // Перерисовываем текущую вкладку
+    };
+
     // --- Логика рендера UI ---
-    function renderPresets() {
+    function renderPresets(tab = 'presets') {
+        currentTab = tab;
         subTabsContainer.innerHTML = `
-            <div class="sub-tab active">ПРЕСЕТЫ</div>
-            <div class="sub-tab">ИЗБРАННОЕ</div>
+            <div class="sub-tab ${tab === 'presets' ? 'active' : ''}" onclick="renderPresets('presets')">ПРЕСЕТЫ</div>
+            <div class="sub-tab ${tab === 'favorites' ? 'active' : ''}" onclick="renderPresets('favorites')">ИЗБРАННОЕ</div>
         `;
         
         itemsContainer.innerHTML = '';
-        presetsData.forEach(p => {
+        
+        let presetsToShow = presetsData;
+        if (tab === 'favorites') {
+            presetsToShow = presetsData.filter(p => favoritePresets.includes(p.id));
+            if (presetsToShow.length === 0) {
+                itemsContainer.innerHTML = '<div style="color: #888; font-size: 12px; margin: auto;">Нет избранных пресетов</div>';
+                return;
+            }
+        }
+
+        presetsToShow.forEach(p => {
             const isLocked = p.isPro && !isPremium;
             const bgImg = preview.src ? `background-image: url(${preview.src});` : '';
+            const isFav = favoritePresets.includes(p.id);
+            const favIcon = p.id !== 'none' ? `<div class="fav-icon" onclick="toggleFavorite(event, '${p.id}')">${isFav ? '★' : '☆'}</div>` : '';
             
             itemsContainer.innerHTML += `
                 <div class="preset-item ${isLocked ? 'locked' : ''}" onclick="applyPreset('${p.id}')">
                     <div class="preset-thumb" style="${bgImg} filter: ${p.filter};"></div>
                     <div class="preset-label" style="background-color: ${p.color};">${p.name}</div>
+                    ${favIcon}
                     ${isLocked ? '<div class="lock-icon">🔒</div>' : ''}
                 </div>
             `;
@@ -290,10 +337,7 @@
     }
 
     function renderTools() {
-        subTabsContainer.innerHTML = `
-            <div class="sub-tab active">ВСЕ ИНСТРУМЕНТЫ</div>
-        `;
-
+        subTabsContainer.innerHTML = `<div class="sub-tab active">ВСЕ ИНСТРУМЕНТЫ</div>`;
         itemsContainer.innerHTML = '';
         toolsData.forEach(t => {
             const isLocked = t.isPro && !isPremium;
@@ -310,7 +354,11 @@
     // --- Взаимодействие с инструментами ---
     window.applyPreset = function(id) {
         const p = presetsData.find(x => x.id === id);
-        if (p.isPro && !isPremium) return tg.showAlert("Этот пресет доступен только в Premium версии.");
+        if (p.isPro && !isPremium) {
+            if(tg.showAlert) tg.showAlert("Этот пресет доступен только в Premium версии.");
+            else alert("Этот пресет доступен только в Premium версии.");
+            return;
+        }
         
         currentSettings.presetFilter = p.filter === 'none' ? '' : p.filter;
         updatePhotoFilter();
@@ -318,7 +366,11 @@
 
     window.openTool = function(id) {
         const t = toolsData.find(x => x.id === id);
-        if (t.isPro && !isPremium) return tg.showAlert("Этот инструмент доступен только в Premium версии.");
+        if (t.isPro && !isPremium) {
+            if(tg.showAlert) tg.showAlert("Этот инструмент доступен только в Premium версии.");
+            else alert("Этот инструмент доступен только в Premium версии.");
+            return;
+        }
 
         activeToolKey = id;
         sliderToolName.innerText = t.name;
@@ -330,16 +382,8 @@
         sliderPanel.classList.add('active');
     };
 
-    // Закрытие/Применение тулбара слайдера
-    document.getElementById('btn-cancel-tool').onclick = () => {
-        // Отмена возвращает сохраненное значение, но здесь для MVP мы просто закроем. 
-        // В идеале нужно хранить временное состояние.
-        closeSlider();
-    };
-    
-    document.getElementById('btn-apply-tool').onclick = () => {
-        closeSlider();
-    };
+    document.getElementById('btn-cancel-tool').onclick = () => closeSlider();
+    document.getElementById('btn-apply-tool').onclick = () => closeSlider();
 
     activeSlider.addEventListener('input', (e) => {
         if(activeToolKey) {
@@ -354,17 +398,15 @@
         activeToolKey = null;
     }
 
-    // --- Применение фильтров к изображению ---
+    // --- Применение фильтров ---
     function updatePhotoFilter() {
         if (isHolding) {
-            preview.style.filter = 'none'; // Показать оригинал
+            preview.style.filter = 'none';
         } else {
             const b = currentSettings.brightness;
             const c = currentSettings.contrast;
             const s = currentSettings.saturate;
             const h = currentSettings.hue;
-            
-            // Комбинируем фильтр пресета и ручные настройки
             let filterStr = currentSettings.presetFilter + ` brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${h}deg)`;
             preview.style.filter = filterStr;
         }
@@ -375,11 +417,9 @@
         item.addEventListener('click', (e) => {
             const tab = item.getAttribute('data-tab');
             if(!tab) return;
-
             navItems.forEach(n => n.classList.remove('active'));
             item.classList.add('active');
-
-            if (tab === 'presets') renderPresets();
+            if (tab === 'presets') renderPresets('presets');
             if (tab === 'tools') renderTools();
         });
     });
@@ -393,9 +433,8 @@
                 preview.src = e.target.result;
                 preview.classList.remove('hidden');
                 placeholder.classList.add('hidden');
-                // Перерисовываем пресеты, чтобы обновить миниатюры
                 if(document.querySelector('.nav-item.active').getAttribute('data-tab') === 'presets') {
-                    renderPresets();
+                    renderPresets(currentTab);
                 }
             }
             reader.readAsDataURL(file);
@@ -408,7 +447,45 @@
     container.addEventListener('pointerleave', () => { isHolding = false; updatePhotoFilter(); });
     container.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Инициализация при запуске
+    // --- Сохранение/Экспорт фото ---
+    btnSave.addEventListener('click', () => {
+        if (!preview.src || preview.src === window.location.href) {
+            if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
+            else alert("Сначала загрузите фото!");
+            return;
+        }
+
+        const ctx = exportCanvas.getContext('2d');
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = preview.src;
+
+        img.onload = () => {
+            exportCanvas.width = img.width;
+            exportCanvas.height = img.height;
+            
+            // Применяем текущие фильтры к canvas
+            ctx.filter = preview.style.filter;
+            ctx.drawImage(img, 0, 0, exportCanvas.width, exportCanvas.height);
+            
+            // Логика экспорта в зависимости от HDR/SDR
+            // Для реального HDR требуется специфичная работа с цветом в WebGL/Canvas2D с colorSpace: 'display-p3'
+            // В MVP мы имитируем это, сохраняя с разным качеством и, если возможно, цветовым пространством
+            let mimeType = 'image/jpeg';
+            let quality = exportMode === 'HDR' ? 1.0 : 0.8;
+            
+            const dataUrl = exportCanvas.toDataURL(mimeType, quality);
+            
+            // Создаем ссылку для скачивания
+            const link = document.createElement('a');
+            link.download = `edited_photo_${exportMode}_${Date.now()}.jpg`;
+            link.href = dataUrl;
+            link.click();
+            
+            if(tg.showAlert) tg.showAlert(`Фото сохранено в режиме ${exportMode}!`);
+        };
+    });
+
     renderPresets();
 </script>
 </body>
