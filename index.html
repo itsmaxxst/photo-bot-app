@@ -75,11 +75,11 @@
         /* Редактор (нижняя часть) */
         .editor-panel {
             background: var(--bg-color);
-            padding-bottom: 20px; /* Safe area */
+            padding-bottom: 20px;
             display: flex; flex-direction: column;
         }
 
-        /* Саб-табы (ВСЕ ИНСТРУМЕНТЫ, САМОЕ НУЖНОЕ и т.д.) */
+        /* Саб-табы */
         .sub-tabs {
             display: flex; gap: 15px; padding: 10px 15px;
             overflow-x: auto; white-space: nowrap;
@@ -92,7 +92,7 @@
         }
         .sub-tab.active { background: white; color: black; }
 
-        /* Горизонтальный скролл для пресетов и инструментов */
+        /* Горизонтальный скролл */
         .items-scroll {
             display: flex; gap: 15px; padding: 20px 15px;
             overflow-x: auto; white-space: nowrap;
@@ -159,7 +159,7 @@
         .slider-label { font-size: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; width: 100%; max-width: 350px; margin: 0 auto 15px auto; }
         .action-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
 
-        /* Нижняя навигация (Табы переключения разделов) */
+        /* Нижняя навигация */
         .bottom-nav {
             display: flex; justify-content: space-around; padding: 15px 0 25px 0;
             border-top: 1px solid #111;
@@ -173,19 +173,22 @@
         .hidden { display: none !important; }
         .locked { opacity: 0.7; }
         
-        
-        /* Оверлей для сохранения (fallback) */
+        /* Оверлей для сохранения (iOS + Telegram Desktop) */
         #save-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); z-index: 9999;
             display: none; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; box-sizing: border-box;
         }
         #save-overlay.active { display: flex; }
-        #save-overlay img { max-width: 90%; max-height: 80%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        .save-hint { color: white; margin-top: 25px; font-size: 16px; font-weight: bold; text-align: center; }
-        .close-overlay { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; border: none; background: none; cursor: pointer; padding: 10px; }
+        #save-overlay img {
+            max-width: 90%; max-height: 75%; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            user-select: auto; -webkit-user-select: auto; -webkit-touch-callout: default;
+        }
+        .save-hint { color: white; margin-top: 20px; font-size: 15px; font-weight: bold; text-align: center; line-height: 1.4; }
+        .close-overlay { position: absolute; top: 15px; right: 20px; color: white; font-size: 30px; border: none; background: none; cursor: pointer; padding: 10px; }
 
-        
         /* Премиум баннер */
         #premium-banner {
             background: linear-gradient(90deg, #ff8a00, #e52e71);
@@ -200,7 +203,6 @@
         }
         #watermark-overlay.active { display: block; }
 
-        /* Скрытый canvas для экспорта */
         #export-canvas { display: none; }
     </style>
 </head>
@@ -209,13 +211,12 @@
 <input type="file" id="upload" accept="image/*" class="hidden">
 <canvas id="export-canvas"></canvas>
 
-<!-- Оверлей для 100% сохранения на iOS -->
+<!-- Оверлей для 100% сохранения -->
 <div id="save-overlay">
     <button class="close-overlay" onclick="document.getElementById('save-overlay').classList.remove('active')">✕</button>
     <img id="export-preview" src="">
-    <div class="save-hint">👆 Удерживайте фото, чтобы сохранить в галерею</div>
+    <div class="save-hint" id="save-hint-text">👆 Удерживайте фото, чтобы сохранить в галерею</div>
 </div>
-
 
 <header class="top-bar">
     <div class="top-badges" id="hdr-sdr-toggle">
@@ -223,8 +224,12 @@
         <span class="badge active" data-mode="SDR">SDR</span>
     </div>
     <div style="display: flex; gap: 15px;">
-        <button class="icon-btn" onclick="document.getElementById('upload').click()" title="Загрузить фото"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
-        <button class="icon-btn" id="btn-save" title="Сохранить"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+        <button class="icon-btn" onclick="document.getElementById('upload').click()" title="Загрузить фото">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-save" title="Сохранить">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </button>
     </div>
 </header>
 
@@ -249,22 +254,20 @@
     </div>
 
     <div id="selection-panel">
-        <div class="sub-tabs" id="sub-tabs-container">
-            <!-- Заполняется JS (Вкладки) -->
-        </div>
-        <div class="items-scroll" id="items-container">
-            <!-- Заполняется JS (Пресеты или Инструменты) -->
-        </div>
+        <div class="sub-tabs" id="sub-tabs-container"></div>
+        <div class="items-scroll" id="items-container"></div>
     </div>
 
-    
     <div id="premium-banner" class="hidden">
         <span>⭐️ Эффект Premium. Сохранение недоступно.</span>
     </div>
     <nav class="bottom-nav">
-
-        <div class="nav-item active" data-tab="presets"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
-        <div class="nav-item" data-tab="tools"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></div>
+        <div class="nav-item active" data-tab="presets">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </div>
+        <div class="nav-item" data-tab="tools">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        </div>
     </nav>
 </section>
 
@@ -304,9 +307,8 @@
     let activeToolKey = null;
     let isHolding = false;
     let exportMode = 'SDR';
-    let currentTab = 'presets'; // 'presets' или 'favorites'
+    let currentTab = 'presets';
     
-    // Загрузка избранного из localStorage (или пустой массив)
     let favoritePresets = JSON.parse(localStorage.getItem('favoritePresets')) || [];
 
     const presetsData = [
@@ -326,7 +328,6 @@
         { id: 'hue', name: 'Тон', icon: 'H', min: 0, max: 360, def: 0, isPro: true }
     ];
 
-    // --- Переключение HDR/SDR ---
     hdrSdrBadges.forEach(badge => {
         badge.addEventListener('click', () => {
             hdrSdrBadges.forEach(b => b.classList.remove('active'));
@@ -335,29 +336,22 @@
         });
     });
 
-    // --- Избранное (Добавление/Удаление) ---
     window.toggleFavorite = function(event, id) {
-        event.stopPropagation(); // Чтобы не применялся сам пресет
-        if (id === 'none') return; // Оригинал нельзя добавить в избранное
-        
+        event.stopPropagation();
+        if (id === 'none') return;
         const index = favoritePresets.indexOf(id);
-        if (index > -1) {
-            favoritePresets.splice(index, 1);
-        } else {
-            favoritePresets.push(id);
-        }
+        if (index > -1) favoritePresets.splice(index, 1);
+        else favoritePresets.push(id);
         localStorage.setItem('favoritePresets', JSON.stringify(favoritePresets));
-        renderPresets(currentTab); // Перерисовываем текущую вкладку
+        renderPresets(currentTab);
     };
 
-    // --- Логика рендера UI ---
     function renderPresets(tab = 'presets') {
         currentTab = tab;
         subTabsContainer.innerHTML = `
             <div class="sub-tab ${tab === 'presets' ? 'active' : ''}" onclick="renderPresets('presets')">ПРЕСЕТЫ</div>
             <div class="sub-tab ${tab === 'favorites' ? 'active' : ''}" onclick="renderPresets('favorites')">ИЗБРАННОЕ</div>
         `;
-        
         itemsContainer.innerHTML = '';
         
         let presetsToShow = presetsData;
@@ -401,13 +395,9 @@
         });
     }
 
-    // --- Взаимодействие с инструментами ---
-
     function updateLockState() {
         const p = presetsData.find(x => x.id === activePresetId);
         const isPresetLocked = p && p.isPro && !isPremium;
-        
-        // Считаем инструмент заблокированным, если его значение изменено и он платный
         const isToolLocked = !isPremium && (currentSettings.saturate != 100 || currentSettings.hue != 0);
         
         if (isPresetLocked || isToolLocked) {
@@ -471,7 +461,6 @@
         activeToolKey = null;
     }
 
-    // --- Применение фильтров ---
     function updatePhotoFilter() {
         if (isHolding) {
             preview.style.filter = 'none';
@@ -485,9 +474,8 @@
         }
     }
 
-    // --- Переключение нижних вкладок ---
     navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
+        item.addEventListener('click', () => {
             const tab = item.getAttribute('data-tab');
             if(!tab) return;
             navItems.forEach(n => n.classList.remove('active'));
@@ -497,7 +485,6 @@
         });
     });
 
-    // --- Загрузка фото ---
     upload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -514,13 +501,83 @@
         }
     });
 
-    // --- Логика "Удерживай для оригинала" ---
     container.addEventListener('pointerdown', () => { if(preview.src) { isHolding = true; updatePhotoFilter(); } });
     container.addEventListener('pointerup', () => { isHolding = false; updatePhotoFilter(); });
     container.addEventListener('pointerleave', () => { isHolding = false; updatePhotoFilter(); });
     container.addEventListener('contextmenu', e => e.preventDefault());
 
-    // --- Сохранение/Экспорт фото (с поддержкой iOS) ---
+    // --- Универсальный пиксельный обработчик (работает в любом WebView без ctx.filter) ---
+    function renderFilteredCanvas(img, canvas) {
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // Собираем все активные фильтры (из пресета + ручные ползунки)
+        const fullStr = (currentSettings.presetFilter ? currentSettings.presetFilter + ' ' : '') +
+                        `brightness(${currentSettings.brightness}%) contrast(${currentSettings.contrast}%) saturate(${currentSettings.saturate}%) hue-rotate(${currentSettings.hue}deg)`;
+
+        const ops = [];
+        const regex = /(brightness|contrast|saturate|hue-rotate|sepia)\(([^)]+)\)/g;
+        let match;
+        while ((match = regex.exec(fullStr)) !== null) {
+            const type = match[1];
+            const raw = match[2].trim();
+            let val = parseFloat(raw);
+            if (raw.endsWith('%')) val /= 100;
+            ops.push({ type, val });
+        }
+
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const data = imageData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i + 1];
+            let b = data[i + 2];
+
+            for (let j = 0; j < ops.length; j++) {
+                const { type, val } = ops[j];
+                if (type === 'brightness') {
+                    r *= val; g *= val; b *= val;
+                } else if (type === 'contrast') {
+                    r = (r - 128) * val + 128;
+                    g = (g - 128) * val + 128;
+                    b = (b - 128) * val + 128;
+                } else if (type === 'saturate') {
+                    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    r = lum + (r - lum) * val;
+                    g = lum + (g - lum) * val;
+                    b = lum + (b - lum) * val;
+                } else if (type === 'sepia') {
+                    const sr = r * 0.393 + g * 0.769 + b * 0.189;
+                    const sg = r * 0.349 + g * 0.686 + b * 0.168;
+                    const sb = r * 0.272 + g * 0.534 + b * 0.131;
+                    r = r * (1 - val) + sr * val;
+                    g = g * (1 - val) + sg * val;
+                    b = b * (1 - val) + sb * val;
+                } else if (type === 'hue-rotate') {
+                    const rad = val * Math.PI / 180;
+                    const cos = Math.cos(rad);
+                    const sin = Math.sin(rad);
+                    const nr = r * (0.213 + cos * 0.787 - sin * 0.213) + g * (0.715 - cos * 0.715 - sin * 0.715) + b * (0.072 - cos * 0.072 + sin * 0.928);
+                    const ng = r * (0.213 - cos * 0.213 + sin * 0.143) + g * (0.715 + cos * 0.285 + sin * 0.140) + b * (0.072 - cos * 0.072 - sin * 0.283);
+                    const nb = r * (0.213 - cos * 0.213 - sin * 0.787) + g * (0.715 - cos * 0.715 + sin * 0.715) + b * (0.072 + cos * 0.928 + sin * 0.072);
+                    r = nr; g = ng; b = nb;
+                }
+            }
+
+            data[i] = r < 0 ? 0 : (r > 255 ? 255 : r);
+            data[i + 1] = g < 0 ? 0 : (g > 255 ? 255 : g);
+            data[i + 2] = b < 0 ? 0 : (b > 255 ? 255 : b);
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    // --- Сохранение/Экспорт фото ---
     btnSave.addEventListener('click', () => {
         if (hasLockedActive) {
             if(tg.showAlert) tg.showAlert("Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.");
@@ -533,47 +590,34 @@
             return;
         }
 
-        const ctx = exportCanvas.getContext('2d');
+        // Применяем эффекты попиксельно
+        renderFilteredCanvas(preview, exportCanvas);
         
-        // Используем изображение напрямую, без асинхронного onload, чтобы сохранить User Gesture контекст
-        exportCanvas.width = preview.naturalWidth;
-        exportCanvas.height = preview.naturalHeight;
-        
-        // Явно собираем строку фильтров, так как чтение preview.style.filter 
-        // в некоторых версиях WebKit (iOS) возвращает пустую строку или нормализованные значения
-        const b = currentSettings.brightness;
-        const c = currentSettings.contrast;
-        const s = currentSettings.saturate;
-        const h = currentSettings.hue;
-        const filterStr = (currentSettings.presetFilter ? currentSettings.presetFilter + ' ' : '') + `brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${h}deg)`;
-        
-        ctx.filter = filterStr;
-        ctx.drawImage(preview, 0, 0, exportCanvas.width, exportCanvas.height);
-        
-        let quality = exportMode === 'HDR' ? 1.0 : 0.8;
+        let quality = exportMode === 'HDR' ? 1.0 : 0.85;
         const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
+
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const isTelegramMiniApp = Boolean(tg && tg.initData);
 
         exportCanvas.toBlob(async (blob) => {
             if (!blob) return;
             const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-            // Способ 1: Нативный Share API (Вызывает шторку iOS 'Сохранить изображение')
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            // 1. Нативный Share API на телефонах (вызывает меню "Сохранить изображение")
+            if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
                     await navigator.share({
                         files: [file],
                         title: 'Фото из редактора'
                     });
-                    return; // Успех, выходим
+                    return;
                 } catch (error) {
-                    if (error.name === 'AbortError') return; // Юзер сам закрыл шторку
-                    console.log('Share API error:', error);
+                    if (error.name === 'AbortError') return;
                 }
             }
-            
-            // Способ 2: Скачивание (Работает на Android и Telegram Desktop)
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-            if (!isIOS) {
+
+            // 2. Обычный браузер на ПК (не внутри Telegram Desktop)
+            if (!isMobile && !isTelegramMiniApp) {
                 const dataUrl = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.download = fileName;
@@ -582,13 +626,15 @@
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(dataUrl);
-                if(tg.showAlert) tg.showAlert("Фото сохранено!");
                 return;
             }
 
-            // Способ 3: Железобетонный fallback для iOS, если Share API заблокирован WebView
+            // 3. Оверлей для Telegram Desktop (где заблокирован <a download>) и iOS fallback
             const dataUrlBase64 = exportCanvas.toDataURL('image/jpeg', quality);
             document.getElementById('export-preview').src = dataUrlBase64;
+            document.getElementById('save-hint-text').innerText = isMobile
+                ? "👆 Удерживайте фото, чтобы сохранить в галерею"
+                : "🖱 Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...» (или перетащите на рабочий стол)";
             document.getElementById('save-overlay').classList.add('active');
 
         }, 'image/jpeg', quality);
