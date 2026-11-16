@@ -459,8 +459,15 @@
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const isTelegramMiniApp = Boolean(tg && tg.initData);
 
-        // В WebGL мы берем данные напрямую из glCanvas.toDataURL (которая использует встроенный canvas)
-        const dataUrl = glCanvas.toDataURL('image/jpeg'); // Для генерации Blob конвертируем base64 в blob
+        // На iOS WebGL canvas может отдавать черный экран при toDataURL, если буфер (drawing buffer) уже очищен.
+        // Надежнее всего перенести отрендеренное изображение на временный 2D canvas перед сохранением.
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = glCanvas.width;
+        tempCanvas.height = glCanvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(glCanvas, 0, 0);
+        
+        const dataUrl = tempCanvas.toDataURL('image/jpeg', quality);
         
         fetch(dataUrl)
             .then(res => res.blob())
