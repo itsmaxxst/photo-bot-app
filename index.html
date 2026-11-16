@@ -111,7 +111,6 @@
 
 <section class="editor-panel">
     <div class="slider-panel" id="slider-panel">
-        
         <div class="slider-container" id="single-slider-container">
             <div class="slider-label">
                 <span id="slider-tool-name">Настройка</span>
@@ -119,10 +118,7 @@
             </div>
             <input type="range" id="active-slider" min="-100" max="100" value="0">
         </div>
-
-        <div class="slider-container" id="multi-slider-container">
-        </div>
-
+        <div class="slider-container" id="multi-slider-container"></div>
         <div class="slider-actions">
             <button class="action-btn" id="btn-cancel-tool">✕</button>
             <button class="action-btn" id="btn-reset-tool" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
@@ -181,9 +177,6 @@
     container.appendChild(glCanvas);
     let fxTexture;
     
-    // Переменная для хранения временной текстуры блума
-    let bloomTexture = null;
-
     let activePresetId = 'none';
     let hasLockedActive = false;
     let activeToolKey = null; 
@@ -321,121 +314,135 @@
         }
     }
 
-    // --- Кастомные шейдеры Bloom для glfx.js ---
+    // --- Кастомные шейдеры Bloom (Внедрение в прототип glfx) ---
     try {
-        // Шейдер для выделения ярких участков (Threshold)
-        fx.canvas().constructor.prototype.bloomThreshold = function(threshold) {
-            gl.bloomThreshold = gl.bloomThreshold || new fx.Shader(null, `
-                uniform sampler2D texture;
-                uniform float threshold;
-                varying vec2 texCoord;
-                void main() {
-                    vec4 color = texture2D(texture, texCoord);
-                    // Вычисляем яркость
-                    float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                    // Если яркость выше порога, сохраняем цвет, иначе черный
-                    float factor = smoothstep(threshold, threshold + 0.1, luminance);
-                    gl_FragColor = vec4(color.rgb * factor, color.a);
-                }
-            `);
-            this.simpleShader(gl.bloomThreshold, { threshold: threshold });
-            return this;
-        };
+        const CanvasProto = fx.canvas().constructor.prototype;
         
-        // Шейдер для наложения свечения (Blend/Screen)
-        fx.canvas().constructor.prototype.bloomBlend = function(originalTexture, strength) {
-            gl.bloomBlend = gl.bloomBlend || new fx.Shader(null, `
-                uniform sampler2D texture;
-                uniform sampler2D originalTexture;
-                uniform float strength;
-                varying vec2 texCoord;
-                void main() {
-                    vec4 bloomColor = texture2D(texture, texCoord);
-                    vec4 originalColor = texture2D(originalTexture, texCoord);
-                    // Экранное наложение (Screen Blend Mode)
-                    vec3 result = 1.0 - (1.0 - originalColor.rgb) * (1.0 - (bloomColor.rgb * strength));
-                    gl_FragColor = vec4(result, originalColor.a);
+        if (!CanvasProto.bloomThreshold) {
+            CanvasProto.bloomThreshold = function(threshold) {
+                if (!this._bloomThresholdShader) {
+                    this._bloomThresholdShader = new fx.Shader(null, `
+                        uniform sampler2D texture;
+                        uniform float threshold;
+                        varying vec2 texCoord;
+                        void main() {
+                            vec4 color = texture2D(texture, texCoord);
+                            float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                            float factor = smoothstep(threshold, threshold + 0.2, luminance);
+                            gl_FragColor = vec4(color.rgb * factor, color.a);
+                        }
+                    `);
                 }
-            `);
-            originalTexture.bind(1);
-            this.simpleShader(gl.bloomBlend, {
-                originalTexture: 1,
-                strength: strength
-            });
-            return this;
-        };
-
-        window.applyFiltersToCanvas = function(targetCanvas, texture, settingsToApply, baseSettings) {
-            const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
-            const c = Math.max(-1, Math.min(1, baseSettings.contrast + settingsToApply.contrast));
-            const hue = Math.max(-1, Math.min(1, baseSettings.hue + settingsToApply.hue));
-            const sat = Math.max(-1, Math.min(1, baseSettings.saturation + settingsToApply.saturation));
-            const vib = Math.max(-1, Math.min(1, baseSettings.vibrance + settingsToApply.vibrance));
-            const sepia = Math.max(0, Math.min(1, baseSettings.sepia + settingsToApply.sepia));
-            const vig = Math.max(0, Math.min(1, baseSettings.vignette + settingsToApply.vignette));
-            const sharp = Math.max(0, Math.min(1, baseSettings.unsharp + settingsToApply.unsharp));
-            const noise = Math.max(0, Math.min(1, baseSettings.noise + settingsToApply.noise));
-            const blur = Math.max(0, Math.min(1, baseSettings.blur + settingsToApply.blur));
-            const denoiseVal = Math.max(0, Math.min(1, baseSettings.denoise + settingsToApply.denoise));
-            
-            // Bloom
-            const bloomStr = Math.max(0, Math.min(1, baseSettings.bloom_strength + settingsToApply.bloom_strength));
-            const bloomThr = Math.max(0, Math.min(1, baseSettings.bloom_threshold + settingsToApply.bloom_threshold));
-            const bloomRad = Math.max(0, Math.min(1, baseSettings.bloom_radius + settingsToApply.bloom_radius));
-
-            const colorCurves = baseSettings.curves;
-
-            targetCanvas.draw(texture);
-
-            if (denoiseVal > 0) targetCanvas.denoise(denoiseVal * 50);
-            if (blur > 0) targetCanvas.triangleBlur(blur * 30);
-            
-            if (colorCurves) {
-                targetCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
-            }
-
-            targetCanvas.brightnessContrast(b, c).hueSaturation(hue, sat).vibrance(vib);
-            
-            // Реализация Bloom
-            if (bloomStr > 0) {
-                // 1. Сохраняем текущее состояние текстуры (оригинал с базовой коррекцией)
-                targetCanvas.update();
-                
-                // Создаем текстуру для хранения оригинала, если ее нет или размеры не совпадают
-                if (!bloomTexture || bloomTexture.width !== targetCanvas.width || bloomTexture.height !== targetCanvas.height) {
-                    if (bloomTexture) bloomTexture.destroy();
-                    // Используем заглушку, чтобы создать пустую текстуру нужного размера
-                    const emptyCanvas = document.createElement('canvas');
-                    emptyCanvas.width = targetCanvas.width;
-                    emptyCanvas.height = targetCanvas.height;
-                    bloomTexture = targetCanvas.texture(emptyCanvas);
-                }
-                
-                // Копируем пиксели из WebGL обратно в нашу текстуру сохранения
-                bloomTexture.loadContentsOf(targetCanvas);
-                
-                // 2. Выделяем яркие участки (чем выше значение UI, тем ниже порог)
-                let shaderThreshold = 1.0 - (bloomThr * 0.8); // 0.2 .. 1.0
-                targetCanvas.bloomThreshold(shaderThreshold);
-                
-                // 3. Размываем выделенные участки (свечение)
-                if (bloomRad > 0) {
-                    targetCanvas.triangleBlur(bloomRad * 50);
-                }
-                
-                // 4. Накладываем свечение поверх сохраненного оригинала
-                targetCanvas.bloomBlend(bloomTexture, bloomStr * 2.5);
-            }
-                
-            if (sepia > 0) targetCanvas.sepia(sepia);
-            if (sharp > 0) targetCanvas.unsharpMask(sharp * 5, 2);
-            if (noise > 0) targetCanvas.noise(noise * 0.3);
-            if (vig > 0) targetCanvas.vignette(0.5, 0.5 - (vig * 0.3));
-
-            targetCanvas.update();
+                this.simpleShader(this._bloomThresholdShader, { threshold: threshold });
+                return this;
+            };
         }
-    } catch (e) {
-        console.log("Custom shader error:", e);
+
+        if (!CanvasProto.bloomBlend) {
+            CanvasProto.bloomBlend = function(originalTexture, strength) {
+                if (!this._bloomBlendShader) {
+                    this._bloomBlendShader = new fx.Shader(null, `
+                        uniform sampler2D texture;
+                        uniform sampler2D originalTexture;
+                        uniform float strength;
+                        varying vec2 texCoord;
+                        void main() {
+                            vec4 bloomColor = texture2D(texture, texCoord);
+                            vec4 originalColor = texture2D(originalTexture, texCoord);
+                            vec3 bloom = clamp(bloomColor.rgb * strength, 0.0, 1.0);
+                            vec3 result = 1.0 - (1.0 - originalColor.rgb) * (1.0 - bloom);
+                            gl_FragColor = vec4(result, originalColor.a);
+                        }
+                    `);
+                }
+                originalTexture.bind(1);
+                this.simpleShader(this._bloomBlendShader, {
+                    originalTexture: 1,
+                    strength: strength
+                });
+                return this;
+            };
+        }
+    } catch(e) {
+        console.error("Shader injection failed:", e);
+    }
+
+    window.applyFiltersToCanvas = function(targetCanvas, texture, settingsToApply, baseSettings) {
+        const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
+        const c = Math.max(-1, Math.min(1, baseSettings.contrast + settingsToApply.contrast));
+        const hue = Math.max(-1, Math.min(1, baseSettings.hue + settingsToApply.hue));
+        const sat = Math.max(-1, Math.min(1, baseSettings.saturation + settingsToApply.saturation));
+        const vib = Math.max(-1, Math.min(1, baseSettings.vibrance + settingsToApply.vibrance));
+        const sepia = Math.max(0, Math.min(1, baseSettings.sepia + settingsToApply.sepia));
+        const vig = Math.max(0, Math.min(1, baseSettings.vignette + settingsToApply.vignette));
+        const sharp = Math.max(0, Math.min(1, baseSettings.unsharp + settingsToApply.unsharp));
+        const noise = Math.max(0, Math.min(1, baseSettings.noise + settingsToApply.noise));
+        const blur = Math.max(0, Math.min(1, baseSettings.blur + settingsToApply.blur));
+        const denoiseVal = Math.max(0, Math.min(1, baseSettings.denoise + settingsToApply.denoise));
+        
+        // Bloom
+        const bloomStr = Math.max(0, Math.min(1, baseSettings.bloom_strength + settingsToApply.bloom_strength));
+        const bloomThr = Math.max(0, Math.min(1, baseSettings.bloom_threshold + settingsToApply.bloom_threshold));
+        const bloomRad = Math.max(0, Math.min(1, baseSettings.bloom_radius + settingsToApply.bloom_radius));
+
+        const colorCurves = baseSettings.curves;
+
+        targetCanvas.draw(texture);
+
+        if (denoiseVal > 0) targetCanvas.denoise(denoiseVal * 50);
+        if (blur > 0) targetCanvas.triangleBlur(blur * 30);
+        
+        if (colorCurves) targetCanvas.curves(colorCurves.red, colorCurves.green, colorCurves.blue);
+
+        targetCanvas.brightnessContrast(b, c).hueSaturation(hue, sat).vibrance(vib);
+        
+        // --- ЛОГИКА BLOOM ---
+        if (bloomStr > 0) {
+            // 1. Отрисовываем текущий результат конвейера
+            targetCanvas.update();
+            
+            // 2. Создаем 2D Canvas для копирования текущего кадра (оригинал с цветокоррекцией)
+            if (!targetCanvas._bloom2d) {
+                targetCanvas._bloom2d = document.createElement('canvas');
+            }
+            if (targetCanvas._bloom2d.width !== targetCanvas.width || targetCanvas._bloom2d.height !== targetCanvas.height) {
+                targetCanvas._bloom2d.width = targetCanvas.width;
+                targetCanvas._bloom2d.height = targetCanvas.height;
+            }
+            
+            const ctx2d = targetCanvas._bloom2d.getContext('2d', { willReadFrequently: true });
+            ctx2d.drawImage(targetCanvas, 0, 0);
+            
+            // 3. Сохраняем это в WebGL текстуру
+            if (!targetCanvas._bloomTex || targetCanvas._bloomTex.width !== targetCanvas.width || targetCanvas._bloomTex.height !== targetCanvas.height) {
+                if (targetCanvas._bloomTex) targetCanvas._bloomTex.destroy();
+                targetCanvas._bloomTex = targetCanvas.texture(targetCanvas._bloom2d);
+            } else {
+                targetCanvas._bloomTex.loadContentsOf(targetCanvas._bloom2d);
+            }
+
+            // 4. Запускаем конвейер заново, передав туда сохраненную текстуру
+            targetCanvas.draw(targetCanvas._bloomTex);
+            
+            // 5. Выделяем яркие участки
+            let shaderThreshold = 1.0 - (bloomThr * 0.8);
+            targetCanvas.bloomThreshold(shaderThreshold);
+            
+            // 6. Размываем свечение
+            if (bloomRad > 0) {
+                targetCanvas.triangleBlur(bloomRad * 80);
+            }
+            
+            // 7. Накладываем светящуюся маску поверх оригинала
+            targetCanvas.bloomBlend(targetCanvas._bloomTex, bloomStr * 2.5);
+        }
+            
+        if (sepia > 0) targetCanvas.sepia(sepia);
+        if (sharp > 0) targetCanvas.unsharpMask(sharp * 5, 2);
+        if (noise > 0) targetCanvas.noise(noise * 0.3);
+        if (vig > 0) targetCanvas.vignette(0.5, 0.5 - (vig * 0.3));
+
+        targetCanvas.update();
     }
 
     function updatePhotoFilter() {
@@ -612,9 +619,9 @@
             fxTexture.destroy();
             fxTexture = null;
         }
-        if (bloomTexture) {
-            bloomTexture.destroy();
-            bloomTexture = null;
+        if (glCanvas && glCanvas._bloomTex) {
+            glCanvas._bloomTex.destroy();
+            glCanvas._bloomTex = null;
         }
         previewImg.src = '';
         originalImage.src = '';
@@ -668,10 +675,6 @@
         let tempGlCanvas;
         try { tempGlCanvas = fx.canvas(); } catch (e) { alert("Ошибка рендера высокого качества."); return; }
         const tempTex = tempGlCanvas.texture(temp2dCanvas);
-        
-        // Временно подменяем bloomTexture для хайрезового рендера
-        const originalBloomTex = bloomTexture;
-        bloomTexture = null; 
 
         window.applyFiltersToCanvas(tempGlCanvas, tempTex, currentSettings, presetSettings);
 
@@ -693,8 +696,7 @@
                 const file = new File([blob], fileName, { type: 'image/jpeg' });
                 
                 tempTex.destroy();
-                if(bloomTexture) { bloomTexture.destroy(); }
-                bloomTexture = originalBloomTex; // Возвращаем текстуру для UI
+                if(tempGlCanvas._bloomTex) tempGlCanvas._bloomTex.destroy();
 
                 if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
