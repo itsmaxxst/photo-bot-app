@@ -3,184 +3,422 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Photo Editor MVP</title>
-    <!-- Подключаем библиотеку Telegram -->
+    <title>Photo Editor</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --bg-color: #000000;
+            --panel-bg: #121212;
+            --text-main: #ffffff;
+            --text-muted: #888888;
+            --accent: #ffffff;
+            --lock-color: #ffffff;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #121212);
-            color: var(--tg-theme-text-color, #ffffff);
-            margin: 0; padding: 20px; text-align: center;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0; 
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
         }
-        .container { max-width: 500px; margin: 0 auto; }
-        
-        /* Контейнер фото для реализации "До/После" */
-        #photo-container {
-            width: 100%;
-            height: 300px;
-            background-color: #222;
-            border-radius: 12px;
-            margin-bottom: 20px;
+
+        /* Верхняя панель (Header) */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--bg-color);
+            z-index: 10;
+        }
+        .icon-btn {
+            background: none; border: none; color: white;
+            font-size: 24px; cursor: pointer; padding: 0;
+        }
+        .top-badges {
+            display: flex; gap: 5px; background: #222;
+            border-radius: 15px; padding: 3px;
+        }
+        .badge {
+            font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 12px; color: #888;
+        }
+        .badge.active { background: white; color: black; }
+
+        /* Контейнер фото */
+        .photo-area {
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
             position: relative;
-            touch-action: none; /* Запрет скролла при удержании */
+            touch-action: none;
         }
         #photo-preview {
-            max-width: 100%;
-            max-height: 100%;
+            max-width: 100%; max-height: 100%;
             object-fit: contain;
             transition: filter 0.1s;
         }
-        .hint { font-size: 12px; color: #888; margin-bottom: 20px; }
-        
-        .controls-group { margin-bottom: 20px; text-align: left; }
-        label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
-        input[type="range"] { width: 100%; margin-bottom: 15px; }
-        
-        .premium-lock { color: #f39c12; font-size: 12px; float: right; }
-        .disabled-slider { opacity: 0.5; pointer-events: none; }
-        
-        .btn {
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none; padding: 12px 20px; border-radius: 8px;
-            font-size: 16px; width: 100%; cursor: pointer; font-weight: bold;
+        .placeholder-text {
+            color: var(--text-muted); font-size: 16px;
+            position: absolute; pointer-events: none;
         }
+
+        /* Редактор (нижняя часть) */
+        .editor-panel {
+            background: var(--bg-color);
+            padding-bottom: 20px; /* Safe area */
+            display: flex; flex-direction: column;
+        }
+
+        /* Саб-табы (ВСЕ ИНСТРУМЕНТЫ, САМОЕ НУЖНОЕ и т.д.) */
+        .sub-tabs {
+            display: flex; gap: 15px; padding: 10px 15px;
+            overflow-x: auto; white-space: nowrap;
+            border-bottom: 1px solid #222;
+        }
+        .sub-tabs::-webkit-scrollbar { display: none; }
+        .sub-tab {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            color: var(--text-muted); padding: 6px 12px; border-radius: 4px; cursor: pointer;
+        }
+        .sub-tab.active { background: white; color: black; }
+
+        /* Горизонтальный скролл для пресетов и инструментов */
+        .items-scroll {
+            display: flex; gap: 15px; padding: 20px 15px;
+            overflow-x: auto; white-space: nowrap;
+            min-height: 80px; align-items: flex-end;
+        }
+        .items-scroll::-webkit-scrollbar { display: none; }
+
+        /* Дизайн пресетов */
+        .preset-item {
+            display: flex; flex-direction: column; align-items: center; cursor: pointer;
+            position: relative;
+        }
+        .preset-thumb {
+            width: 60px; height: 60px; background-color: #222;
+            border-radius: 2px 2px 0 0; background-size: cover; background-position: center;
+        }
+        .preset-label {
+            width: 60px; text-align: center; font-size: 10px; font-weight: bold;
+            padding: 4px 0; border-radius: 0 0 2px 2px; color: black;
+        }
+        .lock-icon {
+            position: absolute; top: 4px; right: 4px;
+            background: rgba(0,0,0,0.5); border-radius: 50%; width: 16px; height: 16px;
+            display: flex; align-items: center; justify-content: center; font-size: 10px;
+        }
+
+        /* Дизайн инструментов */
+        .tool-item {
+            display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer;
+            position: relative; width: 65px;
+        }
+        .tool-icon {
+            width: 40px; height: 40px; border-radius: 50%; border: 1px solid #fff;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+        }
+        .tool-name {
+            font-size: 10px; color: white; white-space: normal; text-align: center; line-height: 1.1;
+        }
+        .tool-item .lock-icon { top: -5px; right: 5px; }
+
+        /* Панель активного слайдера */
+        .slider-panel {
+            display: none; padding: 20px; flex-direction: column; align-items: center;
+        }
+        .slider-panel.active { display: flex; }
+        .slider-label { font-size: 12px; margin-bottom: 15px; }
+        input[type="range"] {
+            width: 100%; -webkit-appearance: none; background: transparent; margin-bottom: 20px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 20px; width: 20px;
+            border-radius: 50%; background: white; cursor: pointer; margin-top: -8px;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #444; border-radius: 2px;
+        }
+        .slider-actions { display: flex; justify-content: space-between; width: 100%; }
+        .action-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+
+        /* Нижняя навигация (Табы переключения разделов) */
+        .bottom-nav {
+            display: flex; justify-content: space-around; padding: 15px 0 25px 0;
+            border-top: 1px solid #111;
+        }
+        .nav-item {
+            color: #555; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .nav-item.active { color: white; }
+
+        /* Утилиты */
+        .hidden { display: none !important; }
+        .locked { opacity: 0.7; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <p id="user-info" style="font-size: 14px; font-weight: bold;"></p>
+<!-- Скрытый инпут для фото -->
+<input type="file" id="upload" accept="image/*" class="hidden">
+
+<!-- Верхняя панель -->
+<header class="top-bar">
+    <button class="icon-btn">✕</button>
+    <div class="top-badges">
+        <span class="badge">HDR</span>
+        <span class="badge active">SDR</span>
+    </div>
+    <div style="display: flex; gap: 15px;">
+        <button class="icon-btn" onclick="document.getElementById('upload').click()">📁</button> <!-- Загрузить фото -->
+        <button class="icon-btn">⭱</button>
+    </div>
+</header>
+
+<!-- Зона фотографии -->
+<main class="photo-area" id="photo-container">
+    <div class="placeholder-text" id="placeholder">Загрузите фото (иконка 📁 сверху)</div>
+    <img id="photo-preview" src="" class="hidden">
+</main>
+
+<!-- Панель редактирования -->
+<section class="editor-panel">
     
-    <!-- Загрузка фото -->
-    <input type="file" id="upload" accept="image/*" style="display: none;">
-    <button class="btn" onclick="document.getElementById('upload').click()" style="margin-bottom: 15px;">📁 Загрузить фото</button>
-
-    <div id="photo-container">
-        <span id="placeholder" style="color: #666;">Фото не выбрано</span>
-        <img id="photo-preview" src="" style="display: none;">
-    </div>
-    <div class="hint">👆 Удерживайте фото, чтобы увидеть оригинал</div>
-
-    <!-- Бесплатные настройки -->
-    <div class="controls-group">
-        <h3>Бесплатные настройки</h3>
-        <label>Яркость <span id="bright-val">100%</span></label>
-        <input type="range" id="brightness" min="50" max="150" value="100">
-
-        <label>Контраст <span id="contrast-val">100%</span></label>
-        <input type="range" id="contrast" min="50" max="150" value="100">
+    <!-- Панель активного инструмента (Слайдер) -->
+    <div class="slider-panel" id="slider-panel">
+        <div class="slider-label" id="slider-tool-name">Настройка</div>
+        <input type="range" id="active-slider" min="50" max="150" value="100">
+        <div class="slider-actions">
+            <button class="action-btn" id="btn-cancel-tool">✕</button>
+            <button class="action-btn" id="btn-apply-tool">✓</button>
+        </div>
     </div>
 
-    <!-- Premium настройки -->
-    <div class="controls-group" id="premium-controls">
-        <h3>Сложные фильтры <span class="premium-lock" id="premium-badge">🔒 Premium</span></h3>
-        <label>Насыщенность (Saturate) <span id="sat-val">100%</span></label>
-        <input type="range" id="saturate" min="0" max="200" value="100">
+    <!-- Основной интерфейс выбора -->
+    <div id="selection-panel">
+        <div class="sub-tabs" id="sub-tabs-container">
+            <!-- Заполняется JS (Вкладки) -->
+        </div>
 
-        <label>Тонирование (Hue) <span id="hue-val">0deg</span></label>
-        <input type="range" id="hue" min="0" max="360" value="0">
+        <div class="items-scroll" id="items-container">
+            <!-- Заполняется JS (Пресеты или Инструменты) -->
+        </div>
     </div>
-</div>
+
+    <!-- Главная нижняя навигация -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" data-tab="presets">❐</div> <!-- Пресеты -->
+        <div class="nav-item" data-tab="tools">⚲</div> <!-- Инструменты (Ползунки) -->
+        <div class="nav-item">FX</div>
+        <div class="nav-item">✨</div>
+        <div class="nav-item">≡</div>
+    </nav>
+</section>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand(); // Разворачиваем на весь экран
+    tg.expand(); 
 
-    // Читаем параметры из URL, которые передал бот
     const urlParams = new URLSearchParams(window.location.search);
-    const tgId = urlParams.get('user_id') || tg.initDataUnsafe?.user?.id || "Неизвестно";
-    const isPremium = urlParams.get('premium') === '1';
+    const isPremium = urlParams.get('premium') === '1'; // Статус Premium от бота
 
-    // Показываем ID пользователя
-    document.getElementById('user-info').innerText = `Ваш Telegram ID: ${tgId}`;
-
-    // Блокировка премиум-ползунков
-    const premControls = document.getElementById('premium-controls');
-    const premBadge = document.getElementById('premium-badge');
-    if (!isPremium) {
-        premControls.classList.add('disabled-slider');
-    } else {
-        premBadge.innerText = '🔓 Разблокировано';
-    }
-
-    // Элементы
+    // DOM Элементы
     const upload = document.getElementById('upload');
     const preview = document.getElementById('photo-preview');
     const placeholder = document.getElementById('placeholder');
     const container = document.getElementById('photo-container');
+    
+    const subTabsContainer = document.getElementById('sub-tabs-container');
+    const itemsContainer = document.getElementById('items-container');
+    const navItems = document.querySelectorAll('.nav-item');
 
-    const sliders = {
-        brightness: document.getElementById('brightness'),
-        contrast: document.getElementById('contrast'),
-        saturate: document.getElementById('saturate'),
-        hue: document.getElementById('hue')
+    const selectionPanel = document.getElementById('selection-panel');
+    const sliderPanel = document.getElementById('slider-panel');
+    const activeSlider = document.getElementById('active-slider');
+    const sliderToolName = document.getElementById('slider-tool-name');
+
+    // Состояние фильтров
+    let currentSettings = {
+        brightness: 100, contrast: 100, saturate: 100, hue: 0,
+        presetFilter: '' // Сохранение фильтра от пресета
     };
-
+    let activeToolKey = null;
     let isHolding = false;
 
-    // Загрузка фото
+    // --- Данные интерфейса ---
+    const presetsData = [
+        { id: 'none', name: 'ORIG', color: '#999', filter: 'none', isPro: false },
+        { id: 'g3', name: 'G3', color: '#cddc39', filter: 'contrast(110%) saturate(120%)', isPro: false },
+        { id: 'hb2', name: 'HB2', color: '#90caf9', filter: 'contrast(120%) saturate(80%) brightness(95%)', isPro: false },
+        { id: 'a1', name: 'A1 PRO', color: '#e57373', filter: 'sepia(30%) contrast(110%) brightness(105%)', isPro: true },
+        { id: 'c8', name: 'C8 PRO', color: '#ffb74d', filter: 'contrast(130%) saturate(140%) hue-rotate(-10deg)', isPro: true },
+        { id: 'g6', name: 'G6 PRO', color: '#ffeb3b', filter: 'brightness(110%) contrast(105%) saturate(130%)', isPro: true },
+        { id: 'm5', name: 'M5 PRO', color: '#4db6ac', filter: 'saturate(60%) contrast(120%) sepia(20%)', isPro: true },
+    ];
+
+    const toolsData = [
+        { id: 'brightness', name: 'Экспозиция', icon: '☀', min: 50, max: 150, def: 100, isPro: false },
+        { id: 'contrast', name: 'Контраст', icon: '◐', min: 50, max: 150, def: 100, isPro: false },
+        { id: 'saturate', name: 'Насыщенность', icon: '⏺', min: 0, max: 200, def: 100, isPro: true },
+        { id: 'hue', name: 'Тон', icon: 'H', min: 0, max: 360, def: 0, isPro: true }
+    ];
+
+    // --- Логика рендера UI ---
+    function renderPresets() {
+        subTabsContainer.innerHTML = `
+            <div class="sub-tab">ВСЕ ФИЛЬТРЫ</div>
+            <div class="sub-tab active">ДЛЯ ЭТОЙ ФОТОГРАФИИ</div>
+            <div class="sub-tab">ИЗБРАННОЕ</div>
+        `;
+        
+        itemsContainer.innerHTML = '';
+        presetsData.forEach(p => {
+            const isLocked = p.isPro && !isPremium;
+            const bgImg = preview.src ? `background-image: url(${preview.src});` : '';
+            
+            itemsContainer.innerHTML += `
+                <div class="preset-item ${isLocked ? 'locked' : ''}" onclick="applyPreset('${p.id}')">
+                    <div class="preset-thumb" style="${bgImg} filter: ${p.filter};"></div>
+                    <div class="preset-label" style="background-color: ${p.color};">${p.name}</div>
+                    ${isLocked ? '<div class="lock-icon">🔒</div>' : ''}
+                </div>
+            `;
+        });
+    }
+
+    function renderTools() {
+        subTabsContainer.innerHTML = `
+            <div class="sub-tab active">ВСЕ ИНСТРУМЕНТЫ</div>
+            <div class="sub-tab">САМОЕ НУЖНОЕ</div>
+            <div class="sub-tab">СВЕТЛАЯ</div>
+            <div class="sub-tab">ЦВЕТ</div>
+        `;
+
+        itemsContainer.innerHTML = '';
+        toolsData.forEach(t => {
+            const isLocked = t.isPro && !isPremium;
+            itemsContainer.innerHTML += `
+                <div class="tool-item ${isLocked ? 'locked' : ''}" onclick="openTool('${t.id}')">
+                    <div class="tool-icon">${t.icon}</div>
+                    <div class="tool-name">${t.name}</div>
+                    ${isLocked ? '<div class="lock-icon">🔒</div>' : ''}
+                </div>
+            `;
+        });
+    }
+
+    // --- Взаимодействие с инструментами ---
+    window.applyPreset = function(id) {
+        const p = presetsData.find(x => x.id === id);
+        if (p.isPro && !isPremium) return tg.showAlert("Этот пресет доступен только в Premium версии.");
+        
+        currentSettings.presetFilter = p.filter === 'none' ? '' : p.filter;
+        updatePhotoFilter();
+    };
+
+    window.openTool = function(id) {
+        const t = toolsData.find(x => x.id === id);
+        if (t.isPro && !isPremium) return tg.showAlert("Этот инструмент доступен только в Premium версии.");
+
+        activeToolKey = id;
+        sliderToolName.innerText = t.name;
+        activeSlider.min = t.min;
+        activeSlider.max = t.max;
+        activeSlider.value = currentSettings[id];
+        
+        selectionPanel.classList.add('hidden');
+        sliderPanel.classList.add('active');
+    };
+
+    // Закрытие/Применение тулбара слайдера
+    document.getElementById('btn-cancel-tool').onclick = () => {
+        // Отмена возвращает сохраненное значение, но здесь для MVP мы просто закроем. 
+        // В идеале нужно хранить временное состояние.
+        closeSlider();
+    };
+    
+    document.getElementById('btn-apply-tool').onclick = () => {
+        closeSlider();
+    };
+
+    activeSlider.addEventListener('input', (e) => {
+        if(activeToolKey) {
+            currentSettings[activeToolKey] = e.target.value;
+            updatePhotoFilter();
+        }
+    });
+
+    function closeSlider() {
+        sliderPanel.classList.remove('active');
+        selectionPanel.classList.remove('hidden');
+        activeToolKey = null;
+    }
+
+    // --- Применение фильтров к изображению ---
+    function updatePhotoFilter() {
+        if (isHolding) {
+            preview.style.filter = 'none'; // Показать оригинал
+        } else {
+            const b = currentSettings.brightness;
+            const c = currentSettings.contrast;
+            const s = currentSettings.saturate;
+            const h = currentSettings.hue;
+            
+            // Комбинируем фильтр пресета и ручные настройки
+            let filterStr = currentSettings.presetFilter + ` brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${h}deg)`;
+            preview.style.filter = filterStr;
+        }
+    }
+
+    // --- Переключение нижних вкладок ---
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            const tab = item.getAttribute('data-tab');
+            if(!tab) return;
+
+            navItems.forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+
+            if (tab === 'presets') renderPresets();
+            if (tab === 'tools') renderTools();
+        });
+    });
+
+    // --- Загрузка фото ---
     upload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 preview.src = e.target.result;
-                preview.style.display = 'block';
-                placeholder.style.display = 'none';
-                applyFilters();
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                // Перерисовываем пресеты, чтобы обновить миниатюры
+                if(document.querySelector('.nav-item.active').getAttribute('data-tab') === 'presets') {
+                    renderPresets();
+                }
             }
             reader.readAsDataURL(file);
         }
     });
 
-    // Функция применения CSS-фильтров
-    function applyFilters() {
-        if (isHolding) {
-            // Если удерживаем палец — показываем оригинал (сбрасываем фильтры)
-            preview.style.filter = 'none';
-        } else {
-            // Применяем значения ползунков
-            const b = sliders.brightness.value;
-            const c = sliders.contrast.value;
-            const s = sliders.saturate.value;
-            const h = sliders.hue.value;
-            preview.style.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${h}deg)`;
-        }
-    }
+    // --- Логика "Удерживай для оригинала" ---
+    container.addEventListener('pointerdown', () => { if(preview.src) { isHolding = true; updatePhotoFilter(); } });
+    container.addEventListener('pointerup', () => { isHolding = false; updatePhotoFilter(); });
+    container.addEventListener('pointerleave', () => { isHolding = false; updatePhotoFilter(); });
+    container.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Обновление значений при движении ползунков
-    Object.keys(sliders).forEach(key => {
-        sliders[key].addEventListener('input', (e) => {
-            document.getElementById(key === 'brightness' ? 'bright-val' : 
-                                    key === 'contrast' ? 'contrast-val' : 
-                                    key === 'saturate' ? 'sat-val' : 'hue-val').innerText = 
-            key === 'hue' ? `${e.target.value}deg` : `${e.target.value}%`;
-            
-            applyFilters();
-        });
-    });
-
-    // Логика "Удерживай для оригинала"
-    // Используем pointer events для поддержки и мыши, и сенсоров телефонов
-    container.addEventListener('pointerdown', (e) => {
-        if (preview.src) { isHolding = true; applyFilters(); }
-    });
-    
-    container.addEventListener('pointerup', (e) => {
-        isHolding = false; applyFilters();
-    });
-    
-    container.addEventListener('pointerleave', (e) => {
-        isHolding = false; applyFilters();
-    });
-    
-    container.addEventListener('contextmenu', e => e.preventDefault()); // Отключаем меню по долгому тапу
+    // Инициализация при запуске
+    renderPresets();
 </script>
 </body>
 </html>
