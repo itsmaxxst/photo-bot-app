@@ -193,6 +193,13 @@
             display: flex; justify-content: center; align-items: center;
         }
 
+        #watermark-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10; display: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' transform='rotate(-45 70 70)' font-size='18' fill='rgba(255,255,255,0.5)' font-weight='bold' font-family='sans-serif'%3EPREMIUM%3C/text%3E%3C/svg%3E");
+        }
+        #watermark-overlay.active { display: block; }
+
         /* Скрытый canvas для экспорта */
         #export-canvas { display: none; }
     </style>
@@ -222,6 +229,7 @@
 </header>
 
 <main class="photo-area" id="photo-container">
+    <div id="watermark-overlay"></div>
     <div class="placeholder-text" id="placeholder" onclick="document.getElementById('upload').click()">Нажмите здесь, чтобы загрузить фото</div>
     <img id="photo-preview" src="" class="hidden">
 </main>
@@ -405,9 +413,11 @@
         if (isPresetLocked || isToolLocked) {
             hasLockedActive = true;
             document.getElementById('premium-banner').classList.remove('hidden');
+            document.getElementById('watermark-overlay').classList.add('active');
         } else {
             hasLockedActive = false;
             document.getElementById('premium-banner').classList.add('hidden');
+            document.getElementById('watermark-overlay').classList.remove('active');
         }
     }
 
