@@ -928,17 +928,16 @@ const toolsData = [
         if (dbMode === 'dodge') {
             // Осветление (используем color-dodge для естественного свечения)
             // Он делает пиксели ярче за счет снижения контраста с белым, сохраняя цвета сочными
-            grad.addColorStop(0, 'rgba(255,255,255,0.015)');
+            grad.addColorStop(0, 'rgba(255,255,255,0.010)');
             grad.addColorStop(0.4, 'rgba(255,255,255,0.005)');
             grad.addColorStop(1, 'rgba(255,255,255,0)');
             dbCtx.globalCompositeOperation = 'color-dodge'; 
         } else {
-            // Затемнение (используем color-burn или оставляем multiply)
             // color-burn делает тени гуще и насыщеннее, а не просто "красит серым"
-            grad.addColorStop(0, 'rgba(0,0,0,0.015)');
+            grad.addColorStop(0, 'rgba(0,0,0,0.005)');
             grad.addColorStop(0.4, 'rgba(0,0,0,0.005)');
             grad.addColorStop(1, 'rgba(0,0,0,0)');
-            dbCtx.globalCompositeOperation = 'color-burn'; 
+            dbCtx.globalCompositeOperation = 'multiply'; 
         }
         
         dbCtx.fillStyle = grad;
