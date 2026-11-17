@@ -414,6 +414,7 @@
         { id: 'hue', name: 'Тон', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'sepia', name: 'Сепия', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>', min: 0, max: 100, isPro: false },
         { id: 'dodgeburn', name: 'Осв/Зат', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20z" fill="currentColor"/></svg>', isPro: true },
+        { id: 'fog', name: 'Туман', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>', isPro: true },
         { id: 'vignette', name: 'Виньетка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" stroke-dasharray="2 2"/></svg>', min: 0, max: 100, isPro: false },
         { id: 'unsharp', name: 'Резкость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 21 2 21 12 2"/></svg>', min: 0, max: 100, isPro: false },
         { id: 'blur', name: 'Размытие', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>', min: 0, max: 100, isPro: true },
@@ -1413,9 +1414,9 @@
         }
     });
 
-    container.addEventListener('pointerdown', () => { if(fxTexture) { isHolding = true; updatePhotoFilter(); } });
-    container.addEventListener('pointerup', () => { isHolding = false; updatePhotoFilter(); });
-    container.addEventListener('pointerleave', () => { isHolding = false; updatePhotoFilter(); });
+    container.addEventListener('pointerdown', () => { if(fxTexture && !isDBActive) { isHolding = true; updatePhotoFilter(); } });
+    container.addEventListener('pointerup', () => { if (isDBActive) return; isHolding = false; updatePhotoFilter(); });
+    container.addEventListener('pointerleave', () => { if (isDBActive) return; isHolding = false; updatePhotoFilter(); });
     container.addEventListener('contextmenu', e => e.preventDefault());
 
     function resetEditor() {
@@ -1523,17 +1524,36 @@
             });
     });
     renderPresets();
-    // --- ЛОГИКА ОСВЕТЛЕНИЯ И ЗАТЕМНЕНИЯ ---
+    // --- ОСВЕТЛЕНИЕ / ЗАТЕМНЕНИЕ и ТУМАН ---
+    // Оба инструмента используют одну панель (размер / режим / ✕ СБРОС ✓), но разные «кисти»:
+    //   'dodgeburn' – новая кисть: мягкий отпечаток с накоплением, действует на средние тона
+    //                 (чёрное и белое почти не трогает);
+    //   'fog'       – прежняя логика (очень слабый soft-light градиент) – выглядит как дымка.
     let isDBActive = false;
+    let dbTool = 'dodgeburn';
     let dbMode = 'dodge';
     let isDrawingDB = false;
+    let dbDirty = false;
     const dbPanel = document.getElementById('db-panel');
     const brushCursor = document.getElementById('brush-cursor');
     const dbSizeSlider = document.getElementById('db-size');
-    
-    let dbCanvas = document.createElement('canvas');
-    let dbCtx = dbCanvas.getContext('2d');
-    let dbBackupImg = new Image(); // Для отмены действий
+
+    // Две рабочие копии фото: dbCanvas – для итогового файла (макс. 2560px = макс. размер экспорта),
+    // dbPrevCanvas – размер превью, из него идёт живая картинка на экране. Мазок рисуется на обеих.
+    const DB_MAX_FULL = 2560;
+    const dbCanvas = document.createElement('canvas');
+    const dbCtx = dbCanvas.getContext('2d');
+    const dbPrevCanvas = document.createElement('canvas');
+    const dbPrevCtx = dbPrevCanvas.getContext('2d');
+
+    // Настройки кисти Осв/Зат
+    const DB_FLOW = 0.035;     // сила одного отпечатка (больше = быстрее накапливается эффект)
+    const DB_SPACING = 0.22;   // шаг между отпечатками в долях радиуса (меньше = ровнее мазок)
+    const DB_STOPS = [[0, 1], [0.2, 0.92], [0.4, 0.71], [0.6, 0.41], [0.8, 0.13], [1, 0]]; // мягкий спад (1-t²)²
+
+    let dbLast = null;    // последняя точка мазка (координаты экрана)
+    let dbCarry = 0;      // сколько пройдено после последнего отпечатка
+    let dbRaf = 0;
 
     window.openTool = function(id) {
         if (id === 'crop') {
@@ -1548,8 +1568,8 @@
             openHsl(); 
             return; 
         }
-        if (id === 'dodgeburn') { 
-            openDodgeBurn(); 
+        if (id === 'dodgeburn' || id === 'fog') { 
+            openDodgeBurn(id); 
             return; 
         }
         const t = toolsData.find(x => x.id === id);
@@ -1565,52 +1585,94 @@
         sliderPanel.classList.add('active');
     };
 
-    function openDodgeBurn() {
-        if (!originalImage.src || !glCanvas) return;
+    // Заполняет рабочие холсты исходным фото (начало сессии и «СБРОС»)
+    function dbLoadCanvases() {
+        const ow = originalImage.naturalWidth || originalImage.width;
+        const oh = originalImage.naturalHeight || originalImage.height;
+        const k = Math.min(1, DB_MAX_FULL / Math.max(ow, oh));
+        dbCanvas.width = Math.max(1, Math.round(ow * k));
+        dbCanvas.height = Math.max(1, Math.round(oh * k));
+        dbCtx.drawImage(originalImage, 0, 0, dbCanvas.width, dbCanvas.height);
+
+        dbPrevCanvas.width = previewImg.naturalWidth || previewImg.width;
+        dbPrevCanvas.height = previewImg.naturalHeight || previewImg.height;
+        dbPrevCtx.drawImage(previewImg, 0, 0, dbPrevCanvas.width, dbPrevCanvas.height);
+        dbDirty = false;
+    }
+
+    function openDodgeBurn(tool) {
+        if (!originalImage.src || !previewImg.src || !fxTexture || !glCanvas) return;
+        dbTool = tool || 'dodgeburn';
         selectionPanel.classList.add('hidden');
         sliderPanel.classList.remove('active');
         if(typeof cropPanel !== 'undefined') cropPanel.classList.remove('active');
         dbPanel.classList.add('active');
-        
-        // Сохраняем бекап для кнопки отмены (✕)
-        dbBackupImg.src = originalImage.src;
-        
-        // Настраиваем скрытый холст под текущее разрешение картинки
-        dbCanvas.width = originalImage.width;
-        dbCanvas.height = originalImage.height;
-        dbCtx.drawImage(originalImage, 0, 0);
-        
+
+        dbLoadCanvases();
+        dbLast = null; dbCarry = 0;
+        // тонкое жёлтое кольцо у Осв/Зат; у Тумана – прежнее белое
+        brushCursor.style.borderColor = dbTool === 'dodgeburn' ? '#e8e34d' : '';
+        brushCursor.style.display = 'none';
         isDBActive = true;
+    }
+
+    // Показать текущее состояние рабочего холста на экране (через все фильтры/пресеты)
+    function dbRefresh() {
+        if (!fxTexture) return;
+        if (typeof fxTexture.loadContentsOf === 'function') {
+            fxTexture.loadContentsOf(dbPrevCanvas);
+        } else {
+            fxTexture.destroy();
+            fxTexture = glCanvas.texture(dbPrevCanvas);
+        }
+        updatePhotoFilter();
+    }
+    function dbScheduleRefresh() {
+        if (dbRaf) return;
+        dbRaf = requestAnimationFrame(() => { dbRaf = 0; dbRefresh(); });
+    }
+    function dbCancelRefresh() {
+        if (dbRaf) { cancelAnimationFrame(dbRaf); dbRaf = 0; }
     }
 
     function closeDodgeBurn(apply) {
         isDBActive = false;
+        isDrawingDB = false;
+        dbLast = null;
+        dbCancelRefresh();
         brushCursor.style.display = 'none';
         dbPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
-        
-        if (apply) {
-            // Сохраняем результат
-            const editedUrl = dbCanvas.toDataURL('image/jpeg', 1.0);
-            originalImage.src = editedUrl;
+
+        if (apply && dbDirty) {
+            // Сохраняем результат: и итоговое фото, и превью (чтобы обрезка и экспорт видели правки)
+            const fullUrl = dbCanvas.toDataURL('image/jpeg', 1.0);
+            const prevUrl = dbPrevCanvas.toDataURL('image/jpeg', 0.95);
+            dbRefresh(); // на экране остаётся результат, пока грузятся новые картинки
+            originalImage.onload = null;
+            originalImage.src = fullUrl;
+            previewImg.onload = function() {
+                if (fxTexture) fxTexture.destroy();
+                fxTexture = glCanvas.texture(previewImg);
+                updatePhotoFilter();
+            };
+            previewImg.src = prevUrl;
         } else {
-            // Отменяем (возвращаем как было)
-            originalImage.src = dbBackupImg.src;
+            // Отмена (или ничего не нарисовано): originalImage/previewImg не менялись – просто возвращаем текстуру
             if (fxTexture) fxTexture.destroy();
-            fxTexture = glCanvas.texture(originalImage);
+            fxTexture = glCanvas.texture(previewImg);
             updatePhotoFilter();
         }
+        dbDirty = false;
     }
 
     document.getElementById('btn-cancel-db').onclick = () => closeDodgeBurn(false);
     document.getElementById('btn-reset-db').onclick = () => {
-        // Очищаем canvas и восстанавливаем из бекапа
-        dbCtx.clearRect(0, 0, dbCanvas.width, dbCanvas.height);
-        dbCtx.drawImage(dbBackupImg, 0, 0);
-        // Обновляем текстуру WebGL
-        if (fxTexture) fxTexture.destroy();
-        fxTexture = glCanvas.texture(dbCanvas);
-        updatePhotoFilter();
+        // СБРОС: возвращаем фото к состоянию на момент открытия инструмента, панель остаётся открытой
+        dbLast = null;
+        dbCancelRefresh();
+        dbLoadCanvases();
+        dbRefresh();
     };
     document.getElementById('btn-apply-db').onclick = () => closeDodgeBurn(true);
 
@@ -1623,42 +1685,24 @@
         });
     });
 
-    // Рисование кистью по фото
-    function applyDodgeBurnStroke(clientX, clientY) {
-        const rect = glCanvas.getBoundingClientRect();
-        
-        // Вычисляем реальные размеры картинки внутри canvas (из-за object-fit: contain)
-        const scaleX = rect.width / glCanvas.width;
-        const scaleY = rect.height / glCanvas.height;
-        const scale = Math.min(scaleX, scaleY);
+    // ---- Кисть Осв/Зат ----
+    // Режим наложения 'overlay': белым – средние тона светлеют, чёрным – темнеют,
+    // а глубокие тени и яркие света почти не меняются (нет серой «дымки» и пересветов).
+    function dbDabDodgeBurn(ctx, x, y, r, dodge) {
+        const rgb = dodge ? '255,255,255' : '0,0,0';
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        DB_STOPS.forEach(([t, f]) => g.addColorStop(t, `rgba(${rgb},${(f * DB_FLOW).toFixed(4)})`));
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.fillStyle = g;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        ctx.globalCompositeOperation = 'source-over';
+    }
 
-        const renderedW = glCanvas.width * scale;
-        const renderedH = glCanvas.height * scale;
-        const offsetX = (rect.width - renderedW) / 2;
-        const offsetY = (rect.height - renderedH) / 2;
-
-        // Координаты относительно картинки
-        const xOnCanvas = clientX - rect.left - offsetX;
-        const yOnCanvas = clientY - rect.top - offsetY;
-
-        // Отсекаем рисование за пределами картинки
-        if (xOnCanvas < 0 || yOnCanvas < 0 || xOnCanvas > renderedW || yOnCanvas > renderedH) return;
-
-        // Переводим в оригинальное разрешение
-        const imgX = xOnCanvas / scale;
-        const imgY = yOnCanvas / scale;
-
-        // Размер кисти с учетом зума
-        const brushUI = parseInt(dbSizeSlider.value);
-        const radius = (brushUI / scale) * 0.5;
-
-        // Рисуем ультра-мягкий градиент
-        const grad = dbCtx.createRadialGradient(imgX, imgY, 0, imgX, imgY, radius);
-        
-        // Включаем самый естественный режим наложения для обоих инструментов
-        dbCtx.globalCompositeOperation = 'soft-light'; 
-        
-        if (dbMode === 'dodge') {
+    // ---- Кисть «Туман») ----
+    function dbDabFog(ctx, x, y, r, dodge) {
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        ctx.globalCompositeOperation = 'soft-light'; 
+        if (dodge) {
             // Мягкий теплый свет
             grad.addColorStop(0, 'rgba(255, 245, 230, 0.02)');
             grad.addColorStop(0.4, 'rgba(255, 245, 230, 0.005)');
@@ -1669,53 +1713,114 @@
             grad.addColorStop(0.4, 'rgba(15, 20, 35, 0.005)');
             grad.addColorStop(1, 'rgba(15, 20, 35, 0)');
         }
-        
-        dbCtx.fillStyle = grad;
-        dbCtx.beginPath();
-        dbCtx.arc(imgX, imgY, radius, 0, Math.PI * 2);
-        dbCtx.fill();
-        dbCtx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+    }
 
-        // Мгновенно обновляем WebGL текстуру
-        if (fxTexture) fxTexture.destroy();
-        fxTexture = glCanvas.texture(dbCanvas);
-        updatePhotoFilter();
+    // Один отпечаток кисти в точке экрана (clientX/clientY) – на оба рабочих холста
+    function dbDab(clientX, clientY) {
+        const rect = glCanvas.getBoundingClientRect();
+        // реальный размер картинки внутри canvas (object-fit: contain)
+        const scale = Math.min(rect.width / glCanvas.width, rect.height / glCanvas.height);
+        const rw = glCanvas.width * scale;
+        const rh = glCanvas.height * scale;
+        const xo = clientX - rect.left - (rect.width - rw) / 2;
+        const yo = clientY - rect.top - (rect.height - rh) / 2;
+        const rUI = parseInt(dbSizeSlider.value) * 0.5;   // радиус кисти на экране, px
+
+        // за пределами картинки (дальше радиуса кисти) не рисуем
+        if (xo < -rUI || yo < -rUI || xo > rw + rUI || yo > rh + rUI) return;
+
+        const dodge = dbMode === 'dodge';
+        const dab = dbTool === 'fog' ? dbDabFog : dbDabDodgeBurn;
+        [dbCanvas, dbPrevCanvas].forEach(cv => {
+            const ctx = cv === dbCanvas ? dbCtx : dbPrevCtx;
+            // координаты и радиус – в долях картинки, поэтому попадают в то же место на любом разрешении
+            dab(ctx, (xo / rw) * cv.width, (yo / rh) * cv.height, (rUI / rw) * cv.width, dodge);
+        });
+        dbDirty = true;
+        dbScheduleRefresh();
+    }
+
+    // Мазок: у Осв/Зат отпечатки ставятся с равным шагом вдоль пути, у Тумана – как раньше, по одному на событие
+    function dbStroke(clientX, clientY) {
+        if (dbTool === 'fog') { dbDab(clientX, clientY); return; }
+        if (!dbLast) {
+            dbDab(clientX, clientY);
+            dbLast = { x: clientX, y: clientY };
+            dbCarry = 0;
+            return;
+        }
+        const dx = clientX - dbLast.x, dy = clientY - dbLast.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist === 0) return;
+        const spacing = Math.max(1.5, parseInt(dbSizeSlider.value) * 0.5 * DB_SPACING);
+        let d = spacing - dbCarry;
+        while (d <= dist) {
+            dbDab(dbLast.x + dx * d / dist, dbLast.y + dy * d / dist);
+            d += spacing;
+        }
+        dbCarry = dist - (d - spacing);
+        dbLast = { x: clientX, y: clientY };
+    }
+
+    function dbMoveCursor(e) {
+        const rect = container.getBoundingClientRect();
+        const brushSize = parseInt(dbSizeSlider.value);
+        brushCursor.style.width = brushSize + 'px';
+        brushCursor.style.height = brushSize + 'px';
+        brushCursor.style.left = (e.clientX - rect.left - brushSize/2) + 'px';
+        brushCursor.style.top = (e.clientY - rect.top - brushSize/2) + 'px';
+        brushCursor.style.display = 'block';
     }
 
     // Перехватываем события мыши/пальца на контейнере
-    // Чтобы старая функция "Удержание для До/После" не срабатывала при рисовании, обновите её:
     container.addEventListener('pointerdown', (e) => { 
         if (isDBActive) {
             isDrawingDB = true;
-            applyDodgeBurnStroke(e.clientX, e.clientY);
+            dbLast = null; dbCarry = 0;
+            dbMoveCursor(e);
+            dbStroke(e.clientX, e.clientY);
         } else if (fxTexture && typeof cropperInstance === 'undefined' || cropperInstance === null) { 
             isHolding = true; updatePhotoFilter(); 
         } 
     });
 
     container.addEventListener('pointermove', (e) => {
-        if (isDBActive) {
-            const rect = container.getBoundingClientRect();
-            const brushSize = parseInt(dbSizeSlider.value);
-            brushCursor.style.width = brushSize + 'px';
-            brushCursor.style.height = brushSize + 'px';
-            brushCursor.style.left = (e.clientX - rect.left - brushSize/2) + 'px';
-            brushCursor.style.top = (e.clientY - rect.top - brushSize/2) + 'px';
-            brushCursor.style.display = 'block';
-
-            if (isDrawingDB) {
-                applyDodgeBurnStroke(e.clientX, e.clientY);
-            }
+        if (!isDBActive) return;
+        if (isDrawingDB) {
+            dbMoveCursor(e);
+            const pts = (e.getCoalescedEvents && e.getCoalescedEvents()) || [];
+            if (pts.length) pts.forEach(p => dbStroke(p.clientX, p.clientY));
+            else dbStroke(e.clientX, e.clientY);
+        } else if (e.pointerType === 'mouse') {
+            dbMoveCursor(e);   // на десктопе кольцо видно и при наведении
         }
     });
 
-    container.addEventListener('pointerup', () => { 
+    function dbEndStroke(e) {
         isDrawingDB = false;
-        if (!isDBActive) { isHolding = false; updatePhotoFilter(); }
+        dbLast = null;
+        // на телефоне кольцо видно только пока палец на экране
+        if (e && e.pointerType !== 'mouse') brushCursor.style.display = 'none';
+    }
+
+    container.addEventListener('pointerup', (e) => { 
+        if (isDBActive) { dbEndStroke(e); return; }
+        isDrawingDB = false;
+        isHolding = false; updatePhotoFilter();
+    });
+
+    container.addEventListener('pointercancel', (e) => {
+        if (isDBActive) dbEndStroke(e);
     });
     
     container.addEventListener('pointerleave', () => { 
         isDrawingDB = false;
+        dbLast = null;
         brushCursor.style.display = 'none';
         if (!isDBActive) { isHolding = false; updatePhotoFilter(); }
     });
