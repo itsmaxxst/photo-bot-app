@@ -805,29 +805,7 @@ const toolsData = [
         updatePhotoFilter();
         updateLockState();
     };
-
-    window.openTool = function(id) {
-        if (id === 'crop') {
-            openCropper();
-            return;
-        }
-        if (id === 'bloom') { 
-            openBloom(); 
-            return; 
-        }
-        const t = toolsData.find(x => x.id === id);
-        activeToolKey = id;
-        sliderToolName.innerText = t.name;
-        const uiValue = Math.round(currentSettings[id] * 100);
-        sliderToolValue.innerText = uiValue;
-        activeSlider.min = t.min;
-        activeSlider.max = t.max;
-        activeSlider.value = uiValue;
-        
-        selectionPanel.classList.add('hidden');
-        sliderPanel.classList.add('active');
-    };
-
+    
     // Обновленная логика для кнопки '✕' (отмена + сброс)
     document.getElementById('btn-cancel-tool').onclick = () => {
         if(activeToolKey) {
@@ -1196,14 +1174,29 @@ const toolsData = [
     let dbBackupImg = new Image(); // Для отмены действий
 
     window.openTool = function(id) {
-        if (id === 'crop') { openCropper(); return; }
-        if (id === 'dodgeburn') { openDodgeBurn(); return; }
-        
-        // ... ваш старый код openTool
+        if (id === 'crop') {
+            openCropper();
+            return;
+        }
+        if (id === 'bloom') { 
+            openBloom(); 
+            return; 
+        }
+        if (id === 'dodgeburn') { 
+            openDodgeBurn(); 
+            return; 
+        }
         const t = toolsData.find(x => x.id === id);
         activeToolKey = id;
         sliderToolName.innerText = t.name;
-        // ...
+        const uiValue = Math.round(currentSettings[id] * 100);
+        sliderToolValue.innerText = uiValue;
+        activeSlider.min = t.min;
+        activeSlider.max = t.max;
+        activeSlider.value = uiValue;
+        
+        selectionPanel.classList.add('hidden');
+        sliderPanel.classList.add('active');
     };
 
     function openDodgeBurn() {
