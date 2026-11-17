@@ -89,6 +89,23 @@
         .ratio-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-muted); font-size: 11px; font-weight: 500; cursor: pointer; flex-shrink: 0; min-width: 40px; }
         .ratio-btn.active { color: white; }
         .ratio-icon { border: 1.5px solid currentColor; border-radius: 2px; }
+
+        #brush-cursor {
+            position: absolute; border: 1.5px solid white; border-radius: 50%;
+            pointer-events: none; display: none; box-shadow: 0 0 4px rgba(0,0,0,0.5); z-index: 30;
+            transition: width 0.1s, height 0.1s;
+        }
+
+        #db-panel { display: none; flex-direction: column; align-items: center; background: var(--bg-color); width: 100%; padding: 20px 0; }
+        #db-panel.active { display: flex; }
+        .db-slider-container { display: flex; align-items: center; gap: 15px; width: 100%; max-width: 350px; padding: 0 20px 20px; }
+        .db-modes { display: flex; justify-content: space-around; width: 100%; max-width: 300px; margin-bottom: 25px; }
+        .db-mode { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-muted); font-size: 11px; cursor: pointer; }
+        .db-mode.active { color: white; }
+        .db-icon { width: 30px; height: 30px; border-radius: 50%; border: 2px solid currentColor; position: relative; overflow: hidden; }
+
+        .db-mode[data-mode="dodge"] .db-icon::after { content: ''; position: absolute; left: 0; top: 0; width: 50%; height: 100%; background: currentColor; }
+        .db-mode[data-mode="burn"] .db-icon::after { content: ''; position: absolute; right: 0; top: 0; width: 50%; height: 100%; background: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
@@ -119,6 +136,7 @@
     <div class="placeholder-text" id="placeholder" onclick="document.getElementById('upload').click()">Нажмите здесь, чтобы загрузить фото</div>
     <img id="photo-preview" src="">
     <img id="cropper-image" class="hidden" src="" style="max-width: 100%; display: none;">
+    <div id="brush-cursor"></div>
 </main>
 
 <section class="editor-panel">
@@ -166,6 +184,26 @@
             <button class="action-btn" id="btn-cancel-crop">✕</button>
             <span style="font-size: 13px; font-weight: 600; color: white;">ОБРЕЗКА</span>
             <button class="action-btn" id="btn-apply-crop">✓</button>
+        </div>
+    </div>
+
+    <div id="db-panel">
+        <div class="db-slider-container">
+            <span style="font-size: 12px; color: white;">Size</span>
+            <input type="range" id="db-size" min="20" max="150" value="60">
+        </div>
+        <div class="db-modes">
+            <div class="db-mode active" data-mode="dodge">
+                <div class="db-icon"></div><span>Осветлить</span>
+            </div>
+            <div class="db-mode" data-mode="burn">
+                <div class="db-icon"></div><span>Затемнить</span>
+            </div>
+        </div>
+        <div class="slider-actions" style="width: 100%; max-width: 350px; padding: 0 20px;">
+            <button class="action-btn" id="btn-cancel-db">✕</button>
+            <span style="font-size: 13px; font-weight: 600; color: white;">ОСВЕТЛЕНИЕ И ЗАТЕМНЕНИЕ</span>
+            <button class="action-btn" id="btn-apply-db">✓</button>
         </div>
     </div>
 
@@ -285,6 +323,7 @@ const toolsData = [
         { id: 'clarity', name: 'Четкость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41L13.7 2.71a2.41 2.41 0 0 0-3.41 0z"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'hue', name: 'Тон', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'sepia', name: 'Сепия', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>', min: 0, max: 100, isPro: true },
+        { id: 'dodgeburn', name: 'Осветл./Затемн.', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20z" fill="currentColor"/></svg>', isPro: true },
         { id: 'vignette', name: 'Виньетка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" stroke-dasharray="2 2"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'unsharp', name: 'Резкость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 21 2 21 12 2"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'blur', name: 'Размытие', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>', min: 0, max: 100, isPro: true },
@@ -781,8 +820,169 @@ const toolsData = [
                 resetEditor();
             });
     });
-
     renderPresets();
+    // --- ЛОГИКА ОСВЕТЛЕНИЯ И ЗАТЕМНЕНИЯ ---
+    let isDBActive = false;
+    let dbMode = 'dodge';
+    let isDrawingDB = false;
+    const dbPanel = document.getElementById('db-panel');
+    const brushCursor = document.getElementById('brush-cursor');
+    const dbSizeSlider = document.getElementById('db-size');
+    
+    let dbCanvas = document.createElement('canvas');
+    let dbCtx = dbCanvas.getContext('2d');
+    let dbBackupImg = new Image(); // Для отмены действий
+
+    window.openTool = function(id) {
+        if (id === 'crop') { openCropper(); return; }
+        if (id === 'dodgeburn') { openDodgeBurn(); return; }
+        
+        // ... ваш старый код openTool
+        const t = toolsData.find(x => x.id === id);
+        activeToolKey = id;
+        sliderToolName.innerText = t.name;
+        // ...
+    };
+
+    function openDodgeBurn() {
+        if (!originalImage.src || !glCanvas) return;
+        selectionPanel.classList.add('hidden');
+        sliderPanel.classList.remove('active');
+        if(typeof cropPanel !== 'undefined') cropPanel.classList.remove('active');
+        dbPanel.classList.add('active');
+        
+        // Сохраняем бекап для кнопки отмены (✕)
+        dbBackupImg.src = originalImage.src;
+        
+        // Настраиваем скрытый холст под текущее разрешение картинки
+        dbCanvas.width = originalImage.width;
+        dbCanvas.height = originalImage.height;
+        dbCtx.drawImage(originalImage, 0, 0);
+        
+        isDBActive = true;
+    }
+
+    function closeDodgeBurn(apply) {
+        isDBActive = false;
+        brushCursor.style.display = 'none';
+        dbPanel.classList.remove('active');
+        selectionPanel.classList.remove('hidden');
+        
+        if (apply) {
+            // Сохраняем результат
+            const editedUrl = dbCanvas.toDataURL('image/jpeg', 1.0);
+            originalImage.src = editedUrl;
+        } else {
+            // Отменяем (возвращаем как было)
+            originalImage.src = dbBackupImg.src;
+            if (fxTexture) fxTexture.destroy();
+            fxTexture = glCanvas.texture(originalImage);
+            updatePhotoFilter();
+        }
+    }
+
+    document.getElementById('btn-cancel-db').onclick = () => closeDodgeBurn(false);
+    document.getElementById('btn-apply-db').onclick = () => closeDodgeBurn(true);
+
+    // Переключение режимов Осветлить/Затемнить
+    document.querySelectorAll('.db-mode').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.db-mode').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            dbMode = btn.getAttribute('data-mode');
+        });
+    });
+
+    // Рисование кистью по фото
+    function applyDodgeBurnStroke(clientX, clientY) {
+        const rect = glCanvas.getBoundingClientRect();
+        
+        // Вычисляем реальные размеры картинки внутри canvas (из-за object-fit: contain)
+        const scaleX = rect.width / glCanvas.width;
+        const scaleY = rect.height / glCanvas.height;
+        const scale = Math.min(scaleX, scaleY);
+
+        const renderedW = glCanvas.width * scale;
+        const renderedH = glCanvas.height * scale;
+        const offsetX = (rect.width - renderedW) / 2;
+        const offsetY = (rect.height - renderedH) / 2;
+
+        // Координаты относительно картинки
+        const xOnCanvas = clientX - rect.left - offsetX;
+        const yOnCanvas = clientY - rect.top - offsetY;
+
+        // Отсекаем рисование за пределами картинки
+        if (xOnCanvas < 0 || yOnCanvas < 0 || xOnCanvas > renderedW || yOnCanvas > renderedH) return;
+
+        // Переводим в оригинальное разрешение
+        const imgX = xOnCanvas / scale;
+        const imgY = yOnCanvas / scale;
+
+        // Размер кисти с учетом зума
+        const brushUI = parseInt(dbSizeSlider.value);
+        const radius = (brushUI / scale) * 0.5;
+
+        // Рисуем мягкий градиент
+        const grad = dbCtx.createRadialGradient(imgX, imgY, 0, imgX, imgY, radius);
+        if (dbMode === 'dodge') {
+            grad.addColorStop(0, 'rgba(255,255,255,0.04)'); // Мягкий белый
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            dbCtx.globalCompositeOperation = 'screen';
+        } else {
+            grad.addColorStop(0, 'rgba(0,0,0,0.04)'); // Мягкий черный
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            dbCtx.globalCompositeOperation = 'multiply';
+        }
+        
+        dbCtx.fillStyle = grad;
+        dbCtx.beginPath();
+        dbCtx.arc(imgX, imgY, radius, 0, Math.PI * 2);
+        dbCtx.fill();
+        dbCtx.globalCompositeOperation = 'source-over';
+
+        // Мгновенно обновляем WebGL текстуру
+        if (fxTexture) fxTexture.destroy();
+        fxTexture = glCanvas.texture(dbCanvas);
+        updatePhotoFilter();
+    }
+
+    // Перехватываем события мыши/пальца на контейнере
+    // Чтобы старая функция "Удержание для До/После" не срабатывала при рисовании, обновите её:
+    container.addEventListener('pointerdown', (e) => { 
+        if (isDBActive) {
+            isDrawingDB = true;
+            applyDodgeBurnStroke(e.clientX, e.clientY);
+        } else if (fxTexture && typeof cropperInstance === 'undefined' || cropperInstance === null) { 
+            isHolding = true; updatePhotoFilter(); 
+        } 
+    });
+
+    container.addEventListener('pointermove', (e) => {
+        if (isDBActive) {
+            const rect = container.getBoundingClientRect();
+            const brushSize = parseInt(dbSizeSlider.value);
+            brushCursor.style.width = brushSize + 'px';
+            brushCursor.style.height = brushSize + 'px';
+            brushCursor.style.left = (e.clientX - rect.left - brushSize/2) + 'px';
+            brushCursor.style.top = (e.clientY - rect.top - brushSize/2) + 'px';
+            brushCursor.style.display = 'block';
+
+            if (isDrawingDB) {
+                applyDodgeBurnStroke(e.clientX, e.clientY);
+            }
+        }
+    });
+
+    container.addEventListener('pointerup', () => { 
+        isDrawingDB = false;
+        if (!isDBActive) { isHolding = false; updatePhotoFilter(); }
+    });
+    
+    container.addEventListener('pointerleave', () => { 
+        isDrawingDB = false;
+        brushCursor.style.display = 'none';
+        if (!isDBActive) { isHolding = false; updatePhotoFilter(); }
+    });
 </script>
 </body>
 </html>
