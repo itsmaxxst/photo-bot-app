@@ -121,7 +121,6 @@
         input[type="range"].bloom-slider::-moz-range-track { height: 1px; background: #4a4a4a; }
         input[type="range"].bloom-slider::-moz-range-thumb { width: 26px; height: 26px; border: none; border-radius: 50%; background: #fff; }
         .bloom-actions { margin-top: 4px; }
-        .bloom-pill { display: flex; align-items: center; gap: 5px; background: #f2f2f2; color: #000; border: none; border-radius: 18px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -198,7 +197,7 @@
         </div>
         <div class="slider-actions" style="padding: 20px 0;">
             <button class="action-btn" id="btn-cancel-crop">✕</button>
-            <span style="font-size: 13px; font-weight: 600; color: white;">ОБРЕЗКА</span>
+            <button class="action-btn" id="btn-cancel-crop" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="btn-apply-crop">✓</button>
         </div>
     </div>
@@ -218,7 +217,7 @@
         </div>
         <div class="slider-actions" style="width: 100%; max-width: 350px; padding: 0 20px;">
             <button class="action-btn" id="btn-cancel-db">✕</button>
-            <span style="font-size: 13px; font-weight: 600; color: white;">ОСВЕТЛЕНИЕ И ЗАТЕМНЕНИЕ</span>
+            <button class="action-btn" id="btn-cancel-db" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="btn-apply-db">✓</button>
         </div>
     </div>
@@ -238,7 +237,7 @@
         </div>
         <div class="slider-actions bloom-actions">
             <button class="action-btn" id="bloom-cancel">✕</button>
-            <button class="bloom-pill" id="bloom-pill">Блум <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+            <button class="action-btn" id="bloom-cancel" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="bloom-apply">✓</button>
         </div>
     </div>
@@ -922,7 +921,6 @@ const toolsData = [
         closeSlider();
     };
     document.getElementById('bloom-apply').onclick = () => closeSlider();
-    document.getElementById('bloom-pill').onclick = () => closeSlider();
 
     navItems.forEach(item => {
         item.addEventListener('click', () => {
