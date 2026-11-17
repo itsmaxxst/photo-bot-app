@@ -923,23 +923,21 @@ const toolsData = [
         const radius = (brushUI / scale) * 0.5;
 
         // Рисуем ультра-мягкий градиент
-        // Рисуем ультра-мягкий градиент с естественными природными оттенками
         const grad = dbCtx.createRadialGradient(imgX, imgY, 0, imgX, imgY, radius);
         
+        // Включаем самый естественный режим наложения для обоих инструментов
+        dbCtx.globalCompositeOperation = 'soft-light'; 
+        
         if (dbMode === 'dodge') {
-            // Теплый, солнечный блик (кремово-золотистый) вместо чистого белого
-            // RGB: 255, 245, 230
-            grad.addColorStop(0, 'rgba(255, 245, 230, 0.01)');
-            grad.addColorStop(0.4, 'rgba(255, 245, 230, 0.005)');
+            // Мягкий теплый свет
+            grad.addColorStop(0, 'rgba(255, 245, 230, 0.04)');
+            grad.addColorStop(0.4, 'rgba(255, 245, 230, 0.01)');
             grad.addColorStop(1, 'rgba(255, 245, 230, 0)');
-            dbCtx.globalCompositeOperation = 'color-dodge'; 
         } else {
-            // Глубокая атмосферная тень (темный индиго/сине-серый) вместо глухого черного
-            // RGB: 15, 20, 35
-            grad.addColorStop(0, 'rgba(15, 20, 35, 0.01)');
-            grad.addColorStop(0.4, 'rgba(15, 20, 35, 0.005)');
+            // Глубокая холодная тень
+            grad.addColorStop(0, 'rgba(15, 20, 35, 0.04)');
+            grad.addColorStop(0.4, 'rgba(15, 20, 35, 0.01)');
             grad.addColorStop(1, 'rgba(15, 20, 35, 0)');
-            dbCtx.globalCompositeOperation = 'color-burn'; 
         }
         
         dbCtx.fillStyle = grad;
