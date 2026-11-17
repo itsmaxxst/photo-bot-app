@@ -323,7 +323,7 @@ const toolsData = [
         { id: 'clarity', name: 'Четкость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41L13.7 2.71a2.41 2.41 0 0 0-3.41 0z"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'hue', name: 'Тон', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'sepia', name: 'Сепия', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>', min: 0, max: 100, isPro: true },
-        { id: 'dodgeburn', name: 'Осветл./Затемн.', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20z" fill="currentColor"/></svg>', isPro: true },
+        { id: 'dodgeburn', name: 'Осв/Зат', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20z" fill="currentColor"/></svg>', isPro: true },
         { id: 'vignette', name: 'Виньетка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" stroke-dasharray="2 2"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'unsharp', name: 'Резкость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 21 2 21 12 2"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'blur', name: 'Размытие', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>', min: 0, max: 100, isPro: true },
@@ -922,15 +922,20 @@ const toolsData = [
         const brushUI = parseInt(dbSizeSlider.value);
         const radius = (brushUI / scale) * 0.5;
 
-        // Рисуем мягкий градиент
+        // Рисуем ультра-мягкий градиент
         const grad = dbCtx.createRadialGradient(imgX, imgY, 0, imgX, imgY, radius);
+        
         if (dbMode === 'dodge') {
-            grad.addColorStop(0, 'rgba(255,255,255,0.04)'); // Мягкий белый
-            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            // Осветление (уменьшили альфу с 0.04 до 0.01 + добавили среднюю точку)
+            grad.addColorStop(0, 'rgba(255,255,255,0.01)');   // Центр кисти (1%)
+            grad.addColorStop(0.4, 'rgba(255,255,255,0.005)'); // Плавный переход (0.5%)
+            grad.addColorStop(1, 'rgba(255,255,255,0)');      // Идеально растворяющийся край
             dbCtx.globalCompositeOperation = 'screen';
         } else {
-            grad.addColorStop(0, 'rgba(0,0,0,0.04)'); // Мягкий черный
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            // Затемнение 
+            grad.addColorStop(0, 'rgba(0,0,0,0.01)');   // Центр кисти (1%)
+            grad.addColorStop(0.4, 'rgba(0,0,0,0.005)'); // Плавный переход (0.5%)
+            grad.addColorStop(1, 'rgba(0,0,0,0)');      // Идеально растворяющийся край
             dbCtx.globalCompositeOperation = 'multiply';
         }
         
