@@ -260,6 +260,22 @@
         </div>
     </div>
 
+    <div class="hsl-panel" id="wb-panel">
+        <div class="hsl-row" data-key="wbTemp" data-trk="linear-gradient(90deg, #2f7df6, #f1ede0 50%, #ffb400)">
+            <div class="hsl-head"><span>Температура</span><span class="hsl-val"></span></div>
+            <div class="hsl-track"><i class="hsl-tick"></i><input type="range" class="hsl-slider" min="-120" max="120" step="1" value="0"></div>
+        </div>
+        <div class="hsl-row" data-key="wbTint" data-trk="linear-gradient(90deg, #1fbf6a, #eee9ee 50%, #ff3fa4)">
+            <div class="hsl-head"><span>Оттенок</span><span class="hsl-val"></span></div>
+            <div class="hsl-track"><i class="hsl-tick"></i><input type="range" class="hsl-slider" min="-120" max="120" step="1" value="0"></div>
+        </div>
+        <div class="slider-actions hsl-actions">
+            <button class="action-btn" id="wb-cancel">✕</button>
+            <button class="action-btn" id="wb-reset" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <button class="action-btn" id="wb-apply">✓</button>
+        </div>
+    </div>
+
     <div class="hsl-panel" id="hsl-panel">
         <div class="hsl-row" data-ch="h">
             <div class="hsl-head"><span>Оттенок</span><span class="hsl-val"></span></div>
@@ -352,7 +368,7 @@
         vignette: 0, unsharp: 0, noise: 0, sepia: 0, 
         vibrance: 0, blur: 0, denoise: 0,
         temperature: 0, tint: 0, highlights: 0, shadows: 0, fade: 0, clarity: 0 ,
-        bloomStrength: 0, bloomSize: 0, bloomRange: 0
+        bloomStrength: 0, bloomSize: 0, bloomRange: 0, wbTemp: 0, wbTint: 0
     };
     HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach(ch => { defaultSettings['hsl' + i + ch] = 0; }));
     
@@ -403,6 +419,7 @@
         { id: 'contrast', name: 'Контраст', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20Z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'saturation', name: 'Насыщенность', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'vibrance', name: 'Сочность', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'wb', name: 'Баланс белого', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14.76V3.5a2.5 2.5 0 0 1 5 0v11.26a4.5 4.5 0 1 1-5 0z" transform="translate(-1 0)"/><line x1="17" y1="6" x2="20" y2="6"/><line x1="17" y1="10" x2="20" y2="10"/></svg>', isPro: false },
         { id: 'temperature', name: 'Температура', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'bloom', name: 'Блум', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 Q12 12 3 12 Q12 12 12 21 Q12 12 21 12 Q12 12 12 3 Z"/><path d="M4.5 4.5l2 2"/><path d="M19.5 4.5l-2 2"/><path d="M19.5 19.5l-2 -2"/><path d="M4.5 19.5l2 -2"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'tint', name: 'Оттенок', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><circle cx="15" cy="15" r="7"/></svg>', min: -100, max: 100, isPro: false },
@@ -952,6 +969,19 @@
 
         targetCanvas.draw(texture);
 
+        // 0. Баланс белого (Температура: синий↔жёлтый, Оттенок: зелёный↔пурпурный)
+        const wbT = Math.max(-1, Math.min(1, (baseSettings.wbTemp || 0) + (settingsToApply.wbTemp || 0)));
+        const wbN = Math.max(-1, Math.min(1, (baseSettings.wbTint || 0) + (settingsToApply.wbTint || 0)));
+        if (wbT !== 0 || wbN !== 0) {
+            const wbX = [0, 0.25, 0.5, 0.75, 1];
+            const wbCurve = e => wbX.map(x => [x, Math.pow(x, Math.pow(2, e))]);
+            targetCanvas.curves(
+                wbCurve(-0.45 * wbT - 0.15 * wbN),
+                wbCurve(-0.08 * wbT + 0.45 * wbN),
+                wbCurve( 0.45 * wbT - 0.15 * wbN)
+            );
+        }
+
         // 1. Предварительная очистка (если задана)
         if (denoiseVal > 0) targetCanvas.denoise(denoiseVal * 50);
         if (blur > 0) targetCanvas.triangleBlur(blur * 30);
@@ -1079,13 +1109,14 @@
         sliderPanel.classList.remove('active');
         bloomPanel.classList.remove('active');
         hslPanel.classList.remove('active');
+        wbPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
         activeToolKey = null;
     }
 
     // ===================== Блум UI (3 sliders: Сила / Размер / Диапазон) =====================
     const bloomPanel = document.getElementById('bloom-panel');
-    const BLOOM_UI_MAX = 12;   // sliders show 0.0 … 12.0 like VSCO; settings store 0…1
+    const BLOOM_UI_MAX = 12;   // sliders show 0.0 … 12.0; settings store 0…1
     const bloomRows = Array.from(bloomPanel.querySelectorAll('.bloom-row')).map(row => ({
         key: row.dataset.key,
         input: row.querySelector('.bloom-slider'),
@@ -1127,7 +1158,7 @@
             updateLockState();
         });
 
-        // double-tap on the slider's name resets just that slider (like VSCO)
+        // double-tap on the slider's name resets just that slider
         let lastTap = 0;
         r.head.addEventListener('pointerdown', () => {
             const now = Date.now();
@@ -1256,7 +1287,7 @@
             updateLockState();
         });
 
-        // double-tap on the slider's name resets just that slider (like VSCO)
+        // double-tap on the slider's name resets just that slider
         let lastTap = 0;
         r.head.addEventListener('pointerdown', () => {
             const now = Date.now();
@@ -1281,6 +1312,69 @@
     document.getElementById('hsl-cancel').onclick = () => { hslResetAll(); closeSlider(); };
     document.getElementById('hsl-reset').onclick = hslResetAll;
     document.getElementById('hsl-apply').onclick = () => closeSlider();
+
+    // ===================== Баланс белого UI (Температура / Оттенок, -12.0 … +12.0) =====================
+    const wbPanel = document.getElementById('wb-panel');
+    const wbRows = Array.from(wbPanel.querySelectorAll('.hsl-row')).map(row => ({
+        key: row.dataset.key,
+        input: row.querySelector('.hsl-slider'),
+        val: row.querySelector('.hsl-val'),
+        head: row.querySelector('.hsl-head')
+    }));
+
+    function syncWbRow(r) {
+        const ui = parseFloat(r.input.value) / 10;
+        r.val.textContent = (ui > 0 ? '+' : '') + ui.toFixed(1).replace('.', ',');
+        r.val.style.left = hslThumbX((ui + HSL_UI_MAX) / (2 * HSL_UI_MAX));
+    }
+
+    function setWbValue(r, uiValue) {
+        r.input.value = Math.round(uiValue * 10);
+        currentSettings[r.key] = (parseFloat(r.input.value) / 10) / HSL_UI_MAX;
+        syncWbRow(r);
+    }
+
+    function wbResetAll() {
+        wbRows.forEach(r => setWbValue(r, 0));
+        updatePhotoFilter();
+        updateLockState();
+    }
+
+    wbRows.forEach(r => {
+        r.input.style.setProperty('--trk', r.head.parentElement.dataset.trk);
+        r.input.addEventListener('input', () => {
+            setWbValue(r, parseFloat(r.input.value) / 10);
+            updatePhotoFilter();
+            updateLockState();
+        });
+
+        // double-tap on the slider's name resets just that slider
+        let lastTap = 0;
+        r.head.addEventListener('pointerdown', () => {
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                setWbValue(r, 0);
+                updatePhotoFilter();
+                updateLockState();
+            }
+            lastTap = now;
+        });
+    });
+
+    function openWb() {
+        activeToolKey = null;
+        wbRows.forEach(r => {
+            r.input.value = Math.round((currentSettings[r.key] || 0) * HSL_UI_MAX * 10);
+            syncWbRow(r);
+        });
+        selectionPanel.classList.add('hidden');
+        wbPanel.classList.add('active');
+    }
+
+    // ✕ = cancel + reset (same as other tools), СБРОС = reset and stay open, ✓ = apply and go back to the tool list
+    document.getElementById('wb-cancel').onclick = () => { wbResetAll(); closeSlider(); };
+    document.getElementById('wb-reset').onclick = wbResetAll;
+    document.getElementById('wb-apply').onclick = () => closeSlider();
 
     navItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -1567,6 +1661,10 @@
         if (id === 'hsl') { 
             openHsl(); 
             return; 
+        }
+        if (id === 'wb') {
+            openWb();
+            return;
         }
         if (id === 'dodgeburn' || id === 'fog') { 
             openDodgeBurn(id); 
