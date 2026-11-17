@@ -218,7 +218,7 @@
         </div>
         <div class="slider-actions" style="width: 100%; max-width: 350px; padding: 0 20px;">
             <button class="action-btn" id="btn-cancel-db">✕</button>
-            <button class="action-btn" id="btn-reset-tool" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <span style="font-size: 13px; font-weight: 600; color: white;">ОСВЕТЛЕНИЕ И ЗАТЕМНЕНИЕ</span>
             <button class="action-btn" id="btn-apply-db">✓</button>
         </div>
     </div>
@@ -238,7 +238,7 @@
         </div>
         <div class="slider-actions bloom-actions">
             <button class="action-btn" id="bloom-cancel">✕</button>
-            <button class="action-btn" id="btn-reset-tool" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <button class="bloom-pill" id="bloom-pill">Блум <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
             <button class="action-btn" id="bloom-apply">✓</button>
         </div>
     </div>
@@ -805,7 +805,7 @@ const toolsData = [
         updatePhotoFilter();
         updateLockState();
     };
-
+    
     // Обновленная логика для кнопки '✕' (отмена + сброс)
     document.getElementById('btn-cancel-tool').onclick = () => {
         if(activeToolKey) {
