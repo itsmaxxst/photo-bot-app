@@ -121,6 +121,24 @@
         input[type="range"].bloom-slider::-moz-range-track { height: 1px; background: #4a4a4a; }
         input[type="range"].bloom-slider::-moz-range-thumb { width: 26px; height: 26px; border: none; border-radius: 50%; background: #fff; }
         .bloom-actions { margin-top: 4px; }
+
+        /* ===================== HSL panel ===================== */
+        .hsl-panel { display: none; flex-direction: column; gap: 10px; padding: 16px 20px 8px; }
+        .hsl-panel.active { display: flex; }
+        .hsl-row { width: 100%; max-width: 350px; margin: 0 auto; }
+        .hsl-head { position: relative; height: 18px; line-height: 18px; font-size: 13px; color: #fff; }
+        .hsl-val { position: absolute; top: 0; transform: translateX(-50%); font-size: 13px; white-space: nowrap; pointer-events: none; }
+        .hsl-track { position: relative; height: 30px; }
+        .hsl-tick { position: absolute; left: 50%; top: 50%; width: 1px; height: 14px; margin-top: -7px; background: #666; pointer-events: none; }
+        input[type="range"].hsl-slider { position: absolute; left: 0; top: 0; width: 100%; height: 30px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; }
+        input[type="range"].hsl-slider::-webkit-slider-runnable-track { height: 2px; border-radius: 1px; background: var(--trk, #4a4a4a); }
+        input[type="range"].hsl-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; margin-top: -12px; box-shadow: 0 1px 5px rgba(0,0,0,0.45); }
+        input[type="range"].hsl-slider::-moz-range-track { height: 2px; border-radius: 1px; background: var(--trk, #4a4a4a); }
+        input[type="range"].hsl-slider::-moz-range-thumb { width: 26px; height: 26px; border: none; border-radius: 50%; background: #fff; }
+        .hsl-swatches { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 350px; margin: 8px auto 6px; padding: 6px 4px; box-sizing: border-box; }
+        .hsl-swatch { width: 32px; height: 32px; border-radius: 50%; border: none; padding: 0; cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+        .hsl-swatch.sel { box-shadow: 0 0 0 3px #000, 0 0 0 5px var(--ring, #fff); }
+        .hsl-actions { margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -242,6 +260,27 @@
         </div>
     </div>
 
+    <div class="hsl-panel" id="hsl-panel">
+        <div class="hsl-row" data-ch="h">
+            <div class="hsl-head"><span>Оттенок</span><span class="hsl-val"></span></div>
+            <div class="hsl-track"><i class="hsl-tick"></i><input type="range" class="hsl-slider" min="-120" max="120" step="1" value="0"></div>
+        </div>
+        <div class="hsl-row" data-ch="s">
+            <div class="hsl-head"><span>Насыщенность</span><span class="hsl-val"></span></div>
+            <div class="hsl-track"><i class="hsl-tick"></i><input type="range" class="hsl-slider" min="-120" max="120" step="1" value="0"></div>
+        </div>
+        <div class="hsl-row" data-ch="l">
+            <div class="hsl-head"><span>Осветление</span><span class="hsl-val"></span></div>
+            <div class="hsl-track"><i class="hsl-tick"></i><input type="range" class="hsl-slider" min="-120" max="120" step="1" value="0"></div>
+        </div>
+        <div class="hsl-swatches" id="hsl-swatches"></div>
+        <div class="slider-actions hsl-actions">
+            <button class="action-btn" id="hsl-cancel">✕</button>
+            <button class="action-btn" id="hsl-reset" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <button class="action-btn" id="hsl-apply">✓</button>
+        </div>
+    </div>
+
     <div id="selection-panel">
         <div class="sub-tabs" id="sub-tabs-container"></div>
         <div class="items-scroll" id="items-container"></div>
@@ -296,6 +335,18 @@
     let currentTab = 'presets';
     let favoritePresets = JSON.parse(localStorage.getItem('favoritePresets')) || [];
 
+    // HSL: 6 colours x (hue, saturation, lightness) stored as flat keys (hsl0h, hsl0s, hsl0l, hsl1h …),
+    // so the existing "{ ...defaultSettings }" copies keep working without shared references.
+    const HSL_COLORS = [
+        { name: 'red',    h: 0 },
+        { name: 'orange', h: 28 },
+        { name: 'yellow', h: 58 },
+        { name: 'green',  h: 120 },
+        { name: 'blue',   h: 220 },
+        { name: 'purple', h: 285 }
+    ];
+    const HSL_CHANNELS = ['h', 's', 'l'];
+
     const defaultSettings = { 
         brightness: 0, contrast: 0, hue: 0, saturation: 0, 
         vignette: 0, unsharp: 0, noise: 0, sepia: 0, 
@@ -303,6 +354,7 @@
         temperature: 0, tint: 0, highlights: 0, shadows: 0, fade: 0, clarity: 0 ,
         bloomStrength: 0, bloomSize: 0, bloomRange: 0
     };
+    HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach(ch => { defaultSettings['hsl' + i + ch] = 0; }));
     
     let currentSettings = { ...defaultSettings };
     let presetSettings = { ...defaultSettings };
@@ -345,7 +397,7 @@
         { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { ...defaultSettings, brightness: 0, contrast: 0.2, saturation: -0.4, hue: 0.1, sepia: 0.2, vignette: 0.1 } }
     ];
 
-const toolsData = [
+    const toolsData = [
         { id: 'crop', name: 'Обрезка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/></svg>', isPro: false },
         { id: 'brightness', name: 'Экспозиция', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="4.22" x2="19.78" y2="5.64"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'contrast', name: 'Контраст', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20Z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
@@ -356,6 +408,7 @@ const toolsData = [
         { id: 'tint', name: 'Оттенок', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><circle cx="15" cy="15" r="7"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'highlights', name: 'Свет', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'shadows', name: 'Тени', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>', min: -100, max: 100, isPro: true },
+        { id: 'hsl', name: 'HSL', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><circle cx="8" cy="15" r="5"/><circle cx="16" cy="15" r="5"/></svg>', isPro: true },
         { id: 'fade', name: 'Фейд', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2" stroke-dasharray="4 4"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'clarity', name: 'Четкость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41L13.7 2.71a2.41 2.41 0 0 0-3.41 0z"/></svg>', min: 0, max: 100, isPro: false },
         { id: 'hue', name: 'Тон', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>', min: -100, max: 100, isPro: false },
@@ -441,6 +494,7 @@ const toolsData = [
         let isToolLocked = false;
         if (!isPremium) {
             toolsData.filter(t => t.isPro).forEach(t => {
+                if (t.id === 'hsl') { if (hslHasAdjustments(currentSettings)) isToolLocked = true; return; }
                 const key = t.id === 'bloom' ? 'bloomStrength' : t.id;
                 if (currentSettings[key] !== 0) isToolLocked = true;
             });
@@ -692,6 +746,185 @@ const toolsData = [
     }
 
 
+    // ===================== HSL — GPU post-pass =====================
+    // glfx.js has no per-hue colour tool, so HSL runs on glfx's own WebGL context right after update()
+    // (same trick as Bloom): every pixel is converted to HSL, the adjustments of the two nearest colour
+    // channels are blended smoothly by the pixel's hue, then the pixel is converted back.
+    const HSL_TUNING = {
+        hueRange: 30,      // ±12 on the slider = ±30° hue shift
+        satBoost: 1.5,     // +12 saturation ≈ x2.5 (clamped), -12 = fully desaturated
+        lightAmt: 0.5,     // ±12 lightness moves L half-way to white / black
+        chromaKnee: 0.1    // near-grey pixels have no stable hue → fade hue/lightness edits out below this chroma
+    };
+    const HSL_UI_MAX = 12;   // sliders show -12.0 … +12.0 like VSCO; settings store -1 … 1
+
+    function hslFragmentSource() {
+        const n = HSL_COLORS.length, T = HSL_TUNING;
+        const f = v => v.toFixed(6);
+        let s = 'uniform sampler2D tex;\n';
+        for (let i = 0; i < n; i++) s += 'uniform vec3 a' + i + ';\n';
+        s += `
+        vec3 rgb2hsl(vec3 c){
+            float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
+            float l = (mx + mn) * 0.5, d = mx - mn, h = 0.0, s = 0.0;
+            if (d > 0.00001) {
+                s = d / max(1.0 - abs(2.0 * l - 1.0), 0.00001);
+                if (mx == c.r)      h = mod((c.g - c.b) / d, 6.0);
+                else if (mx == c.g) h = (c.b - c.r) / d + 2.0;
+                else                h = (c.r - c.g) / d + 4.0;
+                h /= 6.0;
+            }
+            return vec3(h, s, l);
+        }
+        float hue2rgb(float p, float q, float t){
+            t = fract(t);
+            if (t < 1.0 / 6.0) return p + (q - p) * 6.0 * t;
+            if (t < 0.5)       return q;
+            if (t < 2.0 / 3.0) return p + (q - p) * (2.0 / 3.0 - t) * 6.0;
+            return p;
+        }
+        vec3 hsl2rgb(vec3 c){
+            if (c.y <= 0.0) return vec3(c.z);
+            float q = c.z < 0.5 ? c.z * (1.0 + c.y) : c.z + c.y - c.z * c.y;
+            float p = 2.0 * c.z - q;
+            return vec3(hue2rgb(p, q, c.x + 1.0 / 3.0), hue2rgb(p, q, c.x), hue2rgb(p, q, c.x - 1.0 / 3.0));
+        }
+        void main(){
+            vec3 src = texture2D(tex, uv).rgb;
+            vec3 hsl = rgb2hsl(src);
+            float h = hsl.x;
+            vec3 adj = a0;
+`;
+        // piecewise blend between neighbouring colour centres (the last segment wraps back to red)
+        for (let i = 0; i < n; i++) {
+            const lo = HSL_COLORS[i].h / 360;
+            const hi = i === n - 1 ? 1.0 : HSL_COLORS[i + 1].h / 360;
+            s += `            if (h >= ${f(lo)} && h < ${f(hi)}) { float t = (h - ${f(lo)}) / ${f(hi - lo)}; t = t * t * (3.0 - 2.0 * t); adj = mix(a${i}, a${(i + 1) % n}, t); }\n`;
+        }
+        s += `
+            if (adj.x == 0.0 && adj.y == 0.0 && adj.z == 0.0) { gl_FragColor = vec4(src, 1.0); return; }
+            float chroma = hsl.y * (1.0 - abs(2.0 * hsl.z - 1.0));
+            float cw = smoothstep(0.0, ${f(T.chromaKnee)}, chroma);
+            float nh = fract(h + adj.x * ${f(T.hueRange / 360)} * cw + 1.0);
+            float ns = adj.y >= 0.0 ? hsl.y * (1.0 + adj.y * ${f(T.satBoost)}) : hsl.y * (1.0 + adj.y);
+            ns = clamp(ns, 0.0, 1.0);
+            float dl = adj.z * cw;
+            float nl = dl >= 0.0 ? hsl.z + (1.0 - hsl.z) * dl * ${f(T.lightAmt)} : hsl.z * (1.0 + dl * ${f(T.lightAmt)});
+            gl_FragColor = vec4(hsl2rgb(vec3(nh, ns, clamp(nl, 0.0, 1.0))), 1.0);
+        }`;
+        return s;
+    }
+
+    // JS twin of the shader maths for a single colour — used to paint the "after" half of the swatches
+    function hslAdjustColor(h, s, l, ah, as, al) {
+        const T = HSL_TUNING;
+        const nh = ((h + ah * T.hueRange) % 360 + 360) % 360;
+        const ns = Math.max(0, Math.min(1, as >= 0 ? s * (1 + as * T.satBoost) : s * (1 + as)));
+        const nl = Math.max(0, Math.min(1, al >= 0 ? l + (1 - l) * al * T.lightAmt : l * (1 + al * T.lightAmt)));
+        return [nh, ns, nl];
+    }
+
+    // sums preset + user values (clamped to -1…1); null when nothing is adjusted
+    function hslCollect(base, add) {
+        const out = new Float32Array(HSL_COLORS.length * 3);
+        let any = false;
+        HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach((ch, j) => {
+            const k = 'hsl' + i + ch;
+            const v = Math.max(-1, Math.min(1, ((base && base[k]) || 0) + ((add && add[k]) || 0)));
+            out[i * 3 + j] = v;
+            if (v !== 0) any = true;
+        }));
+        return any ? out : null;
+    }
+    function hslHasAdjustments(settings) { return hslCollect(null, settings) !== null; }
+
+    function createHslRenderer(canvas) {
+        const gl = canvas._ && canvas._.gl;
+        if (!gl) return null;
+        const n = HSL_COLORS.length;
+        const attrs = gl.getContextAttributes();
+        const frameFormat = (attrs && attrs.alpha === false) ? gl.RGB : gl.RGBA;
+
+        function compile(type, srcText) {
+            const sh = gl.createShader(type);
+            gl.shaderSource(sh, srcText);
+            gl.compileShader(sh);
+            if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error('hsl shader: ' + gl.getShaderInfoLog(sh));
+            return sh;
+        }
+        const prog = gl.createProgram();
+        gl.attachShader(prog, compile(gl.VERTEX_SHADER, BLOOM_VS));
+        gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, BLOOM_FS_HEAD + hslFragmentSource()));
+        gl.bindAttribLocation(prog, 0, 'p');
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('hsl link: ' + gl.getProgramInfoLog(prog));
+        const uTex = gl.getUniformLocation(prog, 'tex');
+        const uA = [];
+        for (let i = 0; i < n; i++) uA.push(gl.getUniformLocation(prog, 'a' + i));
+
+        const quad = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+        const R = { frameTex: null, w: 0, h: 0 };
+        function release() { if (R.frameTex) gl.deleteTexture(R.frameTex); R.frameTex = null; }
+        function ensure(w, h) {
+            if (R.w === w && R.h === h && R.frameTex) return;
+            release();
+            R.w = w; R.h = h;
+            const tex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D, 0, frameFormat, w, h, 0, frameFormat, gl.UNSIGNED_BYTE, null);
+            R.frameTex = tex;
+        }
+
+        R.render = function (vals) {
+            const dw = gl.drawingBufferWidth, dh = gl.drawingBufferHeight;
+            if (!dw || !dh) return;
+            ensure(dw, dh);
+
+            gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.disable(gl.SCISSOR_TEST);
+            gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+            // grab the frame glfx has just drawn, then redraw it through the HSL shader
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, R.frameTex);
+            gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, dw, dh);
+
+            gl.useProgram(prog);
+            gl.viewport(0, 0, dw, dh);
+            gl.uniform1i(uTex, 0);
+            for (let i = 0; i < n; i++) gl.uniform3f(uA[i], vals[i * 3], vals[i * 3 + 1], vals[i * 3 + 2]);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            // leave GL the way glfx expects it
+            gl.bindTexture(gl.TEXTURE_2D, null);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, dw, dh);
+        };
+        R.dispose = function () { release(); gl.deleteProgram(prog); gl.deleteBuffer(quad); };
+        return R;
+    }
+
+    function applyHsl(canvas, vals) {
+        let r = canvas._hslRenderer;
+        if (r === undefined) {
+            try { r = createHslRenderer(canvas); } catch (e) { console.warn('HSL unavailable:', e); r = null; }
+            canvas._hslRenderer = r;
+        }
+        if (!r) return;
+        try { r.render(vals); } catch (e) { console.warn('HSL failed:', e); }
+        // the preview canvas keeps its GPU buffers; one-off export canvases free them right away
+        if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._hslRenderer = null; }
+    }
+
     function applyFiltersToCanvas(targetCanvas, texture, settingsToApply, baseSettings) {
         // Базовые настройки
         const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
@@ -779,6 +1012,8 @@ const toolsData = [
         if (vig > 0) targetCanvas.vignette(0.5, 0.5 - (vig * 0.3));
 
         targetCanvas.update();
+        const hslVals = hslCollect(baseSettings, settingsToApply);
+        if (hslVals) applyHsl(targetCanvas, hslVals);
         const bloomStrength = Math.max(0, Math.min(1, (baseSettings.bloomStrength || 0) + (settingsToApply.bloomStrength || 0)));
         if (bloomStrength > 0) {
             const bloomSize = Math.max(0, Math.min(1, (baseSettings.bloomSize || 0) + (settingsToApply.bloomSize || 0)));
@@ -842,6 +1077,7 @@ const toolsData = [
     function closeSlider() {
         sliderPanel.classList.remove('active');
         bloomPanel.classList.remove('active');
+        hslPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
         activeToolKey = null;
     }
@@ -921,6 +1157,123 @@ const toolsData = [
         closeSlider();
     };
     document.getElementById('bloom-apply').onclick = () => closeSlider();
+
+    // ===================== HSL UI (6 colours x 3 sliders: Оттенок / Насыщенность / Осветление) =====================
+    const hslPanel = document.getElementById('hsl-panel');
+    const hslSwatchBox = document.getElementById('hsl-swatches');
+    const HSL_SW = { s: 0.7, l: 0.55 };   // base look of the colour dots
+    const hslCss = (h, s, l) => `hsl(${h.toFixed(1)}, ${(s * 100).toFixed(1)}%, ${(l * 100).toFixed(1)}%)`;
+    let hslCur = 0;
+
+    const hslRows = Array.from(hslPanel.querySelectorAll('.hsl-row')).map(row => ({
+        ch: row.dataset.ch,
+        input: row.querySelector('.hsl-slider'),
+        val: row.querySelector('.hsl-val'),
+        head: row.querySelector('.hsl-head')
+    }));
+    const hslSwatches = HSL_COLORS.map((c, i) => {
+        const b = document.createElement('button');
+        b.className = 'hsl-swatch';
+        b.type = 'button';
+        b.setAttribute('aria-label', c.name);
+        b.addEventListener('click', () => { hslCur = i; refreshHsl(); });
+        hslSwatchBox.appendChild(b);
+        return b;
+    });
+
+    const hslKey = (i, ch) => 'hsl' + i + ch;
+    // thumb is 26px wide, so its centre travels from 13px to (100% - 26px + 13px)
+    const hslThumbX = frac => `calc(13px + (100% - 26px) * ${frac})`;
+
+    function syncHslRow(r) {
+        const ui = parseFloat(r.input.value) / 10;
+        r.val.textContent = (ui > 0 ? '+' : '') + ui.toFixed(1).replace('.', ',');
+        r.val.style.left = hslThumbX((ui + HSL_UI_MAX) / (2 * HSL_UI_MAX));
+    }
+
+    // coloured tracks for the currently selected colour
+    function hslTrackGradients(hue) {
+        const R = HSL_TUNING.hueRange;
+        return {
+            h: `linear-gradient(90deg, ${hslCss(hue - R, 0.85, 0.5)}, ${hslCss(hue, 0.85, 0.5)}, ${hslCss(hue + R, 0.85, 0.5)})`,
+            s: `linear-gradient(90deg, ${hslCss(hue, 0.08, 0.42)}, ${hslCss(hue, 0.95, 0.5)})`,
+            l: `linear-gradient(90deg, ${hslCss(hue, 0.85, 0.1)}, ${hslCss(hue, 0.85, 0.5)}, ${hslCss(hue, 0.95, 0.9)})`
+        };
+    }
+
+    function refreshHslSwatches() {
+        HSL_COLORS.forEach((c, i) => {
+            const el = hslSwatches[i];
+            const base = hslCss(c.h, HSL_SW.s, HSL_SW.l);
+            const a = HSL_CHANNELS.map(ch => currentSettings[hslKey(i, ch)] || 0);
+            if (a[0] || a[1] || a[2]) {
+                const [nh, ns, nl] = hslAdjustColor(c.h, HSL_SW.s, HSL_SW.l, a[0], a[1], a[2]);
+                // like VSCO: left half = original colour, right half = colour after the edit
+                el.style.background = `linear-gradient(90deg, ${base} 50%, ${hslCss(nh, ns, nl)} 50%)`;
+            } else {
+                el.style.background = base;
+            }
+            el.style.setProperty('--ring', base);
+            el.classList.toggle('sel', i === hslCur);
+        });
+    }
+
+    function refreshHsl() {
+        const grads = hslTrackGradients(HSL_COLORS[hslCur].h);
+        hslRows.forEach(r => {
+            r.input.value = Math.round((currentSettings[hslKey(hslCur, r.ch)] || 0) * HSL_UI_MAX * 10);
+            r.input.style.setProperty('--trk', grads[r.ch]);
+            syncHslRow(r);
+        });
+        refreshHslSwatches();
+    }
+
+    function setHslValue(r, uiValue) {
+        r.input.value = Math.round(uiValue * 10);
+        currentSettings[hslKey(hslCur, r.ch)] = (parseFloat(r.input.value) / 10) / HSL_UI_MAX;
+        syncHslRow(r);
+    }
+
+    function hslResetAll() {
+        HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach(ch => { currentSettings[hslKey(i, ch)] = 0; }));
+        refreshHsl();
+        updatePhotoFilter();
+        updateLockState();
+    }
+
+    hslRows.forEach(r => {
+        r.input.addEventListener('input', () => {
+            setHslValue(r, parseFloat(r.input.value) / 10);
+            refreshHslSwatches();
+            updatePhotoFilter();
+            updateLockState();
+        });
+
+        // double-tap on the slider's name resets just that slider (like VSCO)
+        let lastTap = 0;
+        r.head.addEventListener('pointerdown', () => {
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                setHslValue(r, 0);
+                refreshHslSwatches();
+                updatePhotoFilter();
+                updateLockState();
+            }
+            lastTap = now;
+        });
+    });
+
+    function openHsl() {
+        activeToolKey = null;
+        selectionPanel.classList.add('hidden');
+        hslPanel.classList.add('active');
+        refreshHsl();
+    }
+
+    // ✕ = cancel + reset (same behaviour as the other tools), СБРОС = reset, stay open, ✓ = apply and go back to the tool list
+    document.getElementById('hsl-cancel').onclick = () => { hslResetAll(); closeSlider(); };
+    document.getElementById('hsl-reset').onclick = hslResetAll;
+    document.getElementById('hsl-apply').onclick = () => closeSlider();
 
     navItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -1178,6 +1531,10 @@ const toolsData = [
         }
         if (id === 'bloom') { 
             openBloom(); 
+            return; 
+        }
+        if (id === 'hsl') { 
+            openHsl(); 
             return; 
         }
         if (id === 'dodgeburn') { 
