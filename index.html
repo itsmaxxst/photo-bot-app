@@ -215,7 +215,7 @@
         </div>
         <div class="slider-actions" style="padding: 20px 0;">
             <button class="action-btn" id="btn-cancel-crop">✕</button>
-            <button class="action-btn" id="btn-cancel-crop" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <button class="action-btn" id="btn-reset-crop" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="btn-apply-crop">✓</button>
         </div>
     </div>
@@ -235,7 +235,7 @@
         </div>
         <div class="slider-actions" style="width: 100%; max-width: 350px; padding: 0 20px;">
             <button class="action-btn" id="btn-cancel-db">✕</button>
-            <button class="action-btn" id="btn-cancel-db" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <button class="action-btn" id="btn-reset-db" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="btn-apply-db">✓</button>
         </div>
     </div>
@@ -255,7 +255,7 @@
         </div>
         <div class="slider-actions bloom-actions">
             <button class="action-btn" id="bloom-cancel">✕</button>
-            <button class="action-btn" id="bloom-cancel" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <button class="action-btn" id="bloom-reset" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="bloom-apply">✓</button>
         </div>
     </div>
@@ -756,7 +756,7 @@
         lightAmt: 0.5,     // ±12 lightness moves L half-way to white / black
         chromaKnee: 0.1    // near-grey pixels have no stable hue → fade hue/lightness edits out below this chroma
     };
-    const HSL_UI_MAX = 12;   // sliders show -12.0 … +12.0 like VSCO; settings store -1 … 1
+    const HSL_UI_MAX = 12;   // sliders show -12.0 … +12.0; settings store -1 … 1
 
     function hslFragmentSource() {
         const n = HSL_COLORS.length, T = HSL_TUNING;
@@ -1156,6 +1156,12 @@
         updateLockState();
         closeSlider();
     };
+
+    document.getElementById('bloom-reset').onclick = () => {
+        bloomRows.forEach(r => setBloomValue(r, 0));
+        updatePhotoFilter();
+        updateLockState();
+    };
     document.getElementById('bloom-apply').onclick = () => closeSlider();
 
     // ===================== HSL UI (6 colours x 3 sliders: Оттенок / Насыщенность / Осветление) =====================
@@ -1208,7 +1214,7 @@
             const a = HSL_CHANNELS.map(ch => currentSettings[hslKey(i, ch)] || 0);
             if (a[0] || a[1] || a[2]) {
                 const [nh, ns, nl] = hslAdjustColor(c.h, HSL_SW.s, HSL_SW.l, a[0], a[1], a[2]);
-                // like VSCO: left half = original colour, right half = colour after the edit
+                // left half = original colour, right half = colour after the edit
                 el.style.background = `linear-gradient(90deg, ${base} 50%, ${hslCss(nh, ns, nl)} 50%)`;
             } else {
                 el.style.background = base;
@@ -1329,6 +1335,11 @@
     }
 
     document.getElementById('btn-cancel-crop').onclick = closeCropper;
+    document.getElementById('btn-reset-crop').onclick = () => {
+    if (cropperInstance) {
+        cropperInstance.reset();
+    }
+};
 
     document.getElementById('btn-apply-crop').onclick = () => {
         if (cropperInstance) {
@@ -1592,6 +1603,15 @@
     }
 
     document.getElementById('btn-cancel-db').onclick = () => closeDodgeBurn(false);
+    document.getElementById('btn-reset-db').onclick = () => {
+        // Очищаем canvas и восстанавливаем из бекапа
+        dbCtx.clearRect(0, 0, dbCanvas.width, dbCanvas.height);
+        dbCtx.drawImage(dbBackupImg, 0, 0);
+        // Обновляем текстуру WebGL
+        if (fxTexture) fxTexture.destroy();
+        fxTexture = glCanvas.texture(dbCanvas);
+        updatePhotoFilter();
+    };
     document.getElementById('btn-apply-db').onclick = () => closeDodgeBurn(true);
 
     // Переключение режимов Осветлить/Затемнить
