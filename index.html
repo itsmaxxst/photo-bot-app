@@ -218,7 +218,7 @@
         </div>
         <div class="slider-actions" style="width: 100%; max-width: 350px; padding: 0 20px;">
             <button class="action-btn" id="btn-cancel-db">✕</button>
-            <span style="font-size: 13px; font-weight: 600; color: white;">ОСВЕТЛЕНИЕ И ЗАТЕМНЕНИЕ</span>
+            <button class="action-btn" id="btn-reset-tool" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="btn-apply-db">✓</button>
         </div>
     </div>
@@ -238,7 +238,7 @@
         </div>
         <div class="slider-actions bloom-actions">
             <button class="action-btn" id="bloom-cancel">✕</button>
-            <button class="bloom-pill" id="bloom-pill">Блум <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+            <button class="action-btn" id="bloom-cancel" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="bloom-apply">✓</button>
         </div>
     </div>
@@ -353,8 +353,7 @@ const toolsData = [
         { id: 'saturation', name: 'Насыщенность', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'vibrance', name: 'Сочность', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'temperature', name: 'Температура', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>', min: -100, max: 100, isPro: true },
-        { id: 'bloom', name: 'Блум', icon: '✺', min: 0, max: 100, isPro: true },
-        { id: 'tint', name: 'Оттенок', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><circle cx="15" cy="15" r="7"/></svg>', min: -100, max: 100, isPro: true },
+        { id: 'bloom', name: 'Блум', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 Q12 12 3 12 Q12 12 12 21 Q12 12 21 12 Q12 12 12 3 Z"/><path d="M4.5 4.5l2 2"/><path d="M19.5 4.5l-2 2"/><path d="M19.5 19.5l-2 -2"/><path d="M4.5 19.5l2 -2"/></svg>', min: 0, max: 100, isPro: true },        { id: 'tint', name: 'Оттенок', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><circle cx="15" cy="15" r="7"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'highlights', name: 'Свет', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'shadows', name: 'Тени', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'fade', name: 'Фейд', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2" stroke-dasharray="4 4"/></svg>', min: 0, max: 100, isPro: true },
@@ -805,7 +804,7 @@ const toolsData = [
         updatePhotoFilter();
         updateLockState();
     };
-    
+
     // Обновленная логика для кнопки '✕' (отмена + сброс)
     document.getElementById('btn-cancel-tool').onclick = () => {
         if(activeToolKey) {
