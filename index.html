@@ -139,6 +139,10 @@
         .hsl-swatch { width: 32px; height: 32px; border-radius: 50%; border: none; padding: 0; cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
         .hsl-swatch.sel { box-shadow: 0 0 0 3px #000, 0 0 0 5px var(--ring, #fff); }
         .hsl-actions { margin-top: 2px; }
+
+        /* ===================== Halation panel (Сила / Размер / Диапазон / Оттенок) ===================== */
+        .hal-panel .bloom-head, .hal-panel .hsl-head { padding-left: 0; font-size: 12px; }
+        .hal-panel .hsl-val { font-size: 12px; }
     </style>
 </head>
 <body>
@@ -260,6 +264,30 @@
         </div>
     </div>
 
+    <div class="bloom-panel hal-panel" id="halation-panel">
+        <div class="bloom-row" data-key="halationStrength">
+            <div class="bloom-head"><span>Сила</span><span class="bloom-zero">0,0</span><span class="bloom-val"></span></div>
+            <div class="bloom-track"><input type="range" class="bloom-slider" min="0" max="120" step="1" value="0"></div>
+        </div>
+        <div class="bloom-row" data-key="halationSize" data-tick="0.09">
+            <div class="bloom-head"><span>Размер</span><span class="bloom-zero">0,0</span><span class="bloom-val"></span></div>
+            <div class="bloom-track"><i class="bloom-tick"></i><input type="range" class="bloom-slider" min="0" max="120" step="1" value="0"></div>
+        </div>
+        <div class="bloom-row" data-key="halationRange" data-tick="0.23">
+            <div class="bloom-head"><span>Диапазон</span><span class="bloom-zero">0,0</span><span class="bloom-val"></span></div>
+            <div class="bloom-track"><i class="bloom-tick"></i><input type="range" class="bloom-slider" min="0" max="120" step="1" value="0"></div>
+        </div>
+        <div class="hsl-row" data-key="halationHue" data-bipolar="1">
+            <div class="hsl-head"><span>Оттенок</span><span class="hsl-val"></span></div>
+            <div class="hsl-track"><i class="hsl-tick"></i><input type="range" class="hsl-slider" min="-120" max="120" step="1" value="0"></div>
+        </div>
+        <div class="slider-actions bloom-actions">
+            <button class="action-btn" id="halation-cancel">✕</button>
+            <button class="action-btn" id="halation-reset" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <button class="action-btn" id="halation-apply">✓</button>
+        </div>
+    </div>
+
     <div class="hsl-panel" id="wb-panel">
         <div class="hsl-row" data-key="wbTemp" data-trk="linear-gradient(90deg, #2f7df6, #f1ede0 50%, #ffb400)">
             <div class="hsl-head"><span>Температура</span><span class="hsl-val"></span></div>
@@ -368,7 +396,8 @@
         vignette: 0, unsharp: 0, noise: 0, sepia: 0, 
         vibrance: 0, blur: 0, denoise: 0,
         temperature: 0, tint: 0, highlights: 0, shadows: 0, fade: 0, clarity: 0 ,
-        bloomStrength: 0, bloomSize: 0, bloomRange: 0, wbTemp: 0, wbTint: 0
+        bloomStrength: 0, bloomSize: 0, bloomRange: 0, wbTemp: 0, wbTint: 0,
+        halationStrength: 0, halationSize: 0, halationRange: 0, halationHue: 0
     };
     HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach(ch => { defaultSettings['hsl' + i + ch] = 0; }));
     
@@ -422,6 +451,7 @@
         { id: 'wb', name: 'Баланс', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14.76V3.5a2.5 2.5 0 0 1 5 0v11.26a4.5 4.5 0 1 1-5 0z" transform="translate(-1 0)"/><line x1="17" y1="6" x2="20" y2="6"/><line x1="17" y1="10" x2="20" y2="10"/></svg>', isPro: false },
         { id: 'temperature', name: 'Температура', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'bloom', name: 'Блум', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 Q12 12 3 12 Q12 12 12 21 Q12 12 21 12 Q12 12 12 3 Z"/><path d="M4.5 4.5l2 2"/><path d="M19.5 4.5l-2 2"/><path d="M19.5 19.5l-2 -2"/><path d="M4.5 19.5l2 -2"/></svg>', min: 0, max: 100, isPro: true },
+        { id: 'halation', name: 'Ореол', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.6" fill="currentColor"/><circle cx="12" cy="12" r="6.6"/><path d="M12 1.8v1.6"/><path d="M12 20.6v1.6"/><path d="M1.8 12h1.6"/><path d="M20.6 12h1.6"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'tint', name: 'Оттенок', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><circle cx="15" cy="15" r="7"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'highlights', name: 'Свет', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'shadows', name: 'Тени', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>', min: -100, max: 100, isPro: true },
@@ -513,7 +543,7 @@
         if (!isPremium) {
             toolsData.filter(t => t.isPro).forEach(t => {
                 if (t.id === 'hsl') { if (hslHasAdjustments(currentSettings)) isToolLocked = true; return; }
-                const key = t.id === 'bloom' ? 'bloomStrength' : t.id;
+                const key = t.id === 'bloom' ? 'bloomStrength' : t.id === 'halation' ? 'halationStrength' : t.id;
                 if ((currentSettings[key] || 0) !== 0) isToolLocked = true;
             });
         }
@@ -761,6 +791,240 @@
         try { r.render(strength, size, range); } catch (e) { console.warn('Bloom failed:', e); }
         // the preview canvas keeps its GPU buffers; one-off export canvases free them right away
         if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._bloomRenderer = null; }
+    }
+
+
+    // ===================== Ореол (Halation) — GPU post-pass =====================
+    // Film halation: light from bright highlights bounces off the film base and exposes the emulsion again,
+    // leaving a red-orange glow around them. Same trick as Bloom (runs on glfx's own WebGL context after update()):
+    //   1) mono bright-pass (Range = threshold)  2) multi-scale gaussian chain (Size = spread)
+    //   3) tint the glow red-orange (Оттенок rotates the tint) and screen-blend it back (Сила = amount)
+    const HAL_TUNING = {
+        levels: 6,                       // blur scales: 1/2, 1/4 … 1/64 of the image
+        thrBase: 0.92, thrSpan: 0.80, thrPow: 1.5,     // Range 0 → only the brightest pixels … Range 12 → most highlights
+        kneeBase: 0.04, kneeSpan: 0.08,                // softness of the threshold
+        sizePow: 0.85,                   // Size curve
+        sizeFade: 0.08,                  // Size ≈ 0 → no halo at all
+        gains: [1.0, 1.0, 1.0, 1.0, 0.95, 0.9],        // per-scale gain
+        strengthGain: 9.0, strengthPow: 1.2,           // Сила curve
+        glowMax: 0.95,                   // halo never fully saturates
+        hueBase: 10,                     // Оттенок 0 = red-orange (10°)
+        hueNeg: 85, huePos: 45           // Оттенок -12 → violet (285°) … +12 → amber (55°)
+    };
+    const HAL_UI_MAX = 12;   // sliders show 0.0 … 12.0 (Оттенок −12.0 … +12.0); settings store 0…1 (−1…1)
+
+    function halHueDeg(v) {
+        const T = HAL_TUNING;
+        return ((T.hueBase + (v < 0 ? v * T.hueNeg : v * T.huePos)) % 360 + 360) % 360;
+    }
+    function halTintRGB(v) {                 // HSL(h, 100%, 50%) → rgb 0…1
+        const h = halHueDeg(v) / 60;
+        const x = 1 - Math.abs(h % 2 - 1);
+        const i = Math.floor(h) % 6;
+        return [[1, x, 0], [x, 1, 0], [0, 1, x], [0, x, 1], [x, 0, 1], [1, 0, x]][i];
+    }
+
+    const HAL_FS_BRIGHT = `
+        uniform sampler2D tex; uniform vec2 px; uniform float thr; uniform float knee;
+        float m(vec3 c){
+            float l = dot(c, vec3(0.299, 0.587, 0.114));
+            l = mix(l, max(c.r, max(c.g, c.b)), 0.35);
+            return l * smoothstep(thr - knee, thr + knee, l);
+        }
+        void main(){
+            float s = m(texture2D(tex, uv + px * vec2(-1.0, -1.0)).rgb)
+                    + m(texture2D(tex, uv + px * vec2( 1.0, -1.0)).rgb)
+                    + m(texture2D(tex, uv + px * vec2(-1.0,  1.0)).rgb)
+                    + m(texture2D(tex, uv + px * vec2( 1.0,  1.0)).rgb);
+            gl_FragColor = vec4(vec3(s * 0.25), 1.0);
+        }`;
+    function halCompositeFS(n) {
+        let s = 'uniform sampler2D S; uniform float k; uniform vec3 tint; uniform float cap;\n';
+        for (let i = 0; i < n; i++) s += `uniform sampler2D L${i}; uniform float w${i}; uniform vec2 t${i};\n`;
+        s += `float smp(sampler2D t, vec2 px){
+            return (texture2D(t, uv + px * vec2(-0.5, -0.5)).r + texture2D(t, uv + px * vec2(0.5, -0.5)).r
+                  + texture2D(t, uv + px * vec2(-0.5,  0.5)).r + texture2D(t, uv + px * vec2(0.5,  0.5)).r) * 0.25;
+        }\n`;
+        s += 'void main(){\n vec3 base = texture2D(S, uv).rgb;\n float g = 0.0;\n';
+        for (let i = 0; i < n; i++) s += ` if (w${i} > 0.0) g += smp(L${i}, t${i}) * w${i};\n`;
+        s += ` g *= k;
+            vec3 hot = mix(tint, vec3(1.0, 0.8, 0.55), 0.5);          // the halo is a bit hotter close to the light source
+            vec3 col = mix(tint, hot, smoothstep(0.35, 1.3, g));
+            vec3 glow = col * g;
+            glow = cap * (1.0 - exp(-glow / cap));                    // soft roll-off with a ceiling
+            gl_FragColor = vec4(1.0 - (1.0 - base) * (1.0 - glow), 1.0);
+        }`;
+        return s;
+    }
+
+    function createHalationRenderer(canvas) {
+        const gl = canvas._ && canvas._.gl;
+        if (!gl) return null;
+        const T = HAL_TUNING, N = T.levels;
+        const attrs = gl.getContextAttributes();
+        const frameFormat = (attrs && attrs.alpha === false) ? gl.RGB : gl.RGBA;
+
+        function compile(type, srcText) {
+            const sh = gl.createShader(type);
+            gl.shaderSource(sh, srcText);
+            gl.compileShader(sh);
+            if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error('halation shader: ' + gl.getShaderInfoLog(sh));
+            return sh;
+        }
+        function makeProgram(fs, uniformNames) {
+            const p = gl.createProgram();
+            gl.attachShader(p, compile(gl.VERTEX_SHADER, BLOOM_VS));
+            gl.attachShader(p, compile(gl.FRAGMENT_SHADER, BLOOM_FS_HEAD + fs));
+            gl.bindAttribLocation(p, 0, 'p');
+            gl.linkProgram(p);
+            if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error('halation link: ' + gl.getProgramInfoLog(p));
+            const u = {};
+            uniformNames.forEach(n => { u[n] = gl.getUniformLocation(p, n); });
+            return { p, u };
+        }
+
+        const compNames = ['S', 'k', 'tint', 'cap'];
+        for (let i = 0; i < N; i++) { compNames.push('L' + i, 'w' + i, 't' + i); }
+        const prog = {
+            bright: makeProgram(HAL_FS_BRIGHT, ['tex', 'px', 'thr', 'knee']),
+            down:   makeProgram(BLOOM_FS_DOWN, ['tex', 'px']),
+            blur:   makeProgram(BLOOM_FS_BLUR, ['tex', 'dir']),
+            comp:   makeProgram(halCompositeFS(N), compNames)
+        };
+
+        const quad = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+        function makeTexture(w, h, format) {
+            const tex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D, 0, format, w, h, 0, format, gl.UNSIGNED_BYTE, null);
+            return tex;
+        }
+        function makeTarget(w, h) {
+            const tex = makeTexture(w, h, gl.RGBA);
+            const fbo = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+            return { tex, fbo, w, h };
+        }
+        function freeTarget(t) { gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fbo); }
+
+        const R = { frameTex: null, w: 0, h: 0, lv: [], tm: [] };
+        function release() {
+            if (R.frameTex) gl.deleteTexture(R.frameTex);
+            R.lv.forEach(freeTarget); R.tm.forEach(freeTarget);
+            R.frameTex = null; R.lv = []; R.tm = [];
+        }
+        function ensure(w, h) {
+            if (R.w === w && R.h === h && R.frameTex) return;
+            release();
+            R.w = w; R.h = h;
+            R.frameTex = makeTexture(w, h, frameFormat);
+            for (let i = 0; i < N; i++) {
+                const lw = Math.max(2, Math.round(w / Math.pow(2, i + 1)));
+                const lh = Math.max(2, Math.round(h / Math.pow(2, i + 1)));
+                R.lv.push(makeTarget(lw, lh));
+                R.tm.push(makeTarget(lw, lh));
+            }
+        }
+        function bindTex(unit, tex) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex); }
+        function pass(pr, target, w, h, setup) {
+            gl.useProgram(pr.p);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.fbo : null);
+            gl.viewport(0, 0, w, h);
+            setup(pr.u);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+        function blur(i) {
+            const a = R.lv[i], b = R.tm[i];
+            bindTex(0, a.tex);
+            pass(prog.blur, b, b.w, b.h, u => { gl.uniform1i(u.tex, 0); gl.uniform2f(u.dir, 1 / a.w, 0); });
+            bindTex(0, b.tex);
+            pass(prog.blur, a, a.w, a.h, u => { gl.uniform1i(u.tex, 0); gl.uniform2f(u.dir, 0, 1 / a.h); });
+        }
+        const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+
+        R.render = function (strength, size, range, hue) {
+            const dw = gl.drawingBufferWidth, dh = gl.drawingBufferHeight;
+            if (!dw || !dh) return;
+            ensure(dw, dh);
+
+            gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.disable(gl.SCISSOR_TEST);
+            gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+            // 1) grab the frame glfx has just drawn to the canvas
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            bindTex(0, R.frameTex);
+            gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, dw, dh);
+
+            // 2) bright-pass into the first (1/2-size) level
+            const thr = T.thrBase - T.thrSpan * Math.pow(range, T.thrPow);
+            const knee = T.kneeBase + T.kneeSpan * range;
+            const l0 = R.lv[0];
+            pass(prog.bright, l0, l0.w, l0.h, u => {
+                gl.uniform1i(u.tex, 0); gl.uniform2f(u.px, 1 / dw, 1 / dh); gl.uniform1f(u.thr, thr); gl.uniform1f(u.knee, knee);
+            });
+            blur(0);
+
+            // 3) gaussian chain: every level is half the size of the previous one
+            for (let i = 1; i < N; i++) {
+                const prev = R.lv[i - 1], cur = R.lv[i];
+                bindTex(0, prev.tex);
+                pass(prog.down, cur, cur.w, cur.h, u => { gl.uniform1i(u.tex, 0); gl.uniform2f(u.px, 1 / prev.w, 1 / prev.h); });
+                blur(i);
+            }
+
+            // 4) Размер → which scales contribute; Сила → overall amount; Оттенок → tint of the halo
+            const z = Math.pow(size, T.sizePow) * (N - 1);
+            const k = T.strengthGain * Math.pow(strength, T.strengthPow) * smooth(0, T.sizeFade, size);
+            const tint = halTintRGB(hue);
+            bindTex(0, R.frameTex);
+            for (let i = 0; i < N; i++) bindTex(i + 1, R.lv[i].tex);
+            pass(prog.comp, null, dw, dh, u => {
+                gl.uniform1i(u.S, 0);
+                gl.uniform1f(u.k, k);
+                gl.uniform3f(u.tint, tint[0], tint[1], tint[2]);
+                gl.uniform1f(u.cap, T.glowMax);
+                for (let i = 0; i < N; i++) {
+                    gl.uniform1i(u['L' + i], i + 1);
+                    gl.uniform1f(u['w' + i], Math.max(0, 1 - Math.abs(i - z)) * T.gains[i]);
+                    gl.uniform2f(u['t' + i], 1 / R.lv[i].w, 1 / R.lv[i].h);
+                }
+            });
+
+            // leave GL the way glfx expects it
+            for (let i = 1; i <= N; i++) bindTex(i, null);
+            bindTex(0, null);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, dw, dh);
+        };
+
+        R.dispose = function () {
+            release();
+            Object.keys(prog).forEach(k => gl.deleteProgram(prog[k].p));
+            gl.deleteBuffer(quad);
+        };
+        return R;
+    }
+
+    function applyHalation(canvas, strength, size, range, hue) {
+        let r = canvas._halRenderer;
+        if (r === undefined) {
+            try { r = createHalationRenderer(canvas); } catch (e) { console.warn('Halation unavailable:', e); r = null; }
+            canvas._halRenderer = r;
+        }
+        if (!r) return;
+        try { r.render(strength, size, range, hue); } catch (e) { console.warn('Halation failed:', e); }
+        // the preview canvas keeps its GPU buffers; one-off export canvases free them right away
+        if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._halRenderer = null; }
     }
 
 
@@ -1045,6 +1309,13 @@
         targetCanvas.update();
         const hslVals = hslCollect(baseSettings, settingsToApply);
         if (hslVals) applyHsl(targetCanvas, hslVals);
+        const halStrength = Math.max(0, Math.min(1, (baseSettings.halationStrength || 0) + (settingsToApply.halationStrength || 0)));
+        if (halStrength > 0) {
+            const halSize = Math.max(0, Math.min(1, (baseSettings.halationSize || 0) + (settingsToApply.halationSize || 0)));
+            const halRange = Math.max(0, Math.min(1, (baseSettings.halationRange || 0) + (settingsToApply.halationRange || 0)));
+            const halHue = Math.max(-1, Math.min(1, (baseSettings.halationHue || 0) + (settingsToApply.halationHue || 0)));
+            applyHalation(targetCanvas, halStrength, halSize, halRange, halHue);
+        }
         const bloomStrength = Math.max(0, Math.min(1, (baseSettings.bloomStrength || 0) + (settingsToApply.bloomStrength || 0)));
         if (bloomStrength > 0) {
             const bloomSize = Math.max(0, Math.min(1, (baseSettings.bloomSize || 0) + (settingsToApply.bloomSize || 0)));
@@ -1108,6 +1379,7 @@
     function closeSlider() {
         sliderPanel.classList.remove('active');
         bloomPanel.classList.remove('active');
+        halPanel.classList.remove('active');
         hslPanel.classList.remove('active');
         wbPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
@@ -1195,6 +1467,91 @@
         updateLockState();
     };
     document.getElementById('bloom-apply').onclick = () => closeSlider();
+
+    // ===================== Ореол UI (4 sliders: Сила / Размер / Диапазон / Оттенок) =====================
+    const halPanel = document.getElementById('halation-panel');
+    const halRows = Array.from(halPanel.querySelectorAll('[data-key]')).map(row => ({
+        key: row.dataset.key,
+        bipolar: row.dataset.bipolar === '1',
+        input: row.querySelector('input[type="range"]'),
+        zero: row.querySelector('.bloom-zero'),
+        val: row.querySelector('.bloom-val, .hsl-val'),
+        head: row.querySelector('.bloom-head, .hsl-head'),
+        tick: row.querySelector('.bloom-tick'),
+        tickPos: parseFloat(row.dataset.tick)
+    }));
+    const halThumbX = frac => `calc(13px + (100% - 26px) * ${frac})`;
+
+    function syncHalRow(r) {
+        const ui = parseFloat(r.input.value) / 10;
+        if (r.bipolar) {
+            r.val.textContent = (ui > 0 ? '+' : '') + ui.toFixed(1).replace('.', ',');
+            r.val.style.left = halThumbX((ui + HAL_UI_MAX) / (2 * HAL_UI_MAX));
+        } else if (ui === 0) {
+            r.zero.style.display = '';
+            r.val.style.display = 'none';
+        } else {
+            r.zero.style.display = 'none';
+            r.val.style.display = '';
+            r.val.textContent = '+' + ui.toFixed(1).replace('.', ',');
+            r.val.style.left = halThumbX(ui / HAL_UI_MAX);
+        }
+    }
+
+    function setHalValue(r, uiValue) {
+        r.input.value = Math.round(uiValue * 10);
+        currentSettings[r.key] = (parseFloat(r.input.value) / 10) / HAL_UI_MAX;
+        syncHalRow(r);
+    }
+
+    function halResetAll() {
+        halRows.forEach(r => setHalValue(r, 0));
+        updatePhotoFilter();
+        updateLockState();
+    }
+
+    halRows.forEach(r => {
+        if (r.tick && !isNaN(r.tickPos)) r.tick.style.left = halThumbX(r.tickPos);
+        if (r.bipolar) {
+            // the track shows the halo colour the slider produces (violet → red-orange → amber)
+            const stops = [];
+            for (let i = 0; i <= 8; i++) stops.push(`hsl(${halHueDeg(i / 4 - 1).toFixed(0)} 100% 50%) ${(i / 8 * 100).toFixed(1)}%`);
+            r.input.style.setProperty('--trk', `linear-gradient(90deg, ${stops.join(', ')})`);
+        }
+
+        r.input.addEventListener('input', () => {
+            setHalValue(r, parseFloat(r.input.value) / 10);
+            updatePhotoFilter();
+            updateLockState();
+        });
+
+        // double-tap on the slider's name resets just that slider
+        let lastTap = 0;
+        r.head.addEventListener('pointerdown', () => {
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                setHalValue(r, 0);
+                updatePhotoFilter();
+                updateLockState();
+            }
+            lastTap = now;
+        });
+    });
+
+    function openHalation() {
+        activeToolKey = null;
+        halRows.forEach(r => {
+            r.input.value = Math.round((currentSettings[r.key] || 0) * HAL_UI_MAX * 10);
+            syncHalRow(r);
+        });
+        selectionPanel.classList.add('hidden');
+        halPanel.classList.add('active');
+    }
+
+    // ✕ = cancel + reset (same as other tools), СБРОС = reset and stay open, ✓ = apply and go back to the tool list
+    document.getElementById('halation-cancel').onclick = () => { halResetAll(); closeSlider(); };
+    document.getElementById('halation-reset').onclick = halResetAll;
+    document.getElementById('halation-apply').onclick = () => closeSlider();
 
     // ===================== HSL UI (6 colours x 3 sliders: Оттенок / Насыщенность / Осветление) =====================
     const hslPanel = document.getElementById('hsl-panel');
@@ -1657,6 +2014,10 @@
         if (id === 'bloom') { 
             openBloom(); 
             return; 
+        }
+        if (id === 'halation') {
+            openHalation();
+            return;
         }
         if (id === 'hsl') { 
             openHsl(); 
