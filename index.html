@@ -514,7 +514,7 @@
             toolsData.filter(t => t.isPro).forEach(t => {
                 if (t.id === 'hsl') { if (hslHasAdjustments(currentSettings)) isToolLocked = true; return; }
                 const key = t.id === 'bloom' ? 'bloomStrength' : t.id;
-                if (currentSettings[key] !== 0) isToolLocked = true;
+                if ((currentSettings[key] || 0) !== 0) isToolLocked = true;
             });
         }
         
@@ -1743,6 +1743,8 @@
         selectionPanel.classList.remove('hidden');
 
         if (apply && dbDirty) {
+            currentSettings[dbTool] = 1; // Фиксируем использование платной кисти
+            updateLockState();           // Обновляем статус водяного знака
             // Сохраняем результат: и итоговое фото, и превью (чтобы обрезка и экспорт видели правки)
             const fullUrl = dbCanvas.toDataURL('image/jpeg', 1.0);
             const prevUrl = dbPrevCanvas.toDataURL('image/jpeg', 0.95);
