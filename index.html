@@ -427,6 +427,36 @@
             curves: { red: [[0, 0.01], [0.5, 0.53], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 0.99]], blue: [[0, 0.02], [0.5, 0.47], [1, 0.96]] }
         }},
 
+        { id: 'canon5d', name: 'CANON 5D', color: '#ffab91', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.02, contrast: 0.1, saturation: 0.06, vibrance: 0.12, unsharp: 0.12, noise: 0.03, vignette: 0.08, wbTemp: 0.08, darks: 0.08,
+            curves: { red: [[0, 0.02], [0.5, 0.54], [1, 1]], green: [[0, 0.01], [0.5, 0.5], [1, 0.99]], blue: [[0, 0.03], [0.5, 0.46], [1, 0.95]] }
+        }},
+
+        { id: 'canonr6', name: 'CANON R6', color: '#ffcc80', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.04, contrast: 0.06, saturation: 0.05, vibrance: 0.1, noise: 0.05, vignette: 0.12, wbTemp: 0.22, darks: 0.15, lights: -0.05, bloomStrength: 0.035, bloomSize: 0.55, bloomRange: 0.45,
+            curves: { red: [[0, 0.03], [0.5, 0.55], [1, 1]], green: [[0, 0.02], [0.5, 0.5], [1, 0.97]], blue: [[0, 0.04], [0.5, 0.42], [1, 0.88]] }
+        }},
+
+        { id: 'canon6d', name: 'CANON 6D', color: '#f8bbd0', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.05, contrast: -0.02, saturation: -0.04, vibrance: 0.08, fade: 0.06, unsharp: 0.05, wbTemp: 0.08, darks: 0.2, lights: -0.08, bloomStrength: 0.03, bloomSize: 0.5, bloomRange: 0.5,
+            curves: { red: [[0, 0.04], [0.5, 0.54], [1, 0.99]], green: [[0, 0.03], [0.5, 0.5], [1, 0.97]], blue: [[0, 0.06], [0.5, 0.49], [1, 0.95]] }
+        }},
+
+        { id: 'canonr10', name: 'CANON R10', color: '#a5d6a7', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.16, saturation: 0.14, vibrance: 0.12, unsharp: 0.25, texture: 0.1, vignette: 0.1, wbTemp: 0.05, darks: 0.05, blacks: -0.05,
+            curves: { red: [[0, 0], [0.5, 0.52], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.01], [0.5, 0.47], [1, 0.97]] }
+        }},
+
+        { id: 'canonr3', name: 'CANON R3', color: '#ffe0b2', isPro: false, glfx: {
+            ...defaultSettings,
+            exposure: 0.12, brightness: 0.02, contrast: 0.1, saturation: 0.1, vibrance: 0.12, unsharp: 0.2, wbTemp: 0.05, darks: 0.1, lights: -0.1,
+            curves: { red: [[0, 0], [0.5, 0.53], [1, 1]], green: [[0, 0], [0.5, 0.51], [1, 1]], blue: [[0, 0.01], [0.5, 0.48], [1, 0.98]] }
+        }},
+
         { id: 'nikonz9', name: 'NIKON Z9', color: '#fbc02d', isPro: false, glfx: {
             ...defaultSettings,
             contrast: 0.14, saturation: 0.02, vibrance: 0.05, unsharp: 0.2, noise: 0.02,
@@ -469,6 +499,114 @@
             curves: { red: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]], green: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]], blue: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]] }
         }},
 
+        { id: 'trix', name: 'TRI-X 400', color: '#757575', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.28, saturation: -1.0, noise: 0.35, unsharp: 0.25, vignette: 0.15,
+            curves: { red: [[0, 0.02], [0.25, 0.2], [0.75, 0.82], [1, 0.99]], green: [[0, 0.02], [0.25, 0.2], [0.75, 0.82], [1, 0.99]], blue: [[0, 0.02], [0.25, 0.2], [0.75, 0.82], [1, 0.99]] }
+        }},
+
+        { id: 'hp5', name: 'HP5 PLUS', color: '#8d8d8d', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.02, contrast: 0.2, saturation: -1.0, noise: 0.25, vignette: 0.1,
+            curves: { red: [[0, 0.02], [0.25, 0.22], [0.75, 0.79], [1, 0.99]], green: [[0, 0.02], [0.25, 0.22], [0.75, 0.79], [1, 0.99]], blue: [[0, 0.02], [0.25, 0.22], [0.75, 0.79], [1, 0.99]] }
+        }},
+
+        { id: 'bwsoft', name: 'B&W SOFT', color: '#bdbdbd', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.04, contrast: -0.05, saturation: -1.0, fade: 0.1, vignette: 0.05, darks: 0.15, lights: -0.1, bloomStrength: 0.03, bloomSize: 0.5, bloomRange: 0.5,
+            curves: { red: [[0, 0.03], [0.5, 0.52], [1, 0.98]], green: [[0, 0.03], [0.5, 0.52], [1, 0.98]], blue: [[0, 0.03], [0.5, 0.52], [1, 0.98]] }
+        }},
+
+        { id: 'bwhard', name: 'B&W HARD', color: '#616161', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.45, saturation: -1.0, noise: 0.2, vignette: 0.3, unsharp: 0.35, texture: 0.2, blacks: -0.2,
+            curves: { red: [[0, 0], [0.25, 0.17], [0.75, 0.84], [1, 1]], green: [[0, 0], [0.25, 0.17], [0.75, 0.84], [1, 1]], blue: [[0, 0], [0.25, 0.17], [0.75, 0.84], [1, 1]] }
+        }},
+
+        { id: 'bwmatte', name: 'B&W MATTE', color: '#9e9e9e', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.05, saturation: -1.0, fade: 0.35, noise: 0.12, vignette: 0.1,
+            curves: { red: [[0, 0.02], [0.5, 0.5], [1, 0.95]], green: [[0, 0.02], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.02], [0.5, 0.5], [1, 0.95]] }
+        }},
+
+        { id: 'bwred', name: 'B&W RED', color: '#c62828', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.2, saturation: -1.0, noise: 0.1, vignette: 0.15,
+            curves: { red: [[0, 0], [0.5, 0.62], [1, 1]], green: [[0, 0], [0.5, 0.48], [1, 1]], blue: [[0, 0], [0.5, 0.3], [1, 0.9]] }
+        }},
+
+        { id: 'bwwarm', name: 'MONO WARM', color: '#bcaaa4', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.12, saturation: -1.0, sepia: 0.25, noise: 0.15, vignette: 0.15,
+            curves: { red: [[0, 0.02], [0.5, 0.5], [1, 0.98]], green: [[0, 0.02], [0.5, 0.5], [1, 0.98]], blue: [[0, 0.02], [0.5, 0.5], [1, 0.98]] }
+        }},
+
+        { id: 'bwport', name: 'B&W PORT', color: '#e0e0e0', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, saturation: -1.0, darks: 0.1, vignette: 0.08, bloomStrength: 0.03, bloomSize: 0.5, bloomRange: 0.5,
+            curves: { red: [[0, 0], [0.5, 0.55], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0], [0.5, 0.45], [1, 1]] }
+        }},
+
+        { id: 'cpurple', name: 'PURPLE', color: '#ba68c8', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.1, 0.02, 0.22], high: [0.88, 0.7, 1.0] }
+        }},
+
+        { id: 'cpink', name: 'PINK', color: '#f06292', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.22, 0.03, 0.12], high: [1.0, 0.78, 0.88] }
+        }},
+
+        { id: 'cblue', name: 'BLUE', color: '#42a5f5', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.02, 0.06, 0.25], high: [0.72, 0.86, 1.0] }
+        }},
+
+        { id: 'cteal', name: 'TEAL', color: '#26c6da', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.0, 0.1, 0.14], high: [0.7, 1.0, 0.95] }
+        }},
+
+        { id: 'cgreen', name: 'GREEN', color: '#66bb6a', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.02, 0.12, 0.04], high: [0.8, 1.0, 0.78] }
+        }},
+
+        { id: 'cgold', name: 'GOLD', color: '#ffd54f', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.16, 0.09, 0.0], high: [1.0, 0.9, 0.62] }
+        }},
+
+        { id: 'corange', name: 'ORANGE', color: '#ff9800', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.2, 0.05, 0.0], high: [1.0, 0.78, 0.5] }
+        }},
+
+        { id: 'cred', name: 'RED', color: '#ef5350', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.22, 0.0, 0.02], high: [1.0, 0.72, 0.7] }
+        }},
+
+        { id: 'csunset', name: 'SUNSET', color: '#ff7043', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.15, 0.03, 0.3], high: [1.0, 0.65, 0.35] }
+        }},
+
+        { id: 'cneon', name: 'NEON', color: '#e040fb', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, vignette: 0.1,
+            duotone: { shadow: [0.04, 0.02, 0.35], high: [1.0, 0.35, 0.85] }
+        }},
+
         { id: 'portra', name: 'PORTRA', color: '#e5bda1', isPro: true, glfx: { 
             ...defaultSettings,
             brightness: 0.08, contrast: -0.05, saturation: -0.15, sepia: 0.1, hue: -0.02, unsharp: 0.1, noise: 0.25, vignette: 0.1,
@@ -504,8 +642,8 @@
         { id: 'exposure', name: 'Выдержка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7.5 9h5"/><path d="M10 6.5v5"/><path d="M13.5 16.5h4"/><path d="M17 7l-10 10"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'luminance', name: 'Яркость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'contrast', name: 'Контраст', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20Z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
-        { id: 'lights', name: 'Светлые участки', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 1 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
-        { id: 'darks', name: 'Темные участки', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 0 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'lights', name: 'Светлые уч.', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 1 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'darks', name: 'Темные уч.', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 0 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'whites', name: 'Белые', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'blacks', name: 'Чёрные', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'saturation', name: 'Насыщенность', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>', min: -100, max: 100, isPro: false },
@@ -1568,6 +1706,14 @@
             const tp = toneCurvePoints(tone);
             targetCanvas.curves(tp, tp, tp);
             if (tone.dehaze !== 0) targetCanvas.hueSaturation(0, tone.dehaze * 0.3);
+        }
+
+        // 3.2 Дуотон (только у пресетов с полем duotone): всё фото в одном цвете, от тёмного тона к светлому
+        const duo = baseSettings.duotone;
+        if (duo) {
+            targetCanvas.hueSaturation(0, -(duo.mix === undefined ? 1 : duo.mix));
+            const duoCh = i => [[0, duo.shadow[i]], [0.5, (duo.shadow[i] + duo.high[i]) / 2], [1, duo.high[i]]];
+            targetCanvas.curves(duoCh(0), duoCh(1), duoCh(2));
         }
 
         // 4. Базовая цветокоррекция
