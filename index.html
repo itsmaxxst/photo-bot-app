@@ -288,6 +288,18 @@
         </div>
     </div>
 
+    <div class="bloom-panel" id="flash-panel">
+        <div class="bloom-row" data-key="flashStrength">
+            <div class="bloom-head"><span>Сила</span><span class="bloom-zero">0,0</span><span class="bloom-val"></span></div>
+            <div class="bloom-track"><input type="range" class="bloom-slider" min="0" max="120" step="1" value="0"></div>
+        </div>
+        <div class="slider-actions bloom-actions">
+            <button class="action-btn" id="flash-cancel">✕</button>
+            <button class="action-btn" id="flash-reset" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <button class="action-btn" id="flash-apply">✓</button>
+        </div>
+    </div>
+
     <div class="hsl-panel" id="wb-panel">
         <div class="hsl-row" data-key="wbTemp" data-trk="linear-gradient(90deg, #2f7df6, #f1ede0 50%, #ffb400)">
             <div class="hsl-head"><span>Температура</span><span class="hsl-val"></span></div>
@@ -397,7 +409,8 @@
         vibrance: 0, blur: 0, denoise: 0,
         temperature: 0, tint: 0, highlights: 0, shadows: 0, fade: 0, clarity: 0 ,
         bloomStrength: 0, bloomSize: 0, bloomRange: 0, wbTemp: 0, wbTint: 0,
-        halationStrength: 0, halationSize: 0, halationRange: 0, halationHue: 0
+        halationStrength: 0, halationSize: 0, halationRange: 0, halationHue: 0,
+        flashStrength: 0
     };
     HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach(ch => { defaultSettings['hsl' + i + ch] = 0; }));
     
@@ -452,6 +465,7 @@
         { id: 'temperature', name: 'Температура', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'bloom', name: 'Блум', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 Q12 12 3 12 Q12 12 12 21 Q12 12 21 12 Q12 12 12 3 Z"/><path d="M4.5 4.5l2 2"/><path d="M19.5 4.5l-2 2"/><path d="M19.5 19.5l-2 -2"/><path d="M4.5 19.5l2 -2"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'halation', name: 'Ореол', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.6" fill="currentColor"/><circle cx="12" cy="12" r="6.6"/><path d="M12 1.8v1.6"/><path d="M12 20.6v1.6"/><path d="M1.8 12h1.6"/><path d="M20.6 12h1.6"/></svg>', min: 0, max: 100, isPro: true },
+        { id: 'flash', name: 'Вспышка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/></svg>', min: 0, max: 100, isPro: true },
         { id: 'tint', name: 'Оттенок', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><circle cx="15" cy="15" r="7"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'highlights', name: 'Свет', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'shadows', name: 'Тени', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>', min: -100, max: 100, isPro: true },
@@ -543,7 +557,7 @@
         if (!isPremium) {
             toolsData.filter(t => t.isPro).forEach(t => {
                 if (t.id === 'hsl') { if (hslHasAdjustments(currentSettings)) isToolLocked = true; return; }
-                const key = t.id === 'bloom' ? 'bloomStrength' : t.id === 'halation' ? 'halationStrength' : t.id;
+                const key = t.id === 'bloom' ? 'bloomStrength' : t.id === 'halation' ? 'halationStrength' : t.id === 'flash' ? 'flashStrength' : t.id;
                 if ((currentSettings[key] || 0) !== 0) isToolLocked = true;
             });
         }
@@ -1207,6 +1221,177 @@
         if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._hslRenderer = null; }
     }
 
+    // ===================== Вспышка (Flash) — GPU post-pass =====================
+    // Imitates a direct on-camera flash on a photo taken without one. Same trick as HSL / Bloom (runs on glfx's own
+    // WebGL context right after update()):
+    //   1) gray-world pass: the mean colour of the frame is measured into a 1x1 target (warm room light → neutral)
+    //   2) flash pass (in linear light): ambient light is dimmed, a close-range flash falloff (inverse-square-like hotspot)
+    //      is added, highlights get a soft shoulder, then a contrast S-curve gives the hard "flash" look
+    const FLASH_TUNING = {
+        cast: 0.55,                      // how much of the colour cast is removed at full Сила
+        castMin: 0.6, castMax: 1.6,      // limits of the per-channel correction
+        ambient: 0.42,                   // ambient light lost at full Сила
+        gain: 0.85,                      // flash power at the hotspot at full Сила
+        centerX: 0.5, centerY: 0.55,     // hotspot position (0…1, y from the bottom)
+        falloff: 2.2,                    // hotspot tightness (bigger = tighter)
+        shoulder: 0.6, white: 1.8,       // highlight roll-off amount / white point
+        contrast: 0.75                   // S-curve amount
+    };
+    const FLASH_UI_MAX = 12;   // slider shows 0.0 … 12.0; settings store 0…1
+
+    const FLASH_FS_MEAN = `
+        uniform sampler2D tex;
+        void main(){
+            vec3 s = vec3(0.0);
+            for (int j = 0; j < 16; j++) {
+                for (int i = 0; i < 16; i++) {
+                    s += texture2D(tex, (vec2(float(i), float(j)) + 0.5) / 16.0).rgb;
+                }
+            }
+            gl_FragColor = vec4(s / 256.0, 1.0);
+        }`;
+    const FLASH_FS_MAIN = `
+        uniform sampler2D tex; uniform sampler2D mean; uniform float k; uniform float aspect;
+        void main(){
+            vec3 c = texture2D(tex, uv).rgb;
+            vec3 m = max(texture2D(mean, vec2(0.5)).rgb, vec3(0.02));
+            float gray = (m.r + m.g + m.b) / 3.0;
+
+            // 1) take the room-light colour cast out
+            vec3 sc = clamp(vec3(gray) / m, vec3(${FLASH_TUNING.castMin.toFixed(3)}), vec3(${FLASH_TUNING.castMax.toFixed(3)}));
+            c = clamp(c * (1.0 + (sc - 1.0) * ${FLASH_TUNING.cast.toFixed(3)} * k), 0.0, 1.0);
+
+            // 2) flash lighting in linear light
+            c = pow(c, vec3(2.2));
+            vec2 d2 = (uv - vec2(${FLASH_TUNING.centerX.toFixed(3)}, ${FLASH_TUNING.centerY.toFixed(3)})) * vec2(aspect, 1.0);
+            float hot = 1.0 / (1.0 + dot(d2, d2) * ${(FLASH_TUNING.falloff * FLASH_TUNING.falloff).toFixed(3)});
+            c *= (1.0 - ${FLASH_TUNING.ambient.toFixed(3)} * k) + ${FLASH_TUNING.gain.toFixed(3)} * k * hot;
+
+            // soft shoulder so bright surfaces don't clip harshly
+            vec3 shd = c * (1.0 + c / ${(FLASH_TUNING.white * FLASH_TUNING.white).toFixed(3)}) / (1.0 + c) * 1.05;
+            c = mix(c, shd, ${FLASH_TUNING.shoulder.toFixed(3)} * k);
+            c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2));
+
+            // 3) hard-light contrast
+            c = mix(c, c * c * (3.0 - 2.0 * c), ${FLASH_TUNING.contrast.toFixed(3)} * k);
+            gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+        }`;
+
+    function createFlashRenderer(canvas) {
+        const gl = canvas._ && canvas._.gl;
+        if (!gl) return null;
+        const attrs = gl.getContextAttributes();
+        const frameFormat = (attrs && attrs.alpha === false) ? gl.RGB : gl.RGBA;
+
+        function compile(type, srcText) {
+            const sh = gl.createShader(type);
+            gl.shaderSource(sh, srcText);
+            gl.compileShader(sh);
+            if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error('flash shader: ' + gl.getShaderInfoLog(sh));
+            return sh;
+        }
+        function makeProgram(fs, uniformNames) {
+            const p = gl.createProgram();
+            gl.attachShader(p, compile(gl.VERTEX_SHADER, BLOOM_VS));
+            gl.attachShader(p, compile(gl.FRAGMENT_SHADER, BLOOM_FS_HEAD + fs));
+            gl.bindAttribLocation(p, 0, 'p');
+            gl.linkProgram(p);
+            if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error('flash link: ' + gl.getProgramInfoLog(p));
+            const u = {};
+            uniformNames.forEach(n => { u[n] = gl.getUniformLocation(p, n); });
+            return { p, u };
+        }
+        const progMean = makeProgram(FLASH_FS_MEAN, ['tex']);
+        const progMain = makeProgram(FLASH_FS_MAIN, ['tex', 'mean', 'k', 'aspect']);
+
+        const quad = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+        function makeTexture(w, h, format) {
+            const tex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D, 0, format, w, h, 0, format, gl.UNSIGNED_BYTE, null);
+            return tex;
+        }
+        const meanTex = makeTexture(1, 1, gl.RGBA);
+        const meanFbo = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, meanFbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, meanTex, 0);
+
+        const R = { frameTex: null, w: 0, h: 0 };
+        function release() { if (R.frameTex) gl.deleteTexture(R.frameTex); R.frameTex = null; }
+        function ensure(w, h) {
+            if (R.w === w && R.h === h && R.frameTex) return;
+            release();
+            R.w = w; R.h = h;
+            R.frameTex = makeTexture(w, h, frameFormat);
+        }
+        function bindTex(unit, tex) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex); }
+
+        R.render = function (strength) {
+            const dw = gl.drawingBufferWidth, dh = gl.drawingBufferHeight;
+            if (!dw || !dh) return;
+            ensure(dw, dh);
+
+            gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.disable(gl.SCISSOR_TEST);
+            gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+            // grab the frame glfx has just drawn
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            bindTex(0, R.frameTex);
+            gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, dw, dh);
+
+            // 1) mean colour of the frame → 1x1 target
+            gl.useProgram(progMean.p);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, meanFbo);
+            gl.viewport(0, 0, 1, 1);
+            gl.uniform1i(progMean.u.tex, 0);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            // 2) flash look
+            bindTex(1, meanTex);
+            gl.useProgram(progMain.p);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, dw, dh);
+            gl.uniform1i(progMain.u.tex, 0);
+            gl.uniform1i(progMain.u.mean, 1);
+            gl.uniform1f(progMain.u.k, strength);
+            gl.uniform1f(progMain.u.aspect, dw / dh);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            // leave GL the way glfx expects it
+            bindTex(1, null);
+            bindTex(0, null);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, dw, dh);
+        };
+        R.dispose = function () {
+            release();
+            gl.deleteTexture(meanTex); gl.deleteFramebuffer(meanFbo);
+            gl.deleteProgram(progMean.p); gl.deleteProgram(progMain.p); gl.deleteBuffer(quad);
+        };
+        return R;
+    }
+
+    function applyFlash(canvas, strength) {
+        let r = canvas._flashRenderer;
+        if (r === undefined) {
+            try { r = createFlashRenderer(canvas); } catch (e) { console.warn('Flash unavailable:', e); r = null; }
+            canvas._flashRenderer = r;
+        }
+        if (!r) return;
+        try { r.render(strength); } catch (e) { console.warn('Flash failed:', e); }
+        // the preview canvas keeps its GPU buffers; one-off export canvases free them right away
+        if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._flashRenderer = null; }
+    }
+
     function applyFiltersToCanvas(targetCanvas, texture, settingsToApply, baseSettings) {
         // Базовые настройки
         const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
@@ -1309,6 +1494,8 @@
         targetCanvas.update();
         const hslVals = hslCollect(baseSettings, settingsToApply);
         if (hslVals) applyHsl(targetCanvas, hslVals);
+        const flashStrength = Math.max(0, Math.min(1, (baseSettings.flashStrength || 0) + (settingsToApply.flashStrength || 0)));
+        if (flashStrength > 0) applyFlash(targetCanvas, flashStrength);
         const halStrength = Math.max(0, Math.min(1, (baseSettings.halationStrength || 0) + (settingsToApply.halationStrength || 0)));
         if (halStrength > 0) {
             const halSize = Math.max(0, Math.min(1, (baseSettings.halationSize || 0) + (settingsToApply.halationSize || 0)));
@@ -1380,6 +1567,7 @@
         sliderPanel.classList.remove('active');
         bloomPanel.classList.remove('active');
         halPanel.classList.remove('active');
+        flashPanel.classList.remove('active');
         hslPanel.classList.remove('active');
         wbPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
@@ -1552,6 +1740,77 @@
     document.getElementById('halation-cancel').onclick = () => { halResetAll(); closeSlider(); };
     document.getElementById('halation-reset').onclick = halResetAll;
     document.getElementById('halation-apply').onclick = () => closeSlider();
+
+    // ===================== Вспышка UI (1 slider: Сила) =====================
+    const flashPanel = document.getElementById('flash-panel');
+    const flashRows = Array.from(flashPanel.querySelectorAll('.bloom-row')).map(row => ({
+        key: row.dataset.key,
+        input: row.querySelector('.bloom-slider'),
+        zero: row.querySelector('.bloom-zero'),
+        val: row.querySelector('.bloom-val'),
+        head: row.querySelector('.bloom-head')
+    }));
+    const flashThumbX = frac => `calc(13px + (100% - 26px) * ${frac})`;
+
+    function syncFlashRow(r) {
+        const ui = parseFloat(r.input.value) / 10;
+        if (ui === 0) {
+            r.zero.style.display = '';
+            r.val.style.display = 'none';
+        } else {
+            r.zero.style.display = 'none';
+            r.val.style.display = '';
+            r.val.textContent = '+' + ui.toFixed(1).replace('.', ',');
+            r.val.style.left = flashThumbX(ui / FLASH_UI_MAX);
+        }
+    }
+
+    function setFlashValue(r, uiValue) {
+        r.input.value = Math.round(uiValue * 10);
+        currentSettings[r.key] = (parseFloat(r.input.value) / 10) / FLASH_UI_MAX;
+        syncFlashRow(r);
+    }
+
+    function flashResetAll() {
+        flashRows.forEach(r => setFlashValue(r, 0));
+        updatePhotoFilter();
+        updateLockState();
+    }
+
+    flashRows.forEach(r => {
+        r.input.addEventListener('input', () => {
+            setFlashValue(r, parseFloat(r.input.value) / 10);
+            updatePhotoFilter();
+            updateLockState();
+        });
+
+        // double-tap on the slider's name resets just that slider
+        let lastTap = 0;
+        r.head.addEventListener('pointerdown', () => {
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                setFlashValue(r, 0);
+                updatePhotoFilter();
+                updateLockState();
+            }
+            lastTap = now;
+        });
+    });
+
+    function openFlash() {
+        activeToolKey = null;
+        flashRows.forEach(r => {
+            r.input.value = Math.round((currentSettings[r.key] || 0) * FLASH_UI_MAX * 10);
+            syncFlashRow(r);
+        });
+        selectionPanel.classList.add('hidden');
+        flashPanel.classList.add('active');
+    }
+
+    // ✕ = cancel + reset (same as other tools), СБРОС = reset and stay open, ✓ = apply and go back to the tool list
+    document.getElementById('flash-cancel').onclick = () => { flashResetAll(); closeSlider(); };
+    document.getElementById('flash-reset').onclick = flashResetAll;
+    document.getElementById('flash-apply').onclick = () => closeSlider();
 
     // ===================== HSL UI (6 colours x 3 sliders: Оттенок / Насыщенность / Осветление) =====================
     const hslPanel = document.getElementById('hsl-panel');
@@ -2017,6 +2276,10 @@
         }
         if (id === 'halation') {
             openHalation();
+            return;
+        }
+        if (id === 'flash') {
+            openFlash();
             return;
         }
         if (id === 'hsl') { 
