@@ -1521,6 +1521,11 @@
     }
 
     window.applyPreset = function(id) {
+        if (!fxTexture) {
+            if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
+            else alert("Сначала загрузите фото!");
+            return;
+        }
         const p = presetsData.find(x => x.id === id);
         activePresetId = id;
         presetSettings = { ...p.glfx };
@@ -2266,6 +2271,11 @@
     let dbRaf = 0;
 
     window.openTool = function(id) {
+        if (!fxTexture) {
+            if(tg.showAlert) tg.showAlert("Сначала загрузите фото!");
+            else alert("Сначала загрузите фото!");
+            return;
+        }
         if (id === 'crop') {
             openCropper();
             return;
