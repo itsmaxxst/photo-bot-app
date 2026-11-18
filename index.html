@@ -410,7 +410,8 @@
         temperature: 0, tint: 0, highlights: 0, shadows: 0, fade: 0, clarity: 0 ,
         bloomStrength: 0, bloomSize: 0, bloomRange: 0, wbTemp: 0, wbTint: 0,
         halationStrength: 0, halationSize: 0, halationRange: 0, halationHue: 0,
-        flashStrength: 0
+        flashStrength: 0,
+        exposure: 0, luminance: 0, lights: 0, darks: 0, whites: 0, blacks: 0, dehaze: 0, texture: 0
     };
     HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach(ch => { defaultSettings['hsl' + i + ch] = 0; }));
     
@@ -458,7 +459,13 @@
     const toolsData = [
         { id: 'crop', name: 'Обрезка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/></svg>', isPro: false },
         { id: 'brightness', name: 'Экспозиция', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="4.22" x2="19.78" y2="5.64"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'exposure', name: 'Выдержка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7.5 9h5"/><path d="M10 6.5v5"/><path d="M13.5 16.5h4"/><path d="M17 7l-10 10"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'luminance', name: 'Яркость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'contrast', name: 'Контраст', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20Z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'lights', name: 'Светлые', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 1 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'darks', name: 'Тёмные', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 0 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'whites', name: 'Белые', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'blacks', name: 'Чёрные', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'saturation', name: 'Насыщенность', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'vibrance', name: 'Сочность', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'wb', name: 'Баланс', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14.76V3.5a2.5 2.5 0 0 1 5 0v11.26a4.5 4.5 0 1 1-5 0z" transform="translate(-1 0)"/><line x1="17" y1="6" x2="20" y2="6"/><line x1="17" y1="10" x2="20" y2="10"/></svg>', isPro: false },
@@ -471,6 +478,8 @@
         { id: 'shadows', name: 'Тени', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>', min: -100, max: 100, isPro: true },
         { id: 'hsl', name: 'HSL', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><circle cx="8" cy="15" r="5"/><circle cx="16" cy="15" r="5"/></svg>', isPro: true },
         { id: 'fade', name: 'Фейд', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2" stroke-dasharray="4 4"/></svg>', min: 0, max: 100, isPro: true },
+        { id: 'dehaze', name: 'Дымка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M3 12h18"/><path d="M3 17h11"/><circle cx="18.5" cy="17" r="2"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'texture', name: 'Текстура', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12L12 3"/><path d="M3 21L21 3"/><path d="M12 21L21 12"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'clarity', name: 'Четкость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41L13.7 2.71a2.41 2.41 0 0 0-3.41 0z"/></svg>', min: 0, max: 100, isPro: false },
         { id: 'hue', name: 'Тон', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'sepia', name: 'Сепия', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>', min: 0, max: 100, isPro: false },
@@ -1392,6 +1401,41 @@
         if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._flashRenderer = null; }
     }
 
+    // ===================== Базовые тональные инструменты =====================
+    // Выдержка, Яркость, Светлые участки, Темные участки, Белые, Чёрные, Дымка – один общий проход curves()
+    const TONE_KEYS = ['exposure', 'luminance', 'lights', 'darks', 'whites', 'blacks', 'dehaze'];
+
+    function toneSettings(base, add) {
+        const o = {};
+        TONE_KEYS.forEach(k => { o[k] = Math.max(-1, Math.min(1, (base[k] || 0) + (add[k] || 0))); });
+        return o;
+    }
+
+    function toneCurvePoints(t) {
+        const clamp01 = v => Math.max(0, Math.min(1, v));
+        const sstep = x => x * x * (3 - 2 * x);
+        const gain = Math.pow(2, t.exposure * 1.5);      // Выдержка: ±1.5 EV
+        const gamma = Math.pow(2, -t.luminance * 1.2);   // Яркость: гамма (чёрное и белое остаются на месте)
+        const pts = [];
+        const N = 16;
+        for (let i = 0; i <= N; i++) {
+            const x = i / N;
+            let y = x;
+            if (t.exposure !== 0) y = clamp01(Math.pow(Math.pow(y, 2.2) * gain, 1 / 2.2));
+            if (t.luminance !== 0) y = Math.pow(y, gamma);
+            // Светлые / Темные участки – мягкие «колокола» с пиками около 0.67 и 0.33, края не трогают
+            y = clamp01(y + t.darks * 0.20 * 6.75 * y * (1 - y) * (1 - y));
+            y = clamp01(y + t.lights * 0.20 * 6.75 * y * y * (1 - y));
+            // Белые / Чёрные – сдвиг крайних точек
+            y = clamp01(y + t.whites * 0.22 * y * y * y);
+            y = clamp01(y + t.blacks * 0.16 * Math.pow(1 - y, 3));
+            // Дымка: + контраст и чуть темнее, − матовая дымка
+            if (t.dehaze !== 0) y = clamp01(y + t.dehaze * ((sstep(y) - y) - 0.32 * y * (1 - y)));
+            pts.push([x, y]);
+        }
+        return pts;
+    }
+
     function applyFiltersToCanvas(targetCanvas, texture, settingsToApply, baseSettings) {
         // Базовые настройки
         const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
@@ -1476,6 +1520,14 @@
             targetCanvas.curves(r, g, b);
         }
 
+        // 3.1 Выдержка, Яркость, Светлые/Темные участки, Белые, Чёрные, Дымка
+        const tone = toneSettings(baseSettings, settingsToApply);
+        if (TONE_KEYS.some(k => tone[k] !== 0)) {
+            const tp = toneCurvePoints(tone);
+            targetCanvas.curves(tp, tp, tp);
+            if (tone.dehaze !== 0) targetCanvas.hueSaturation(0, tone.dehaze * 0.3);
+        }
+
         // 4. Базовая цветокоррекция
         targetCanvas.brightnessContrast(b, c).hueSaturation(hue, sat).vibrance(vib);
             
@@ -1484,6 +1536,11 @@
         
         // Четкость (Clarity) — используем Unsharp Mask с широким радиусом для микроконтраста
         if (clar > 0) targetCanvas.unsharpMask(20, clar * 2.5);
+
+        // Текстура: + мелкая детализация, − сглаживание
+        const tex = Math.max(-1, Math.min(1, (baseSettings.texture || 0) + (settingsToApply.texture || 0)));
+        if (tex > 0) targetCanvas.unsharpMask(6, tex * 2);
+        else if (tex < 0) targetCanvas.triangleBlur(-tex * 4);
         
         // Обычная резкость (Unsharp) — узкий радиус для контуров
         if (sharp > 0) targetCanvas.unsharpMask(sharp * 5, 2);
