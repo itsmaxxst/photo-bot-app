@@ -1225,22 +1225,17 @@
     // Imitates a direct on-camera flash on a photo taken without one. Same trick as HSL / Bloom (runs on glfx's own
     // WebGL context right after update()):
     //   1) gray-world pass: the mean colour of the frame is measured into a 1x1 target (warm room light → neutral)
-    //   2) flash pass (in linear light): the far part of the scene falls into shadow, near parts get hit by the flash,
-    //      dark subjects get a fill light, colours flatten, then a contrast S-curve gives the hard "flash" look
+    //   2) flash pass (in linear light): ambient light is dimmed, a close-range flash falloff (inverse-square-like hotspot)
+    //      is added, highlights get a soft shoulder, then a contrast S-curve gives the hard "flash" look
     const FLASH_TUNING = {
-        cast: 0.75,                      // how much of the colour cast is removed at full Сила
+        cast: 0.55,                      // how much of the colour cast is removed at full Сила
         castMin: 0.6, castMax: 1.6,      // limits of the per-channel correction
-        ambient: 0.47,                   // how much the far / ambient-lit parts of the scene go dark (the flash does not reach them)
-        side: 0.28,                      // extra flash light on the near parts of the scene (frame sides)
-        bandIn: 0.22, bandOut: 0.42,     // width of the dark "far" zone: full darkening up to bandIn, none beyond bandOut (distance from centre, 0…0.5)
-        protectLo: 0.12, protectHi: 0.50,// dark pixels (clothes, hair…) are lit by the flash instead of darkened
-        keepLo: 0.90, keepHi: 0.97,      // very bright pixels are never darkened
-        centerX: 0.5, centerY: 0.46,     // subject position (0…1, y from the bottom)
-        falloff: 2.1,                    // tightness of the fill light on the subject (bigger = tighter)
-        fill: 0.085,                     // fill light on dark tones near the subject (the flat "flash" look of the clothes)
-        desat: 0.30,                     // flash flattens colours
-        contrast: 0.30,                  // S-curve amount
-        cap: 0.02                        // highlights are held slightly below pure white
+        ambient: 0.42,                   // ambient light lost at full Сила
+        gain: 0.85,                      // flash power at the hotspot at full Сила
+        centerX: 0.5, centerY: 0.55,     // hotspot position (0…1, y from the bottom)
+        falloff: 2.2,                    // hotspot tightness (bigger = tighter)
+        shoulder: 0.6, white: 1.8,       // highlight roll-off amount / white point
+        contrast: 0.75                   // S-curve amount
     };
     const FLASH_UI_MAX = 12;   // slider shows 0.0 … 12.0; settings store 0…1
 
@@ -1261,31 +1256,24 @@
             vec3 c = texture2D(tex, uv).rgb;
             vec3 m = max(texture2D(mean, vec2(0.5)).rgb, vec3(0.02));
             float gray = (m.r + m.g + m.b) / 3.0;
-            const vec3 LUMA = vec3(0.299, 0.587, 0.114);
 
             // 1) take the room-light colour cast out
             vec3 sc = clamp(vec3(gray) / m, vec3(${FLASH_TUNING.castMin.toFixed(3)}), vec3(${FLASH_TUNING.castMax.toFixed(3)}));
             c = clamp(c * (1.0 + (sc - 1.0) * ${FLASH_TUNING.cast.toFixed(3)} * k), 0.0, 1.0);
-            float l0 = dot(c, LUMA);
 
-            // 2) flash light in linear light: the far part of the scene stays in the dark,
-            //    the near parts (frame sides) get hit hard, dark subjects are lit instead of darkened
-            float far = 1.0 - smoothstep(${FLASH_TUNING.bandIn.toFixed(3)}, ${FLASH_TUNING.bandOut.toFixed(3)}, abs(uv.x - ${FLASH_TUNING.centerX.toFixed(3)}));
-            float keep = 1.0 - smoothstep(${FLASH_TUNING.keepLo.toFixed(3)}, ${FLASH_TUNING.keepHi.toFixed(3)}, l0);
-            float lit = smoothstep(${FLASH_TUNING.protectLo.toFixed(3)}, ${FLASH_TUNING.protectHi.toFixed(3)}, l0);
-            vec3 lin = pow(c, vec3(2.2));
-            float att = 1.0 - ${FLASH_TUNING.ambient.toFixed(3)} * k * far * keep * lit + ${FLASH_TUNING.side.toFixed(3)} * k * (1.0 - far);
-            lin *= att;
+            // 2) flash lighting in linear light
+            c = pow(c, vec3(2.2));
             vec2 d2 = (uv - vec2(${FLASH_TUNING.centerX.toFixed(3)}, ${FLASH_TUNING.centerY.toFixed(3)})) * vec2(aspect, 1.0);
             float hot = 1.0 / (1.0 + dot(d2, d2) * ${(FLASH_TUNING.falloff * FLASH_TUNING.falloff).toFixed(3)});
-            lin += ${FLASH_TUNING.fill.toFixed(3)} * k * hot * (1.0 - l0) * (1.0 - l0);
-            c = pow(clamp(lin, 0.0, 1.0), vec3(1.0 / 2.2));
+            c *= (1.0 - ${FLASH_TUNING.ambient.toFixed(3)} * k) + ${FLASH_TUNING.gain.toFixed(3)} * k * hot;
 
-            // 3) flatter colours + hard-light contrast, highlights held just below white
-            float l = dot(c, LUMA);
-            c = mix(vec3(l), c, 1.0 - ${FLASH_TUNING.desat.toFixed(3)} * k);
+            // soft shoulder so bright surfaces don't clip harshly
+            vec3 shd = c * (1.0 + c / ${(FLASH_TUNING.white * FLASH_TUNING.white).toFixed(3)}) / (1.0 + c) * 1.05;
+            c = mix(c, shd, ${FLASH_TUNING.shoulder.toFixed(3)} * k);
+            c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2));
+
+            // 3) hard-light contrast
             c = mix(c, c * c * (3.0 - 2.0 * c), ${FLASH_TUNING.contrast.toFixed(3)} * k);
-            c *= 1.0 - ${FLASH_TUNING.cap.toFixed(3)} * k;
             gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
         }`;
 
