@@ -547,6 +547,33 @@
             curves: { red: [[0, 0], [0.5, 0.54], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0], [0.5, 0.46], [1, 1]] }
         }},
 
+        { id: 'portra', name: 'PORTRA', color: '#e5bda1', isPro: true, glfx: { 
+            ...defaultSettings,
+            brightness: 0.048, contrast: -0.028, saturation: -0.09, sepia: 0.08, hue: -0.012, unsharp: 0.06, noise: 0.175, vignette: 0.07,
+            curves: { red: [[0, 0.04], [0.5, 0.5], [1, 0.96]], green: [[0, 0], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.12], [0.5, 0.42], [1, 0.88]] }
+        }},
+
+        { id: 'fuji', name: 'FUJI 400', color: '#a5d6a7', isPro: true, glfx: { 
+            ...defaultSettings,
+            brightness: 0, contrast: 0.083, saturation: 0.06, hue: 0.06, unsharp: 0.12, noise: 0.105, vignette: 0.14, vibrance: -0.03,
+            curves: { red: [[0, 0], [0.5, 0.46], [1, 0.92]], green: [[0, 0.04], [0.5, 0.54], [1, 0.96]], blue: [[0, 0.04], [0.5, 0.5], [1, 1]] }
+        }},
+
+        { id: 'noir', name: 'NOIR', color: '#424242', isPro: false, glfx: { 
+            ...defaultSettings,
+            brightness: 0, contrast: 0.165, saturation: -1.0, unsharp: 0.24, noise: 0.21, vignette: 0.28,
+            curves: { red: [[0, 0.04], [0.5, 0.5], [1, 0.96]], green: [[0, 0.04], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.04], [0.5, 0.5], [1, 0.96]] }
+        }},
+
+        { id: 'tealorange', name: 'TEAL&ORG', color: '#00acc1', isPro: true, glfx: { 
+            ...defaultSettings,
+            brightness: -0.03, contrast: 0.11, saturation: 0.09, unsharp: 0.12, vignette: 0.21, vibrance: 0.12,
+            curves: { red: [[0, 0], [0.5, 0.54], [1, 1]], green: [[0, 0], [0.5, 0.46], [1, 1]], blue: [[0, 0.08], [0.5, 0.42], [1, 0.92]] }
+        }},
+        
+        { id: 'g3', name: 'G3', color: '#cddc39', isPro: false, glfx: { ...defaultSettings, brightness: 0, contrast: 0.055, saturation: 0.12 } },
+        { id: 'hb2', name: 'HB2', color: '#90caf9', isPro: false, glfx: { ...defaultSettings, brightness: -0.03, contrast: 0.11, saturation: -0.12, vignette: 0.21 } },
+        { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { ...defaultSettings, brightness: 0, contrast: 0.11, saturation: -0.24, hue: 0.06, sepia: 0.16, vignette: 0.07 } },
         { id: 'cpurple', name: 'PURPLE', color: '#ba68c8', isPro: false, glfx: {
             ...defaultSettings,
             contrast: 0.055, vignette: 0.07,
@@ -605,35 +632,7 @@
             ...defaultSettings,
             contrast: 0.055, vignette: 0.07,
             duotone: { shadow: [0.04, 0.02, 0.35], high: [1.0, 0.35, 0.85] }
-        }},
-
-        { id: 'portra', name: 'PORTRA', color: '#e5bda1', isPro: true, glfx: { 
-            ...defaultSettings,
-            brightness: 0.048, contrast: -0.028, saturation: -0.09, sepia: 0.08, hue: -0.012, unsharp: 0.06, noise: 0.175, vignette: 0.07,
-            curves: { red: [[0, 0.04], [0.5, 0.5], [1, 0.96]], green: [[0, 0], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.12], [0.5, 0.42], [1, 0.88]] }
-        }},
-
-        { id: 'fuji', name: 'FUJI 400', color: '#a5d6a7', isPro: true, glfx: { 
-            ...defaultSettings,
-            brightness: 0, contrast: 0.083, saturation: 0.06, hue: 0.06, unsharp: 0.12, noise: 0.105, vignette: 0.14, vibrance: -0.03,
-            curves: { red: [[0, 0], [0.5, 0.46], [1, 0.92]], green: [[0, 0.04], [0.5, 0.54], [1, 0.96]], blue: [[0, 0.04], [0.5, 0.5], [1, 1]] }
-        }},
-
-        { id: 'noir', name: 'NOIR', color: '#424242', isPro: false, glfx: { 
-            ...defaultSettings,
-            brightness: 0, contrast: 0.165, saturation: -1.0, unsharp: 0.24, noise: 0.21, vignette: 0.28,
-            curves: { red: [[0, 0.04], [0.5, 0.5], [1, 0.96]], green: [[0, 0.04], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.04], [0.5, 0.5], [1, 0.96]] }
-        }},
-
-        { id: 'tealorange', name: 'TEAL&ORG', color: '#00acc1', isPro: true, glfx: { 
-            ...defaultSettings,
-            brightness: -0.03, contrast: 0.11, saturation: 0.09, unsharp: 0.12, vignette: 0.21, vibrance: 0.12,
-            curves: { red: [[0, 0], [0.5, 0.54], [1, 1]], green: [[0, 0], [0.5, 0.46], [1, 1]], blue: [[0, 0.08], [0.5, 0.42], [1, 0.92]] }
-        }},
-        
-        { id: 'g3', name: 'G3', color: '#cddc39', isPro: false, glfx: { ...defaultSettings, brightness: 0, contrast: 0.055, saturation: 0.12 } },
-        { id: 'hb2', name: 'HB2', color: '#90caf9', isPro: false, glfx: { ...defaultSettings, brightness: -0.03, contrast: 0.11, saturation: -0.12, vignette: 0.21 } },
-        { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { ...defaultSettings, brightness: 0, contrast: 0.11, saturation: -0.24, hue: 0.06, sepia: 0.16, vignette: 0.07 } }
+        }}
     ];
 
     const toolsData = [
@@ -642,8 +641,8 @@
         { id: 'exposure', name: 'Выдержка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7.5 9h5"/><path d="M10 6.5v5"/><path d="M13.5 16.5h4"/><path d="M17 7l-10 10"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'luminance', name: 'Яркость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'contrast', name: 'Контраст', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20Z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
-        { id: 'lights', name: 'Светлые участки', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 1 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
-        { id: 'darks', name: 'Темные участки', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 0 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'lights', name: 'Светлые уч.', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 1 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'darks', name: 'Темные уч.', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 0 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'whites', name: 'Белые', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'blacks', name: 'Чёрные', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'saturation', name: 'Насыщенность', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>', min: -100, max: 100, isPro: false },
