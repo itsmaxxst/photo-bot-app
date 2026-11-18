@@ -421,12 +421,54 @@
     const presetsData = [
         { id: 'none', name: 'ORIG', color: '#999', isPro: false, glfx: { ...defaultSettings } },
         
-        { id: 'canon1', name: 'CANON 1', color: '#ffcc80', isPro: true, glfx: { 
+        { id: 'canonr5', name: 'CANON R5', color: '#e57373', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.05, contrast: 0.05, saturation: -0.05, sepia: 0.05, hue: -0.05, unsharp: 0.2, noise: 0.05, vignette: 0.15, vibrance: 0.1,
-            curves: { red: [[0, 0], [0.3, 0.35], [0.7, 0.75], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.1], [0.5, 0.45], [1, 0.95]] }
+            brightness: 0.02, contrast: 0.08, saturation: 0.08, vibrance: 0.1, unsharp: 0.1, noise: 0.03, vignette: 0.05, darks: 0.1,
+            curves: { red: [[0, 0.01], [0.5, 0.53], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 0.99]], blue: [[0, 0.02], [0.5, 0.47], [1, 0.96]] }
         }},
-        
+
+        { id: 'nikonz9', name: 'NIKON Z9', color: '#fbc02d', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.14, saturation: 0.02, vibrance: 0.05, unsharp: 0.2, noise: 0.02,
+            curves: { red: [[0, 0], [0.5, 0.5], [1, 1]], green: [[0, 0], [0.5, 0.51], [1, 1]], blue: [[0, 0], [0.5, 0.48], [1, 0.98]] }
+        }},
+
+        { id: 'sonya7', name: 'SONY A7', color: '#64b5f6', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, saturation: 0.12, vibrance: 0.1, unsharp: 0.25, texture: 0.1,
+            curves: { red: [[0, 0], [0.5, 0.48], [1, 0.99]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.01], [0.5, 0.52], [1, 1]] }
+        }},
+
+        { id: 'fujixt5', name: 'FUJI XT5', color: '#81c784', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.12, saturation: -0.18, noise: 0.12, vignette: 0.12, unsharp: 0.1,
+            curves: { red: [[0, 0.03], [0.5, 0.5], [1, 0.97]], green: [[0, 0.03], [0.5, 0.5], [1, 0.97]], blue: [[0, 0.06], [0.5, 0.5], [1, 0.92]] }
+        }},
+
+        { id: 'leicam11', name: 'LEICA M11', color: '#ef5350', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: -0.02, contrast: 0.22, saturation: -0.05, vignette: 0.25, noise: 0.12, unsharp: 0.3, blacks: -0.1,
+            curves: { red: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]], green: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]], blue: [[0, 0], [0.25, 0.21], [0.75, 0.77], [1, 0.98]] }
+        }},
+
+        { id: 'hbx2d', name: 'HB X2D', color: '#b0bec5', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.02, contrast: 0.04, saturation: 0.04, vibrance: 0.08, unsharp: 0.05, darks: 0.15, lights: -0.1,
+            curves: { red: [[0, 0.01], [0.5, 0.51], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0], [0.5, 0.49], [1, 0.99]] }
+        }},
+
+        { id: 'lumixs5', name: 'LUMIX S5', color: '#26a69a', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.15, saturation: 0.05, unsharp: 0.15, vignette: 0.1,
+            curves: { red: [[0, 0.02], [0.5, 0.5], [1, 1]], green: [[0, 0.02], [0.5, 0.5], [1, 0.98]], blue: [[0, 0.08], [0.5, 0.48], [1, 0.93]] }
+        }},
+
+        { id: 'ricohgr', name: 'RICOH GR', color: '#9e9e9e', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.3, saturation: -0.1, noise: 0.3, vignette: 0.2, unsharp: 0.4, blacks: -0.15,
+            curves: { red: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]], green: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]], blue: [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]] }
+        }},
+
         { id: 'portra', name: 'PORTRA', color: '#e5bda1', isPro: true, glfx: { 
             ...defaultSettings,
             brightness: 0.08, contrast: -0.05, saturation: -0.15, sepia: 0.1, hue: -0.02, unsharp: 0.1, noise: 0.25, vignette: 0.1,
@@ -462,8 +504,8 @@
         { id: 'exposure', name: 'Выдержка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7.5 9h5"/><path d="M10 6.5v5"/><path d="M13.5 16.5h4"/><path d="M17 7l-10 10"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'luminance', name: 'Яркость', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'contrast', name: 'Контраст', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20Z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
-        { id: 'lights', name: 'Светлые', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 1 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
-        { id: 'darks', name: 'Тёмные', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 0 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'lights', name: 'Светлые участки', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 1 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
+        { id: 'darks', name: 'Темные участки', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12a9 9 0 0 0 18 0z" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'whites', name: 'Белые', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'blacks', name: 'Чёрные', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/></svg>', min: -100, max: 100, isPro: false },
         { id: 'saturation', name: 'Насыщенность', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>', min: -100, max: 100, isPro: false },
