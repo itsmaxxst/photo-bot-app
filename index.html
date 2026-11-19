@@ -3508,6 +3508,7 @@
         if (!card) return;
         const ic = document.createElement('div');
         ic.className = 'k-icon' + (presetK < 1 ? ' mod' : '');
+        ic.title = 'Интенсивность';
         ic.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.5"/><circle cx="8" cy="16" r="2.5"/></svg>';
         ic.addEventListener('click', e => { e.stopPropagation(); kOpen(); });
         card.appendChild(ic);
@@ -3526,7 +3527,6 @@
         fxId = 'k'; fxBackup = String(presetK);
         selectionPanel.classList.add('hidden');
         fxPanel.classList.add('active');
-        fxTitle.textContent = 'Интенсивность';
         kBuild();
     }
     const _fxApplyPreset = window.applyPreset;
