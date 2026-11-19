@@ -153,6 +153,7 @@
         .fx-chip.on { background: #fff; color: #000; border-color: #fff; }
         .k-icon { position: absolute; top: 24px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; display: flex; align-items: center; justify-content: center; }
         .k-icon.mod { background: #fff; color: #000; }
+        .u-edit { position: absolute; top: 42px; right: 4px; width: 16px; height: 16px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; padding-bottom: 3px; box-sizing: border-box; }
         .icon-btn:disabled { opacity: 0.3; }
         #k-row { display: flex; align-items: center; gap: 10px; padding: 0 20px 6px; font-size: 11px; color: #aaa; }
         #k-row input[type=range] { flex: 1; margin: 0; }
@@ -3987,9 +3988,9 @@
     };
     const DBX_SVG = inner => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
     const DBX_TOOLS = [
-        { id: 'blurbrush', name: 'Кисть размытия', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
+        { id: 'blurbrush', name: 'Обл. разм.', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
         { id: 'heal', name: 'Лечение', icon: DBX_SVG('<rect x="2" y="9" width="20" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M10.5 10.5h.01M13.5 13.5h.01"/>'), isPro: false },
-        { id: 'detail', name: 'Резкость / шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
+        { id: 'detail', name: 'Резк./Шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
     ];
     toolsData.splice(toolsData.findIndex(t => t.id === 'dodgeburn') + 1, 0, ...DBX_TOOLS);
 
@@ -4191,7 +4192,7 @@
                     try {
                         const arr = JSON.parse(val);
                         if (Array.isArray(arr)) {
-                            favoritePresets = arr.filter(id => presetsData.some(p => p.id === id));
+                            favoritePresets = arr.filter(id => presetsData.some(p => p.id === id) || String(id).startsWith('u_'));
                             try { localStorage.setItem('favoritePresets', JSON.stringify(favoritePresets)); } catch (e) {}
                             const act = document.querySelector('.nav-item.active');
                             if (act && act.getAttribute('data-tab') === 'presets' && !fxId) renderPresets(currentTab);
@@ -4303,6 +4304,238 @@
         }
     });
 
+    // ==================================================================================
+    //  МОИ ПРЕСЕТЫ: сохранение текущего вида (пресет + инструменты + эффекты) с названием
+    //  Хранение: localStorage (с миниатюрой) + Telegram CloudStorage (синхронизация между устройствами)
+    // ==================================================================================
+    const BRUSH_IDS = ['dodgeburn', 'fog', 'blurbrush', 'heal', 'detail'];   // кисти правят пиксели, в пресет не входят
+    const UP_COLORS = ['#80cbc4', '#ce93d8', '#90caf9', '#a5d6a7', '#ffcc80', '#f48fb1'];
+    let userPresets = [];
+    const upClone = o => JSON.parse(JSON.stringify(o));
+    const upDiff = (o, d) => { const r = {}; for (const k in o) if (JSON.stringify(o[k]) !== JSON.stringify(d[k])) r[k] = o[k]; return r; };
+    const upEncode = p => ({ id: p.id, name: p.name, color: p.color, isPro: p.isPro, thumb: p.thumb, ps: upDiff(p.ps, defaultSettings), cs: upDiff(p.cs, defaultSettings), fx: upDiff(p.fx, fxDefaults()) });
+    const upDecode = e => ({ id: e.id, name: e.name, color: e.color, isPro: !!e.isPro, thumb: e.thumb || '', ps: { ...defaultSettings, ...e.ps }, cs: { ...defaultSettings, ...e.cs }, fx: { ...fxDefaults(), ...e.fx } });
+    const upSaveLocal = () => { try { localStorage.setItem('userPresets', JSON.stringify(userPresets.map(upEncode))); } catch (e) {} };
+    try { userPresets = JSON.parse(localStorage.getItem('userPresets') || '[]').map(upDecode); } catch (e) { userPresets = []; }
+
+    const upCloudOK = () => tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9');
+    function upCloudIndex() { try { tg.CloudStorage.setItem('up_index', JSON.stringify(userPresets.map(p => p.id)), () => {}); } catch (e) {} }
+    function upCloudSave(p) {
+        if (!upCloudOK()) return;
+        const e = upEncode(p); delete e.thumb;
+        const v = JSON.stringify(e);
+        try { if (v.length <= 4000) tg.CloudStorage.setItem('up_' + p.id, v, () => {}); } catch (err) {}
+        upCloudIndex();
+    }
+    function upCloudDelete(id) { if (!upCloudOK()) return; try { tg.CloudStorage.removeItem('up_' + id, () => {}); } catch (e) {} upCloudIndex(); }
+    function upRefresh() {
+        const act = document.querySelector('.nav-item.active');
+        if (act && act.getAttribute('data-tab') === 'presets' && !fxId && upSheet.style.display !== 'flex') renderPresets(currentTab);
+    }
+    if (upCloudOK()) {
+        try {
+            tg.CloudStorage.getItem('up_index', (err, val) => {
+                if (err) return;
+                if (!val) { userPresets.forEach(upCloudSave); return; }          // первый запуск: переносим локальные пресеты в облако
+                let ids = []; try { ids = JSON.parse(val); } catch (e) {}
+                if (!ids.length) return;
+                tg.CloudStorage.getItems(ids.map(i => 'up_' + i), (err2, vals) => {
+                    if (err2 || !vals) return;
+                    const local = Object.fromEntries(userPresets.map(p => [p.id, p]));
+                    const merged = [];
+                    ids.forEach(id => {
+                        const raw = vals['up_' + id];
+                        if (raw) { try { const p = upDecode(JSON.parse(raw)); p.thumb = (local[id] && local[id].thumb) || ''; merged.push(p); return; } catch (e) {} }
+                        if (local[id]) merged.push(local[id]);
+                    });
+                    userPresets = merged; upSaveLocal(); upRefresh();
+                });
+            });
+        } catch (e) {}
+    }
+
+    // ---------- что входит в текущий вид ----------
+    const upToolKey = id => id === 'bloom' ? 'bloomStrength' : id === 'halation' ? 'halationStrength' : id === 'flash' ? 'flashStrength' : id;
+    const upToolUsed = t => t.id === 'hsl' ? hslHasAdjustments(currentSettings) : (currentSettings[upToolKey(t.id)] || 0) !== 0;
+    function upCS() { const c = { ...currentSettings }; BRUSH_IDS.forEach(k => delete c[k]); return c; }
+    function upFxSnap() { const f = upClone(fxs); delete f.dsDate; return f; }
+    function upLookEmpty() {
+        const d = fxDefaults(); delete d.dsDate;
+        return activePresetId === 'none' && !Object.keys(upDiff(upCS(), defaultSettings)).length && !Object.keys(upDiff(upFxSnap(), d)).length;
+    }
+    function upLookIsPro() {
+        const p = presetsData.find(x => x.id === activePresetId) || userPresets.find(x => x.id === activePresetId);
+        if (p && p.isPro) return true;
+        if (fxProUsed()) return true;
+        return toolsData.filter(t => t.isPro && !BRUSH_IDS.includes(t.id)).some(upToolUsed);
+    }
+    function upSummary() {
+        const parts = [], p = presetsData.find(x => x.id === activePresetId) || userPresets.find(x => x.id === activePresetId);
+        if (p && activePresetId !== 'none') parts.push(p.name + (presetK < 1 ? ' ' + Math.round(presetK * 100) + '%' : ''));
+        const tools = toolsData.filter(t => !BRUSH_IDS.includes(t.id) && upToolUsed(t)).length;
+        const d = fxDefaults();
+        const fxN = Object.keys(FXT).filter(id => FXT[id].custom === 'curves' ? fxCurvesOn() : FXT[id].keys.some(k => JSON.stringify(fxs[k]) !== JSON.stringify(d[k]))).length;
+        if (tools) parts.push(tools + ' ' + (tools === 1 ? 'инструмент' : 'инструм.'));
+        if (fxN) parts.push(fxN + ' FX');
+        return parts.length ? 'Сохранится: ' + parts.join(' · ') : '';
+    }
+    function upSnapshot() { return { ps: upClone(fxScalePreset(presetSettings)), cs: upCS(), fx: upFxSnap(), isPro: upLookIsPro() }; }
+    function upThumb() {
+        try {
+            updatePhotoFilter();
+            const s = Math.min(glCanvas.width, glCanvas.height), c = document.createElement('canvas');
+            c.width = c.height = 120;
+            c.getContext('2d').drawImage(glCanvas, (glCanvas.width - s) / 2, (glCanvas.height - s) / 2, s, s, 0, 0, 120, 120);
+            return c.toDataURL('image/jpeg', 0.72);
+        } catch (e) { return ''; }
+    }
+
+    // ---------- окно создания / редактирования ----------
+    const upSheet = document.createElement('div');
+    upSheet.style.cssText = 'position:fixed;inset:0;z-index:400;display:none;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+    upSheet.innerHTML = `
+        <div style="width:100%;max-width:360px;background:#1c1c1e;border:1px solid #333;border-radius:18px;padding:18px;box-sizing:border-box">
+            <div id="up-title" style="font-size:15px;font-weight:700;color:#fff;margin-bottom:14px">Новый пресет</div>
+            <div style="display:flex;gap:14px;align-items:center">
+                <div id="up-thumb" style="width:76px;height:76px;border-radius:12px;background:#333 center/cover;flex:none"></div>
+                <div style="flex:1;min-width:0">
+                    <input id="up-name" maxlength="20" autocomplete="off" placeholder="Название" style="width:100%;box-sizing:border-box;background:#2a2a2c;border:1px solid #444;border-radius:10px;color:#fff;font-size:15px;padding:10px 12px;outline:none">
+                    <div id="up-sum" style="font-size:11px;color:#8e8e93;margin-top:7px;line-height:1.35"></div>
+                </div>
+            </div>
+            <button id="up-update" style="display:none;width:100%;margin-top:12px;background:#2a2a2c;border:none;border-radius:10px;color:#ddd;font-size:13px;padding:10px;cursor:pointer">Обновить текущим видом</button>
+            <div style="display:flex;gap:8px;margin-top:16px">
+                <button id="up-del" style="display:none;flex:1;background:none;border:1px solid #5a2a2a;border-radius:10px;color:#ff453a;font-size:14px;padding:11px;cursor:pointer">Удалить</button>
+                <button id="up-cancel" style="flex:1;background:#2a2a2c;border:none;border-radius:10px;color:#ddd;font-size:14px;padding:11px;cursor:pointer">Отмена</button>
+                <button id="up-ok" style="flex:1;background:#fff;border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;padding:11px;cursor:pointer">Сохранить</button>
+            </div>
+        </div>`;
+    document.body.appendChild(upSheet);
+    const upEl = id => upSheet.querySelector('#' + id);
+    let upMode = null, upEditId = null, upNewThumb = '', upDelArmed = false;
+    function upClose() { upSheet.style.display = 'none'; upMode = null; upEditId = null; upDelArmed = false; upEl('up-name').blur(); }
+    upSheet.addEventListener('pointerdown', e => { if (e.target === upSheet) upClose(); });
+    upEl('up-cancel').onclick = upClose;
+
+    function upOpenCreate() {
+        if (!fxTexture) { if (tg.showAlert) tg.showAlert('Сначала загрузите фото!'); else alert('Сначала загрузите фото!'); return; }
+        if (upLookEmpty()) { toast('Сначала настройте фото: пресет, инструменты или эффекты'); return; }
+        upMode = 'create'; upNewThumb = upThumb();
+        upEl('up-title').textContent = 'Новый пресет';
+        upEl('up-thumb').style.backgroundImage = upNewThumb ? `url(${upNewThumb})` : '';
+        upEl('up-name').value = 'Пресет ' + (userPresets.length + 1);
+        upEl('up-sum').textContent = upSummary();
+        upEl('up-update').style.display = 'none'; upEl('up-del').style.display = 'none';
+        upSheet.style.display = 'flex';
+        setTimeout(() => { const n = upEl('up-name'); n.focus(); n.select(); }, 60);
+    }
+    window.uPresetCreate = upOpenCreate;
+    window.uPresetEdit = function (ev, id) {
+        ev.stopPropagation();
+        const p = userPresets.find(x => x.id === id); if (!p) return;
+        upMode = 'edit'; upEditId = id; upDelArmed = false;
+        upEl('up-title').textContent = 'Мой пресет';
+        upEl('up-thumb').style.backgroundImage = p.thumb ? `url(${p.thumb})` : '';
+        upEl('up-thumb').style.backgroundColor = p.thumb ? '#333' : p.color;
+        upEl('up-name').value = p.name;
+        upEl('up-sum').textContent = p.isPro ? 'Содержит Pro-эффекты' : '';
+        upEl('up-update').style.display = 'block'; upEl('up-del').style.display = 'block'; upEl('up-del').textContent = 'Удалить';
+        upSheet.style.display = 'flex';
+    };
+    function upOk() {
+        let name = upEl('up-name').value.trim().slice(0, 20);
+        if (upMode === 'create') {
+            if (!name) name = 'Пресет ' + (userPresets.length + 1);
+            const p = { id: 'u_' + Date.now().toString(36), name, color: UP_COLORS[userPresets.length % UP_COLORS.length], thumb: upNewThumb, ...upSnapshot() };
+            userPresets.push(p); upSaveLocal(); upCloudSave(p);
+            activePresetId = p.id; presetSettings = upClone(p.ps); presetK = 1;     // вид не меняется, пресет становится активным
+            upClose(); renderPresets('mine'); updateLockState();
+            const sel = itemsContainer.querySelector('.preset-item.selected'); if (sel && sel.scrollIntoView) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
+            toast('Пресет «' + name + '» сохранён'); clipHaptic();
+        } else if (upMode === 'edit') {
+            const p = userPresets.find(x => x.id === upEditId);
+            if (p && name) { p.name = name; upSaveLocal(); upCloudSave(p); }
+            upClose(); renderPresets(currentTab);
+        }
+    }
+    upEl('up-ok').onclick = upOk;
+    upEl('up-name').addEventListener('keydown', e => { if (e.key === 'Enter') upOk(); });
+    upEl('up-update').onclick = () => {
+        const p = userPresets.find(x => x.id === upEditId); if (!p) return;
+        if (!fxTexture) { toast('Сначала загрузите фото'); return; }
+        Object.assign(p, upSnapshot()); p.thumb = upThumb();
+        upSaveLocal(); upCloudSave(p);
+        if (activePresetId === p.id) { presetSettings = upClone(p.ps); presetK = 1; }
+        upClose(); renderPresets(currentTab); updateLockState(); toast('Пресет обновлён'); clipHaptic();
+    };
+    upEl('up-del').onclick = () => {
+        if (!upDelArmed) { upDelArmed = true; upEl('up-del').textContent = 'Точно удалить?'; return; }
+        const id = upEditId, wasActive = activePresetId === id;
+        userPresets = userPresets.filter(x => x.id !== id); upSaveLocal(); upCloudDelete(id);
+        if (favoritePresets.includes(id)) window.toggleFavorite({ stopPropagation() {} }, id);
+        upClose();
+        if (wasActive) { if (fxTexture) window.applyPreset('none'); else activePresetId = 'none'; }
+        renderPresets(currentTab); toast('Пресет удалён');
+    };
+
+    // ---------- применение, блокировка Pro ----------
+    const _upApply = window.applyPreset;
+    window.applyPreset = function (id) {
+        if (!String(id).startsWith('u_')) return _upApply(id);
+        if (!fxTexture) { if (tg.showAlert) tg.showAlert('Сначала загрузите фото!'); else alert('Сначала загрузите фото!'); return; }
+        const p = userPresets.find(x => x.id === id); if (!p) return;
+        activePresetId = id; presetK = 1;
+        presetSettings = upClone(p.ps); currentSettings = upClone(p.cs);
+        fxs = { ...fxDefaults(), ...upClone(p.fx), dsDate: fxs.dsDate };
+        document.querySelectorAll('.preset-item').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
+        updatePhotoFilter(); updateLockState(); kIconSync();
+    };
+    const _upLock = updateLockState;
+    updateLockState = function () {
+        _upLock();
+        const up = userPresets.find(x => x.id === activePresetId);
+        if (!isPremium && up && up.isPro) {
+            hasLockedActive = true;
+            document.getElementById('premium-banner').classList.remove('hidden');
+            document.getElementById('watermark-overlay').classList.add('active');
+        }
+    };
+
+    // ---------- вкладки ПРЕСЕТЫ / МОИ / ИЗБРАННОЕ ----------
+    renderPresets = function (tab = 'presets') {
+        currentTab = tab;
+        const t = (id, label) => `<div class="sub-tab ${tab === id ? 'active' : ''}" onclick="renderPresets('${id}')">${label}</div>`;
+        subTabsContainer.innerHTML = t('presets', 'ПРЕСЕТЫ') + t('mine', 'МОИ') + t('favorites', 'ИЗБРАННОЕ');
+        itemsContainer.innerHTML = '';
+        let list = presetsData;
+        if (tab === 'mine') {
+            itemsContainer.innerHTML = `
+                <div class="preset-item" onclick="uPresetCreate()">
+                    <div class="preset-thumb" style="display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:1.5px dashed #666;background:#1c1c1e;color:#bbb;font-size:36px;font-weight:300;line-height:1">+</div>
+                    <div class="preset-label" style="background-color:#3a3a3c;color:#ddd">СОЗДАТЬ</div>
+                </div>`;
+            list = userPresets;
+        } else if (tab === 'favorites') {
+            list = [...presetsData, ...userPresets].filter(p => favoritePresets.includes(p.id));
+            if (!list.length) { itemsContainer.innerHTML = '<div style="color: #888; font-size: 12px; margin: auto;">Нет избранных пресетов</div>'; kIconSync(); return; }
+        }
+        list.forEach(p => {
+            const user = String(p.id).startsWith('u_'), isLocked = p.isPro && !isPremium, isFav = favoritePresets.includes(p.id);
+            const favIcon = p.id !== 'none' ? `<div class="fav-icon" onclick="toggleFavorite(event, '${p.id}')">${isFav ? '★' : '☆'}</div>` : '';
+            const thumb = user && p.thumb ? `background-image:url(${p.thumb});background-color:${p.color}` : `background-color:${p.color};opacity:0.8`;
+            const label = user ? `<div class="preset-label" style="background-color:${p.color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box;padding-left:3px;padding-right:3px">${p.name.replace(/[<>&]/g, '')}</div>` : `<div class="preset-label" style="background-color:${p.color};">${p.name}</div>`;
+            itemsContainer.innerHTML += `
+                <div class="preset-item ${isLocked ? 'locked' : ''} ${p.id === activePresetId ? 'selected' : ''}" data-id="${p.id}" onclick="applyPreset('${p.id}')">
+                    <div class="preset-thumb" style="${thumb}"></div>
+                    ${label}
+                    ${favIcon}
+                    ${user ? `<div class="u-edit" onclick="uPresetEdit(event, '${p.id}')">⋯</div>` : ''}
+                    ${isLocked ? '<div class="lock-icon">🔒</div>' : ''}
+                </div>`;
+        });
+        kIconSync();
+    };
+АК
     // ---------- кроп: поворот / отражение / выравнивание / перспектива ----------
     const cxS = document.getElementById('cx-straight'), cxV = document.getElementById('cx-val'), cxModeBtn = document.getElementById('cx-mode');
     let cxBase = 0, cxMode = 0, cxFx = false, cxFy = false, cxPc = null;
