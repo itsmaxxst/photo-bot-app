@@ -44,6 +44,7 @@
         .items-scroll { display: flex; gap: 15px; padding: 20px 15px; overflow-x: auto; white-space: nowrap; min-height: 80px; align-items: flex-end; }
         .items-scroll::-webkit-scrollbar { display: none; }
         .preset-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; position: relative; }
+        .preset-item.selected { outline: 2px solid #fff; outline-offset: 3px; border-radius: 3px; }
         .preset-thumb { width: 60px; height: 60px; background-color: #222; border-radius: 2px 2px 0 0; background-size: cover; background-position: center; }
         .preset-label { width: 60px; text-align: center; font-size: 10px; font-weight: bold; padding: 4px 0; border-radius: 0 0 2px 2px; color: black; }
         .lock-icon { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.5); border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; }
@@ -164,6 +165,7 @@
     </div>
     <div style="display: flex; gap: 15px;">
         <button class="icon-btn" onclick="document.getElementById('upload').click()" title="Загрузить фото"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+        <button class="icon-btn" id="btn-delete-photo" title="Удалить фото" style="color: #ff3b30;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
         <button class="icon-btn" id="btn-save" title="Сохранить"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
     </div>
 </header>
@@ -907,7 +909,7 @@
             const favIcon = p.id !== 'none' ? `<div class="fav-icon" onclick="toggleFavorite(event, '${p.id}')">${isFav ? '★' : '☆'}</div>` : '';
             
             itemsContainer.innerHTML += `
-                <div class="preset-item ${isLocked ? 'locked' : ''}" onclick="applyPreset('${p.id}')">
+                <div class="preset-item ${isLocked ? 'locked' : ''} ${p.id === activePresetId ? 'selected' : ''}" data-id="${p.id}" onclick="applyPreset('${p.id}')">
                     <div class="preset-thumb" style="background-color: ${p.color}; opacity: 0.8;"></div>
                     <div class="preset-label" style="background-color: ${p.color};">${p.name}</div>
                     ${favIcon}
@@ -1967,6 +1969,7 @@
         }
         const p = presetsData.find(x => x.id === id);
         activePresetId = id;
+        document.querySelectorAll('.preset-item').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
         presetSettings = { ...p.glfx };
         currentSettings = { ...defaultSettings };
         updatePhotoFilter();
@@ -2595,6 +2598,20 @@
         navItems[0].classList.add('active');
         renderPresets('presets');
     }
+
+    // Удаление загруженного фото, чтобы загрузить другое
+    document.getElementById('btn-delete-photo').addEventListener('click', () => {
+        if (!fxTexture) return;
+        const msg = 'Удалить загруженное фото? Все изменения будут потеряны.';
+        let asked = false;
+        try {
+            if (tg && tg.initData && tg.showConfirm) {
+                asked = true;
+                tg.showConfirm(msg, ok => { if (ok) resetEditor(); });
+            }
+        } catch (e) { asked = false; }
+        if (!asked && confirm(msg)) resetEditor();
+    });
 
     btnSave.addEventListener('click', () => {
         if (hasLockedActive) {
