@@ -388,7 +388,7 @@
     <nav class="bottom-nav">
         <div class="nav-item active" data-tab="presets"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
         <div class="nav-item" data-tab="tools"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></div>
-        <div class="nav-item" data-tab="fx" id="nav-fx"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8L21.5 17.5l-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+        <div class="nav-item" data-tab="fx" id="nav-fx"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6v12M3 6h6.5M3 12h5"/><path d="M13 6l8 12M21 6l-8 12"/></svg></div>
     </nav>
 </section>
 
@@ -3153,6 +3153,24 @@
                       : [['ptAmt','Количество',0,100],['ptSize','Размер',0,100]] }
     };
 
+    Object.keys(FXT).forEach(id => { FXT[id].isPro = true; });
+    // Pro-эффект «используется», только если реально что-то меняет картинку
+    function fxProUsed() {
+        const s = fxs;
+        return fxCurvesOn() || s.shS || s.hiS || s.ca || s.dist || s.gAmt || s.lkAmt || s.dust || s.scr ||
+            (s.mType > 0 && (s.mExp || s.mSat || s.mTemp)) || s.dsOn || s.frStyle ||
+            s.vhsAmt || s.scanAmt || s.vNoise || s.glitch || s.htAmt || s.pixAmt || s.flAmt || s.flRays || s.sfAmt || s.ptAmt;
+    }
+    const _fxUpdateLock = updateLockState;
+    updateLockState = function () {
+        _fxUpdateLock();
+        if (!isPremium && fxProUsed()) {
+            hasLockedActive = true;
+            document.getElementById('premium-banner').classList.remove('hidden');
+            document.getElementById('watermark-overlay').classList.add('active');
+        }
+    };
+
     // ---------- кривые: монотонный кубический сплайн → LUT 256 ----------
     function fxSpline(p) {
         const n = p.length, x = p.map(a => a[0]), y = p.map(a => a[1]);
@@ -3680,7 +3698,7 @@
         fxMaskShow = false; fxId = null;
         fxPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
-        updatePhotoFilter(); kIconSync();
+        updatePhotoFilter(); kIconSync(); updateLockState();
     }
     document.getElementById('fx-cancel').onclick = () => fxClose(true);
     document.getElementById('fx-apply').onclick = () => fxClose(false);
@@ -3691,7 +3709,7 @@
         if (def.custom === 'curves') fxs.curves = d.curves;
         else def.keys.forEach(k => { fxs[k] = d[k]; });
         if (fxId === 'mask') fxs.mType = 1;
-        fxBuild(); updatePhotoFilter();
+        fxBuild(); updatePhotoFilter(); updateLockState();
     };
     const _fxOpenTool = window.openTool;
     window.openTool = function (id) {
@@ -3744,10 +3762,12 @@
         subTabsContainer.innerHTML = '<div class="sub-tab active">ЭФФЕКТЫ</div>';
         itemsContainer.innerHTML = '';
         Object.keys(FXT).forEach(id => {
+            const isLocked = FXT[id].isPro && !isPremium;
             itemsContainer.innerHTML += `
-                <div class="tool-item" onclick="openTool('${id}')">
+                <div class="tool-item ${isLocked ? 'locked' : ''}" onclick="openTool('${id}')">
                     <div class="tool-icon">${FXT[id].icon}</div>
                     <div class="tool-name">${FXT[id].name}</div>
+                    ${isLocked ? '<div class="lock-icon">🔒</div>' : ''}
                 </div>`;
         });
     }
@@ -3784,7 +3804,7 @@
     }, true));
     upload.addEventListener('change', () => setTimeout(histReset, 0));
     const _fxResetEditor = resetEditor;
-    resetEditor = function () { _fxResetEditor(); fxs = fxDefaults(); presetK = 1; kSync(); histReset(); };
+    resetEditor = function () { _fxResetEditor(); fxs = fxDefaults(); presetK = 1; kSync(); histReset(); updateLockState(); };
     histReset();
 
 
@@ -3880,9 +3900,9 @@
     };
     const DBX_SVG = inner => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
     const DBX_TOOLS = [
-        { id: 'blurbrush', name: 'Кисть размытия', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
+        { id: 'blurbrush', name: 'Обл. разм.', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
         { id: 'heal', name: 'Лечение', icon: DBX_SVG('<rect x="2" y="9" width="20" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M10.5 10.5h.01M13.5 13.5h.01"/>'), isPro: false },
-        { id: 'detail', name: 'Резкость / шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
+        { id: 'detail', name: 'Резк./Шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
     ];
     toolsData.splice(toolsData.findIndex(t => t.id === 'dodgeburn') + 1, 0, ...DBX_TOOLS);
 
