@@ -15,6 +15,7 @@
             --text-main: #ffffff;
             --text-muted: #888888;
         }
+        html, body { overscroll-behavior: none; overscroll-behavior-y: none; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0;
@@ -356,6 +357,8 @@
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand(); 
+    // Не даём Telegram сворачивать мини-апп вертикальным свайпом (кисть / кроп)
+    try { if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } catch (e) {}
 
     const urlParams = new URLSearchParams(window.location.search);
     const isPremium = urlParams.get('premium') === '1';
@@ -2575,6 +2578,8 @@
     container.addEventListener('pointerup', () => { if (isDBActive) return; isHolding = false; updatePhotoFilter(); });
     container.addEventListener('pointerleave', () => { if (isDBActive) return; isHolding = false; updatePhotoFilter(); });
     container.addEventListener('contextmenu', e => e.preventDefault());
+    // Запасной вариант: жесты внутри фото-области (кисть, кроп) не уходят в Telegram
+    container.addEventListener('touchmove', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
 
     function resetEditor() {
         if (fxTexture) {
