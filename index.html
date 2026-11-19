@@ -265,6 +265,10 @@
             <span style="font-size: 12px; color: white;">Размер</span>
             <input type="range" id="db-size" min="20" max="150" value="60">
         </div>
+        <div class="db-slider-container" id="db-power-row" style="display:none">
+            <span style="font-size: 12px; color: white;">Сила</span>
+            <input type="range" id="db-power" min="5" max="100" value="50">
+        </div>
         <div class="db-modes">
             <div class="db-mode active" data-mode="dodge">
                 <div class="db-icon"></div><span>Осветлить</span>
@@ -2995,7 +2999,7 @@
         if (xo < -rUI || yo < -rUI || xo > rw + rUI || yo > rh + rUI) return;
 
         const dodge = dbMode === 'dodge';
-        const dab = dbTool === 'fog' ? dbDabFog : dbDabDodgeBurn;
+        const dab = (typeof DBX_DAB !== 'undefined' && DBX_DAB[dbTool]) || (dbTool === 'fog' ? dbDabFog : dbDabDodgeBurn);
         [dbCanvas, dbPrevCanvas].forEach(cv => {
             const ctx = cv === dbCanvas ? dbCtx : dbPrevCtx;
             // координаты и радиус – в долях картинки, поэтому попадают в то же место на любом разрешении
@@ -3863,6 +3867,235 @@
         const d = fxDateFromName(f.name) || await fxExifDate(f) || fxToday();
         fxs.dsDate = d; histReset();
     });
+
+
+    // ==================================================================================
+    //  КИСТИ: размытие/пиксели, лечение/клон, резкость/антишум  +  избранное в Telegram CloudStorage
+    //  (используют существующую панель и холсты кисти «Осв/Зат»)
+    // ==================================================================================
+    const DBX_MODES = {
+        blurbrush: [['blur', 'Размытие'], ['pixel', 'Пиксели']],
+        heal:      [['heal', 'Лечение'], ['clone', 'Клон']],
+        detail:    [['sharpen', 'Резкость'], ['denoise', 'Антишум']]
+    };
+    const DBX_SVG = inner => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+    const DBX_TOOLS = [
+        { id: 'blurbrush', name: 'Кисть размытия', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
+        { id: 'heal', name: 'Лечение', icon: DBX_SVG('<rect x="2" y="9" width="20" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M10.5 10.5h.01M13.5 13.5h.01"/>'), isPro: false },
+        { id: 'detail', name: 'Резкость / шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
+    ];
+    toolsData.splice(toolsData.findIndex(t => t.id === 'dodgeburn') + 1, 0, ...DBX_TOOLS);
+
+    const dbPowerRow = document.getElementById('db-power-row'), dbPowerSlider = document.getElementById('db-power');
+    const dbPower = () => parseInt(dbPowerSlider.value) / 100;
+    const dbTmpA = document.createElement('canvas'), dbTmpB = document.createElement('canvas');
+    let dbSrcOff = null, cloneSrc = null, cloneSkip = false;
+
+    // маска-круг поверх временного холста (мягкая или почти жёсткая)
+    function dbMaskCircle(tc, w, h, cx, cy, r, hard) {
+        const g = tc.createRadialGradient(cx, cy, 0, cx, cy, r);
+        if (hard) { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.88, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); }
+        else DB_STOPS.forEach(([t, f]) => g.addColorStop(t, `rgba(0,0,0,${f.toFixed(3)})`));
+        tc.globalCompositeOperation = 'destination-in';
+        tc.fillStyle = g; tc.fillRect(0, 0, w, h);
+        tc.globalCompositeOperation = 'source-over';
+    }
+    // размытие участка: уменьшили → увеличили → наложили через мягкий круг
+    function dbSoftBlur(ctx, x, y, r, f, alpha) {
+        const W = Math.ceil(r * 2), x0 = Math.floor(x - r), y0 = Math.floor(y - r);
+        if (W < 2) return;
+        const sw = Math.max(1, Math.round(W / f));
+        dbTmpA.width = sw; dbTmpA.height = sw;
+        const a = dbTmpA.getContext('2d'); a.imageSmoothingEnabled = true; a.imageSmoothingQuality = 'high';
+        a.drawImage(ctx.canvas, x0, y0, W, W, 0, 0, sw, sw);
+        dbTmpB.width = W; dbTmpB.height = W;
+        const b = dbTmpB.getContext('2d'); b.imageSmoothingEnabled = true; b.imageSmoothingQuality = 'high';
+        b.drawImage(dbTmpA, 0, 0, sw, sw, 0, 0, W, W);
+        dbMaskCircle(b, W, W, x - x0, y - y0, r, false);
+        ctx.globalAlpha = alpha; ctx.drawImage(dbTmpB, x0, y0); ctx.globalAlpha = 1;
+    }
+    function dbDabBlur(ctx, x, y, r) {
+        const pw = dbPower();
+        if (dbMode !== 'pixel') { dbSoftBlur(ctx, x, y, r, 1 + pw * 8, 0.55); return; }
+        // пиксели: сетка привязана к холсту, поэтому блоки не «плывут» вдоль мазка
+        const B = Math.max(2, Math.round(r * (0.08 + pw * 0.5)));
+        const x0 = Math.floor((x - r) / B) * B, y0 = Math.floor((y - r) / B) * B;
+        const W = Math.ceil((x + r - x0) / B) * B, H = Math.ceil((y + r - y0) / B) * B;
+        const sw = Math.max(1, W / B), sh = Math.max(1, H / B);
+        dbTmpA.width = sw; dbTmpA.height = sh;
+        const a = dbTmpA.getContext('2d'); a.imageSmoothingEnabled = true; a.imageSmoothingQuality = 'high';
+        a.drawImage(ctx.canvas, x0, y0, W, H, 0, 0, sw, sh);
+        dbTmpB.width = W; dbTmpB.height = H;
+        const b = dbTmpB.getContext('2d'); b.imageSmoothingEnabled = false;
+        b.drawImage(dbTmpA, 0, 0, sw, sh, 0, 0, W, H);
+        dbMaskCircle(b, W, H, x - x0, y - y0, r, true);
+        ctx.drawImage(dbTmpB, x0, y0);
+    }
+    function dbDabDetail(ctx, x, y, r) {
+        const pw = dbPower();
+        if (dbMode === 'denoise') { dbSoftBlur(ctx, x, y, r, 1 + pw * 2.5, 0.4); return; }
+        const cv = ctx.canvas;
+        const x0 = Math.max(0, Math.floor(x - r)), y0 = Math.max(0, Math.floor(y - r));
+        const x1 = Math.min(cv.width, Math.ceil(x + r)), y1 = Math.min(cv.height, Math.ceil(y + r));
+        const w = x1 - x0, h = y1 - y0;
+        if (w < 2 || h < 2) return;
+        const src = ctx.getImageData(x0, y0, w, h), d = src.data;
+        const f = Math.max(2, Math.round(cv.width / 700));
+        const sw = Math.max(1, Math.round(w / f)), sh = Math.max(1, Math.round(h / f));
+        dbTmpA.width = sw; dbTmpA.height = sh;
+        const a = dbTmpA.getContext('2d'); a.imageSmoothingEnabled = true; a.imageSmoothingQuality = 'high';
+        a.drawImage(cv, x0, y0, w, h, 0, 0, sw, sh);
+        dbTmpB.width = w; dbTmpB.height = h;
+        const b = dbTmpB.getContext('2d'); b.imageSmoothingEnabled = true; b.imageSmoothingQuality = 'high';
+        b.drawImage(dbTmpA, 0, 0, sw, sh, 0, 0, w, h);
+        const bl = b.getImageData(0, 0, w, h).data, amt = 0.8 + pw * 2.2;
+        for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) {
+            const dist = Math.hypot(x0 + px + 0.5 - x, y0 + py + 0.5 - y) / r;
+            if (dist >= 1) continue;
+            const t = 1 - dist * dist, m = t * t * 0.5 * amt, i = (py * w + px) * 4;
+            for (let c = 0; c < 3; c++) { const v = d[i + c] + (d[i + c] - bl[i + c]) * m; d[i + c] = v < 0 ? 0 : v > 255 ? 255 : v; }
+        }
+        ctx.putImageData(src, x0, y0);
+    }
+    // лечение / клон: берём участок со смещением и накладываем через мягкий круг
+    function dbDabHeal(ctx, x, y, r) {
+        if (!dbSrcOff) return;
+        const cv = ctx.canvas, W = Math.ceil(r * 2);
+        if (W < 2) return;
+        const sx = x + dbSrcOff.ox * cv.width, sy = y + dbSrcOff.oy * cv.height;
+        dbTmpA.width = W; dbTmpA.height = W;
+        const a = dbTmpA.getContext('2d');
+        a.drawImage(cv, Math.round(sx - r), Math.round(sy - r), W, W, 0, 0, W, W);
+        dbMaskCircle(a, W, W, W / 2, W / 2, r, false);
+        ctx.globalAlpha = dbMode === 'clone' ? 0.9 : 0.6;
+        ctx.drawImage(dbTmpA, Math.round(x - r), Math.round(y - r));
+        ctx.globalAlpha = 1;
+    }
+    const DBX_DAB = { blurbrush: dbDabBlur, detail: dbDabDetail, heal: dbDabHeal };
+    // (в dbDab выбор кисти идёт через DBX_DAB)
+
+    function dbToFrac(cx, cy) {
+        const rect = glCanvas.getBoundingClientRect();
+        const sc = Math.min(rect.width / glCanvas.width, rect.height / glCanvas.height);
+        const rw = glCanvas.width * sc, rh = glCanvas.height * sc;
+        const ox0 = (rect.width - rw) / 2, oy0 = (rect.height - rh) / 2;
+        const xo = cx - rect.left - ox0, yo = cy - rect.top - oy0;
+        if (xo < 0 || yo < 0 || xo > rw || yo > rh) return null;
+        return { fx: xo / rw, fy: yo / rh, rw, rh, rect, ox0, oy0 };
+    }
+    // авто-выбор источника для «Лечения»: рядом, похожий цвет и без деталей
+    function fxHealPick(fr) {
+        const W = dbPrevCanvas.width, H = dbPrevCanvas.height;
+        const r = (parseInt(dbSizeSlider.value) * 0.5 / fr.rw) * W, x = fr.fx * W, y = fr.fy * H;
+        const s = Math.max(6, Math.round(r * 1.2));
+        const stat = (cx, cy) => {
+            const x0 = Math.round(cx - s), y0 = Math.round(cy - s), n = 2 * s;
+            if (x0 < 0 || y0 < 0 || x0 + n > W || y0 + n > H) return null;
+            const d = dbPrevCtx.getImageData(x0, y0, n, n).data;
+            let R = 0, G = 0, B = 0, L = 0, L2 = 0, c = 0;
+            for (let i = 0; i < d.length; i += 16) {
+                const l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                R += d[i]; G += d[i + 1]; B += d[i + 2]; L += l; L2 += l * l; c++;
+            }
+            const ml = L / c;
+            return { m: [R / c, G / c, B / c], sd: Math.sqrt(Math.max(0, L2 / c - ml * ml)) };
+        };
+        const dst = stat(x, y);
+        let best = { ox: 0.05, oy: 0 }, bs = Infinity;
+        for (let k = 0; k < 8; k++) {
+            const ang = k * Math.PI / 4, cx = x + Math.cos(ang) * r * 2.4, cy = y + Math.sin(ang) * r * 2.4;
+            const st = stat(cx, cy);
+            if (!st) continue;
+            const diff = dst ? (Math.abs(st.m[0] - dst.m[0]) + Math.abs(st.m[1] - dst.m[1]) + Math.abs(st.m[2] - dst.m[2])) / 3 : 0;
+            const sc = diff + 0.8 * st.sd;
+            if (sc < bs) { bs = sc; best = { ox: (cx - x) / W, oy: (cy - y) / H }; }
+        }
+        return best;
+    }
+
+    // маркер источника для клона
+    const cloneMarker = document.createElement('div');
+    cloneMarker.style.cssText = 'position:absolute;pointer-events:none;display:none;border:2px dashed #4dd0e1;border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,.5);z-index:30';
+    container.appendChild(cloneMarker);
+    function cloneMarkerAt(fx, fy, fr) {
+        const cr = container.getBoundingClientRect(), size = parseInt(dbSizeSlider.value);
+        cloneMarker.style.width = cloneMarker.style.height = size + 'px';
+        cloneMarker.style.left = (fr.rect.left + fr.ox0 + fx * fr.rw - cr.left - size / 2) + 'px';
+        cloneMarker.style.top = (fr.rect.top + fr.oy0 + fy * fr.rh - cr.top - size / 2) + 'px';
+        cloneMarker.style.display = 'block';
+    }
+    function clonePrepare() { cloneSrc = null; dbSrcOff = null; cloneSkip = false; cloneMarker.style.display = 'none'; }
+
+    const _dbStroke = dbStroke;
+    dbStroke = function (cx, cy) {
+        if (dbTool !== 'heal') return _dbStroke(cx, cy);
+        const fr = dbToFrac(cx, cy);
+        if (cloneSkip) return;
+        if (dbLast === null) {                       // начало нового мазка
+            if (!fr) return;
+            if (dbMode === 'heal') dbSrcOff = fxHealPick(fr);
+            else if (!cloneSrc) { cloneSrc = { fx: fr.fx, fy: fr.fy }; cloneSkip = true; cloneMarkerAt(fr.fx, fr.fy, fr); return; }  // первый тап = источник
+            else if (!dbSrcOff) dbSrcOff = { ox: cloneSrc.fx - fr.fx, oy: cloneSrc.fy - fr.fy };
+        }
+        if (!dbSrcOff) return;
+        _dbStroke(cx, cy);
+        if (dbMode === 'clone' && fr && cloneSrc) cloneMarkerAt(fr.fx + dbSrcOff.ox * 1, fr.fy + dbSrcOff.oy * 1, fr);
+    };
+    ['pointerup', 'pointercancel'].forEach(ev => container.addEventListener(ev, () => { cloneSkip = false; }));
+    document.querySelectorAll('.db-mode').forEach(b => b.addEventListener('click', () => { if (dbTool === 'heal') clonePrepare(); }));
+    // dbSrcOff.ox/oy хранятся в долях холста (ширина/высота), а fx/fy – в долях картинки: это одно и то же
+    // (рабочие холсты имеют те же пропорции, что и картинка на экране)
+
+    const _openDB = openDodgeBurn;
+    openDodgeBurn = function (tool) {
+        _openDB(tool);
+        if (!isDBActive) return;
+        const ex = DBX_MODES[tool], labels = ex || [['dodge', 'Осветлить'], ['burn', 'Затемнить']];
+        const modes = document.querySelectorAll('.db-mode');
+        if (ex || modes[0].getAttribute('data-mode') !== 'dodge') {
+            modes.forEach((m, i) => { m.setAttribute('data-mode', labels[i][0]); m.querySelector('span').textContent = labels[i][1]; m.classList.toggle('active', i === 0); });
+            dbMode = labels[0][0];
+        }
+        dbPowerRow.style.display = ex ? '' : 'none';
+        if (ex) brushCursor.style.borderColor = '#4dd0e1';
+        clonePrepare();
+    };
+    const _closeDB = closeDodgeBurn;
+    closeDodgeBurn = function (apply) { clonePrepare(); _closeDB(apply); };
+
+    const _fxOpenTool2 = window.openTool;
+    window.openTool = function (id) {
+        if (DBX_MODES[id]) {
+            if (!fxTexture) { if (tg.showAlert) tg.showAlert("Сначала загрузите фото!"); else alert("Сначала загрузите фото!"); return; }
+            openDodgeBurn(id); return;
+        }
+        _fxOpenTool2(id);
+    };
+
+    // ---------- избранное: синхронизация через Telegram CloudStorage ----------
+    (function () {
+        const cs = tg.CloudStorage;
+        if (!cs || !tg.isVersionAtLeast || !tg.isVersionAtLeast('6.9')) return;
+        const save = () => { try { cs.setItem('favoritePresets', JSON.stringify(favoritePresets), () => {}); } catch (e) {} };
+        try {
+            cs.getItem('favoritePresets', (err, val) => {
+                if (err) return;
+                if (val) {
+                    try {
+                        const arr = JSON.parse(val);
+                        if (Array.isArray(arr)) {
+                            favoritePresets = arr.filter(id => presetsData.some(p => p.id === id));
+                            try { localStorage.setItem('favoritePresets', JSON.stringify(favoritePresets)); } catch (e) {}
+                            const act = document.querySelector('.nav-item.active');
+                            if (act && act.getAttribute('data-tab') === 'presets' && !fxId) renderPresets(currentTab);
+                        }
+                    } catch (e) {}
+                } else if (favoritePresets.length) save();     // первый запуск: переносим локальные избранные в облако
+            });
+        } catch (e) {}
+        const _tf = window.toggleFavorite;
+        window.toggleFavorite = function (ev, id) { _tf(ev, id); save(); };
+    })();
 
     // ---------- кроп: поворот / отражение / выравнивание ----------
     const cxS = document.getElementById('cx-straight'), cxV = document.getElementById('cx-val');
