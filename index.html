@@ -3093,6 +3093,7 @@
     const FX_SVG = inner => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
     function fxDefaults() {
         return {
+            dsOn: 0, dsDate: fxToday(), dsFmt: 0, dsCol: 0, dsPos: 3, dsSize: 50,
             ca: 0, dist: 0, shH: 220, shS: 0, hiH: 35, hiS: 0, bal: 0,
             gAmt: 0, gSize: 30, gRough: 50, gShadow: 50,
             lkAmt: 0, lkHue: 20, lkPos: 15, dust: 0, scr: 0,
@@ -3122,7 +3123,9 @@
                   keys: ['mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp'], custom: 'mask',
                   rows: () => fxs.mType === 2
                       ? [['mX','Позиция X',0,100],['mY','Позиция Y',0,100],['mSize','Размер',5,100],['mFeather','Мягкость',0,100],['mExp','Экспозиция',-100,100],['mSat','Насыщ.',-100,100],['mTemp','Темп.',-100,100]]
-                      : [['mX','Позиция X',0,100],['mY','Позиция Y',0,100],['mAng','Угол',-180,180],['mFeather','Мягкость',0,100],['mExp','Экспозиция',-100,100],['mSat','Насыщ.',-100,100],['mTemp','Темп.',-100,100]] }
+                      : [['mX','Позиция X',0,100],['mY','Позиция Y',0,100],['mAng','Угол',-180,180],['mFeather','Мягкость',0,100],['mExp','Экспозиция',-100,100],['mSat','Насыщ.',-100,100],['mTemp','Темп.',-100,100]] },
+        stamp:  { name: 'Дата', icon: FX_SVG('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
+                  keys: ['dsOn','dsFmt','dsCol','dsPos','dsSize'], custom: 'stamp' }
     };
 
     // ---------- кривые: монотонный кубический сплайн → LUT 256 ----------
@@ -3164,7 +3167,7 @@
 
     // ---------- шейдер ----------
     const FX_FS = `
-        uniform sampler2D tex; uniform sampler2D lut; uniform vec2 res;
+        uniform sampler2D tex; uniform sampler2D lut; uniform sampler2D stamp; uniform vec2 res; uniform float useStamp, stR, stG, stB;
         uniform float aspect, seed, ca, dist, useLut, shH, shS, hiH, hiS, bal, gAmt, gSize, gRough, gShadow,
             lkAmt, lkHue, lkPos, dust, scr, mType, mX, mY, mSize, mAng, mFeather, mInv, mExp, mSat, mTemp, mShow;
         float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -3246,10 +3249,11 @@
                 float w = mix(1.0, 1.7 - 1.5 * lum(col), gShadow);
                 col += n * gAmt * 0.35 * w;
             }
+            if (useStamp > 0.5) col = mix(col, vec3(stR, stG, stB), texture2D(stamp, vec2(uv.x, 1.0 - uv.y)).r);
             gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
         }`;
     const FX_UNI = ['tex','lut','res','aspect','seed','ca','dist','useLut','shH','shS','hiH','hiS','bal','gAmt','gSize','gRough','gShadow',
-        'lkAmt','lkHue','lkPos','dust','scr','mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp','mShow'];
+        'lkAmt','lkHue','lkPos','dust','scr','mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp','mShow','stamp','useStamp','stR','stG','stB'];
 
     function createFxRenderer(canvas) {
         const gl = canvas._ && canvas._.gl;
@@ -3282,10 +3286,11 @@
             return t;
         }
         const lutTex = makeTex(256, 1, gl.RGBA, new Uint8Array(1024));
+        const stampTex = makeTex(1, 1, gl.RGBA, new Uint8Array(4));
         const R = { frameTex: null, w: 0, h: 0 };
         function release() { if (R.frameTex) gl.deleteTexture(R.frameTex); R.frameTex = null; }
         function bindTex(unit, t) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t); }
-        R.render = function (P, lutData) {
+        R.render = function (P, lutData, stampCv) {
             const dw = gl.drawingBufferWidth, dh = gl.drawingBufferHeight;
             if (!dw || !dh) return;
             if (!(R.w === dw && R.h === dh && R.frameTex)) { release(); R.w = dw; R.h = dh; R.frameTex = makeTex(dw, dh, frameFormat); }
@@ -3298,29 +3303,37 @@
             gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, dw, dh);
             if (lutData) { bindTex(1, lutTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, lutData); }
             bindTex(1, lutTex);
+            if (stampCv) {
+                bindTex(2, stampTex);
+                const prevFlip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, stampCv);
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, prevFlip);
+                gl.uniform1i(u.stamp, 2);
+            }
             gl.useProgram(prog);
             gl.viewport(0, 0, dw, dh);
-            gl.uniform1i(u.tex, 0); gl.uniform1i(u.lut, 1);
+            gl.uniform1i(u.tex, 0); gl.uniform1i(u.lut, 1); gl.uniform1i(u.stamp, 2);
             gl.uniform2f(u.res, dw, dh); gl.uniform1f(u.aspect, dw / dh);
             for (const k in P) if (u[k] !== undefined && u[k] !== null && k !== 'tex' && k !== 'lut') gl.uniform1f(u[k], P[k]);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            bindTex(1, null); bindTex(0, null);
+            bindTex(2, null); bindTex(1, null); bindTex(0, null);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.viewport(0, 0, dw, dh);
         };
-        R.dispose = function () { release(); gl.deleteTexture(lutTex); gl.deleteProgram(prog); gl.deleteBuffer(quad); };
+        R.dispose = function () { release(); gl.deleteTexture(lutTex); gl.deleteTexture(stampTex); gl.deleteProgram(prog); gl.deleteBuffer(quad); };
         return R;
     }
 
     function fxActive() {
         const s = fxs;
-        return s.ca || s.dist || s.shS || s.hiS || s.gAmt || s.lkAmt || s.dust || s.scr ||
+        return s.dsOn || s.ca || s.dist || s.shS || s.hiS || s.gAmt || s.lkAmt || s.dust || s.scr ||
             (s.mType > 0 && (s.mExp || s.mSat || s.mTemp || fxMaskShow)) || fxCurvesOn();
     }
     function fxParams(canvas) {
         const s = fxs;
         return {
-            seed: 1.37, ca: s.ca / 100, dist: s.dist / 200, useLut: fxCurvesOn() ? 1 : 0,
+            seed: 1.37, useStamp: s.dsOn ? 1 : 0, stR: DS_COLORS[s.dsCol][0], stG: DS_COLORS[s.dsCol][1], stB: DS_COLORS[s.dsCol][2], ca: s.ca / 100, dist: s.dist / 200, useLut: fxCurvesOn() ? 1 : 0,
             shH: s.shH / 360, shS: s.shS / 100, hiH: s.hiH / 360, hiS: s.hiS / 100, bal: s.bal / 100,
             gAmt: s.gAmt / 100, gSize: s.gSize / 100, gRough: s.gRough / 100, gShadow: s.gShadow / 100,
             lkAmt: s.lkAmt / 100, lkHue: s.lkHue / 360, lkPos: s.lkPos / 100, dust: s.dust / 100, scr: s.scr / 100,
@@ -3337,7 +3350,7 @@
             canvas._fxRenderer = r;
         }
         if (!r) return;
-        try { r.render(fxParams(canvas), fxCurvesOn() ? fxLutData() : null); } catch (e) { console.warn('FX failed:', e); }
+        try { r.render(fxParams(canvas), fxCurvesOn() ? fxLutData() : null, fxs.dsOn ? fxStampCanvas(canvas.width, canvas.height) : null); } catch (e) { console.warn('FX failed:', e); }
         if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._fxRenderer = null; }
     }
 
@@ -3394,6 +3407,7 @@
         const def = FXT[fxId];
         fxBody.innerHTML = '';
         if (def.custom === 'curves') return fxCurvesUI(fxBody);
+        if (def.custom === 'stamp') return fxStampUI(fxBody);
         if (def.custom === 'mask') {
             const bar = document.createElement('div');
             bar.className = 'fx-chips';
@@ -3465,6 +3479,7 @@
     function fxOpen(id) {
         fxId = id; fxBackup = JSON.stringify(fxs);
         if (id === 'mask' && !fxs.mType) fxs.mType = 1;
+        if (id === 'stamp') fxs.dsOn = 1;
         fxMaskShow = (id === 'mask');
         selectionPanel.classList.add('hidden');
         fxPanel.classList.add('active');
@@ -3582,6 +3597,87 @@
     const _fxResetEditor = resetEditor;
     resetEditor = function () { _fxResetEditor(); fxs = fxDefaults(); presetK = 1; kSync(); histReset(); };
     histReset();
+
+
+    // ---------- Штамп даты ----------
+    const DS_COLORS = [[1, 0.54, 0.12], [1, 0.23, 0.19], [1, 0.84, 0.04], [1, 1, 1]];
+    function fxToday() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    function fxDateText() {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fxs.dsDate || '') || /^(\d{4})-(\d{2})-(\d{2})$/.exec(fxToday());
+        const [, y, mo, d] = m;
+        if (fxs.dsFmt === 1) return `${d}.${mo}.${y}`;
+        if (fxs.dsFmt === 2) return `${y}/${mo}/${d}`;
+        return `'${y.slice(2)} ${mo} ${d}`;
+    }
+    function fxStampCanvas(w, h) {
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const x = c.getContext('2d');
+        x.fillStyle = '#000'; x.fillRect(0, 0, w, h);
+        const fs = Math.max(8, Math.round(h * 0.032 * (fxs.dsSize / 50)));
+        x.font = `italic bold ${fs}px "Courier New", monospace`;
+        const text = fxDateText(), tw = x.measureText(text).width, mg = Math.round(Math.min(w, h) * 0.04);
+        const px = (fxs.dsPos % 2) ? w - mg - tw : mg, py = fxs.dsPos < 2 ? mg + fs * 0.8 : h - mg;
+        x.fillStyle = '#fff'; x.shadowColor = '#fff'; x.shadowBlur = fs * 0.3;
+        x.fillText(text, px, py); x.shadowBlur = 0; x.fillText(text, px, py);
+        return c;
+    }
+    function fxStampUI(body) {
+        const re = () => { fxBuild(); updatePhotoFilter(); };
+        const r1 = document.createElement('div'); r1.className = 'fx-chips'; body.appendChild(r1);
+        fxChip(r1, fxs.dsOn ? 'Вкл' : 'Выкл', !!fxs.dsOn, () => { fxs.dsOn = fxs.dsOn ? 0 : 1; re(); });
+        const di = document.createElement('input');
+        di.type = 'date'; di.value = fxs.dsDate;
+        di.style.cssText = 'background:#222;color:#fff;border:1px solid #444;border-radius:8px;padding:4px 8px;font-size:12px;color-scheme:dark';
+        di.addEventListener('input', () => { if (di.value) { fxs.dsDate = di.value; updatePhotoFilter(); } });
+        r1.appendChild(di);
+        const r2 = document.createElement('div'); r2.className = 'fx-chips'; body.appendChild(r2);
+        ["'26 11 19", '19.11.2026', '2026/11/19'].forEach((t, i) => fxChip(r2, t, fxs.dsFmt === i, () => { fxs.dsFmt = i; re(); }));
+        const r3 = document.createElement('div'); r3.className = 'fx-chips'; r3.style.alignItems = 'center'; body.appendChild(r3);
+        DS_COLORS.forEach((c, i) => {
+            const b = document.createElement('button');
+            b.style.cssText = `width:22px;height:22px;border-radius:50%;padding:0;cursor:pointer;background:rgb(${c.map(v => Math.round(v * 255))});border:2px solid ${fxs.dsCol === i ? '#fff' : '#444'}`;
+            b.onclick = () => { fxs.dsCol = i; re(); }; r3.appendChild(b);
+        });
+        ['↖', '↗', '↙', '↘'].forEach((t, i) => fxChip(r3, t, fxs.dsPos === i, () => { fxs.dsPos = i; re(); }));
+        fxGrid(body, [['dsSize', 'Размер', 20, 100]]);
+    }
+    function fxDateFromName(name) {
+        let m = /((?:19|20)\d{2})[-_.]?(0[1-9]|1[0-2])[-_.]?(0[1-9]|[12]\d|3[01])/.exec(name), y, mo, d;
+        if (m) { y = m[1]; mo = m[2]; d = m[3]; }
+        else if ((m = /(0[1-9]|[12]\d|3[01])[-_.](0[1-9]|1[0-2])[-_.]((?:19|20)\d{2})/.exec(name))) { d = m[1]; mo = m[2]; y = m[3]; }
+        else return null;
+        return +y <= new Date().getFullYear() + 1 ? `${y}-${mo}-${d}` : null;
+    }
+    async function fxExifDate(file) {
+        try {
+            const v = new DataView(await file.slice(0, 262144).arrayBuffer());
+            if (v.getUint16(0) !== 0xFFD8) return null;
+            let o = 2;
+            while (o < v.byteLength - 10) {
+                const mk = v.getUint16(o), len = v.getUint16(o + 2);
+                if (mk === 0xFFE1 && v.getUint32(o + 4) === 0x45786966) {
+                    const t = o + 10, le = v.getUint16(t) === 0x4949;
+                    const g16 = a => v.getUint16(a, le), g32 = a => v.getUint32(a, le);
+                    const find = (ifd, tag) => { const n = g16(t + ifd); for (let i = 0; i < n; i++) { const e = t + ifd + 2 + i * 12; if (g16(e) === tag) return g32(e + 8); } return null; };
+                    const ifd0 = g32(t + 4), ex = find(ifd0, 0x8769);
+                    let off = ex !== null ? find(ex, 0x9003) : null;
+                    if (off === null) off = find(ifd0, 0x0132);
+                    if (off === null) return null;
+                    let s = ''; for (let i = 0; i < 10; i++) s += String.fromCharCode(v.getUint8(t + off + i));
+                    const m = /^(\d{4}):(\d{2}):(\d{2})$/.exec(s);
+                    return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+                }
+                o += 2 + len;
+            }
+        } catch (e) {}
+        return null;
+    }
+    upload.addEventListener('change', async e => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const d = fxDateFromName(f.name) || await fxExifDate(f) || fxToday();
+        fxs.dsDate = d; histReset();
+    });
 
     // ---------- кроп: поворот / отражение / выравнивание ----------
     const cxS = document.getElementById('cx-straight'), cxV = document.getElementById('cx-val');
