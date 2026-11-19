@@ -176,12 +176,11 @@
     <div class="top-badges" id="hdr-sdr-toggle">
         <span class="badge" data-mode="2K">2K</span>
         <span class="badge active" data-mode="HDR">HDR</span>
-        <span class="badge" data-mode="SDR">SDR</span>
     </div>
-    <div style="display: flex; gap: 15px; align-items: center;">
+    <div style="display: flex; gap: 12px; align-items: center;">
         <button class="icon-btn" id="btn-undo" title="Отменить" disabled><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
         <button class="icon-btn" id="btn-redo" title="Повторить" disabled><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
-        <button class="icon-btn" onclick="document.getElementById('upload').click()" title="Загрузить фото"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+        <button class="icon-btn" id="btn-clip" title="Копировать / вставить настройки"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg></button>
         <button class="icon-btn" id="btn-delete-photo" title="Удалить фото" style="color: #ff3b30;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
         <button class="icon-btn" id="btn-save" title="Сохранить"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
     </div>
@@ -214,6 +213,7 @@
             <button class="icon-btn" id="cx-rot" title="Повернуть на 90°">⟲</button>
             <button class="icon-btn" id="cx-flipx" title="Отразить по горизонтали">⇋</button>
             <button class="icon-btn" id="cx-flipy" title="Отразить по вертикали">⇵</button>
+            <button class="icon-btn" id="cx-mode" title="Угол / перспектива" style="font-size:10px;font-weight:700;width:36px;letter-spacing:.5px">УГОЛ</button>
             <input type="range" id="cx-straight" min="-45" max="45" step="0.5" value="0">
             <span id="cx-val" style="width:34px;text-align:right">0°</span>
         </div>
@@ -3100,6 +3100,8 @@
             pixAmt: 0, htAmt: 0, htSize: 40, vhsAmt: 0, scanAmt: 0, vNoise: 0, glitch: 0,
             flAmt: 0, flRays: 0, flX: 75, flY: 20, flHue: 35, sfAmt: 0, sfSize: 40,
             ptType: 0, ptAmt: 0, ptSize: 50, ptAng: 10, frStyle: 0, frSize: 30, frCol: 0,
+            bwOn: 0, bw0: 0, bw1: 0, bw2: 0, bw3: 0, bw4: 0, bw5: 0, bw6: 0, bw7: 0, lkStyle: 0, anaAmt: 0,
+            gdH0: 220, gdS0: 0, gdL0: 0, gdH1: 40, gdS1: 0, gdL1: 0, gdH2: 35, gdS2: 0, gdL2: 0,
             dsOn: 0, dsDate: fxToday(), dsFmt: 0, dsCol: 0, dsPos: 3, dsSize: 50,
             ca: 0, dist: 0, shH: 220, shS: 0, hiH: 35, hiS: 0, bal: 0,
             gAmt: 0, gSize: 30, gRough: 50, gShadow: 50,
@@ -3124,7 +3126,7 @@
                   keys: ['gAmt','gSize','gRough','gShadow'],
                   rows: () => [['gAmt','Количество',0,100],['gSize','Размер',0,100],['gRough','Жёсткость',0,100],['gShadow','В тенях',0,100]] },
         leaks:  { name: 'Засветы', icon: FX_SVG('<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'),
-                  keys: ['lkAmt','lkHue','lkPos','dust','scr'],
+                  keys: ['lkAmt','lkHue','lkPos','dust','scr','lkStyle'], custom: 'leaks',
                   rows: () => [['lkAmt','Засветка',0,100],['lkHue','Цвет',0,360],['lkPos','Положение',0,100],['dust','Пыль',0,100],['scr','Царапины',0,100]] },
         mask:   { name: 'Маска', icon: FX_SVG('<circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="3"/>'),
                   keys: ['mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp'], custom: 'mask',
@@ -3150,16 +3152,25 @@
                   keys: ['ptType','ptAmt','ptSize','ptAng'], custom: 'particles',
                   rows: () => fxs.ptType === 0
                       ? [['ptAmt','Количество',0,100],['ptSize','Длина',0,100],['ptAng','Наклон',-30,30]]
-                      : [['ptAmt','Количество',0,100],['ptSize','Размер',0,100]] }
+                      : [['ptAmt','Количество',0,100],['ptSize','Размер',0,100]] },
+        grade:  { name: 'Колёса', icon: FX_SVG('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="8" r="1.5"/><circle cx="8" cy="14.5" r="1.5"/><circle cx="16" cy="14.5" r="1.5"/>'),
+                  keys: ['gdH0','gdS0','gdL0','gdH1','gdS1','gdL1','gdH2','gdS2','gdL2'], custom: 'grade' },
+        bw:     { name: 'Ч/Б микшер', icon: FX_SVG('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>'),
+                  keys: ['bw0','bw1','bw2','bw3','bw4','bw5','bw6','bw7'], custom: 'bw',
+                  rows: () => [['bw0','Красные',-100,100],['bw1','Оранжевые',-100,100],['bw2','Жёлтые',-100,100],['bw3','Зелёные',-100,100],['bw4','Голубые',-100,100],['bw5','Синие',-100,100],['bw6','Фиолетовые',-100,100],['bw7','Пурпурные',-100,100]].map((r, i) =>
+                      [r[0], `<i style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:${['#ff3b30','#ff9500','#ffd60a','#34c759','#5ac8fa','#0a84ff','#af52de','#ff2d92'][i]}"></i>${r[1]}`, r[2], r[3]]) },
+        anaglyph: { name: '3D', icon: FX_SVG('<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>'),
+                  keys: ['anaAmt'], rows: () => [['anaAmt','Сдвиг',0,100]] }
     };
 
     Object.keys(FXT).forEach(id => { FXT[id].isPro = true; });
+    FXT.bw.isPro = false;   // ч/б микшер – бесплатный
     // Pro-эффект «используется», только если реально что-то меняет картинку
     function fxProUsed() {
         const s = fxs;
         return fxCurvesOn() || s.shS || s.hiS || s.ca || s.dist || s.gAmt || s.lkAmt || s.dust || s.scr ||
             (s.mType > 0 && (s.mExp || s.mSat || s.mTemp)) || s.dsOn || s.frStyle ||
-            s.vhsAmt || s.scanAmt || s.vNoise || s.glitch || s.htAmt || s.pixAmt || s.flAmt || s.flRays || s.sfAmt || s.ptAmt;
+            s.anaAmt || s.gdS0 || s.gdS1 || s.gdS2 || s.gdL0 || s.gdL1 || s.gdL2 || s.vhsAmt || s.scanAmt || s.vNoise || s.glitch || s.htAmt || s.pixAmt || s.flAmt || s.flRays || s.sfAmt || s.ptAmt;
     }
     const _fxUpdateLock = updateLockState;
     updateLockState = function () {
@@ -3213,7 +3224,7 @@
         uniform sampler2D tex; uniform sampler2D lut; uniform sampler2D stamp; uniform vec2 res; uniform float useStamp, stR, stG, stB;
         uniform float aspect, seed, ca, dist, useLut, shH, shS, hiH, hiS, bal, gAmt, gSize, gRough, gShadow,
             lkAmt, lkHue, lkPos, dust, scr, mType, mX, mY, mSize, mAng, mFeather, mInv, mExp, mSat, mTemp, mShow;
-        uniform vec4 U1, U2, U3, U4, U5, U6;
+        uniform vec4 U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11;
         #define pixAmt U1.x
         #define htAmt U1.y
         #define htSize U1.z
@@ -3235,9 +3246,20 @@
         #define frStyle U5.z
         #define frSize U5.w
         #define frCol U6.x
+        #define bwOn U6.y
+        #define lkStyle U6.z
+        #define anaAmt U6.w
+        #define gd0 U7.xyz
+        #define gd1 U8.xyz
+        #define gd2 U9.xyz
+        #define bwA U10
+        #define bwB U11
         float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
         vec3 hsv(float h, float s, float v){ vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1.0), k, s); }
         float lum(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
+        float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+            return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+        float bwW(float h, float c){ float d = abs(h - c); d = min(d, 1.0 - d); return max(0.0, 1.0 - d / 0.125); }
         void main(){
             vec2 uq = uv;
             float scl = max(1.0, res.y / 1080.0);
@@ -3256,12 +3278,27 @@
                 shf = vhsAmt * 0.004 + act * glitch * 0.02;
             }
             vec3 col;
-            if (ca > 0.0 || shf != 0.0) {
+            if (ca > 0.0 || shf != 0.0 || anaAmt > 0.0) {
                 float a = ca * 0.03;
                 vec2 sv = vec2(shf, 0.0);
-                col = vec3(texture2D(tex, 0.5 + cd * (1.0 + a) + sv).r, texture2D(tex, 0.5 + cd).g, texture2D(tex, 0.5 + cd * (1.0 - a) - sv).b);
+                vec2 av = vec2(anaAmt * 0.02, 0.0);
+                col = vec3(texture2D(tex, 0.5 + cd * (1.0 + a) + sv + av).r, texture2D(tex, 0.5 + cd - av).g, texture2D(tex, 0.5 + cd * (1.0 - a) - sv - av).b);
             } else col = texture2D(tex, 0.5 + cd).rgb;
 
+            if (bwOn > 0.5) {
+                float mx = max(col.r, max(col.g, col.b)), mn = min(col.r, min(col.g, col.b)), dl = mx - mn;
+                float hu = 0.0;
+                if (dl > 0.0001) {
+                    if (mx == col.r) hu = mod((col.g - col.b) / dl, 6.0);
+                    else if (mx == col.g) hu = (col.b - col.r) / dl + 2.0;
+                    else hu = (col.r - col.g) / dl + 4.0;
+                    hu /= 6.0;
+                }
+                float sa = dl / max(mx, 0.0001);
+                float adj = bwW(hu, 0.0) * bwA.x + bwW(hu, 0.0833) * bwA.y + bwW(hu, 0.1667) * bwA.z + bwW(hu, 0.3333) * bwA.w
+                          + bwW(hu, 0.5) * bwB.x + bwW(hu, 0.6667) * bwB.y + bwW(hu, 0.7778) * bwB.z + bwW(hu, 0.8889) * bwB.w;
+                col = vec3(clamp(lum(col) * (1.0 + adj * sa * 0.9), 0.0, 1.0));
+            }
             if (useLut > 0.5) {
                 col = vec3(texture2D(lut, vec2(col.r * 0.99609375 + 0.001953125, 0.5)).r,
                            texture2D(lut, vec2(col.g * 0.99609375 + 0.001953125, 0.5)).g,
@@ -3273,6 +3310,13 @@
                 float ws = 1.0 - smoothstep(mid - 0.3, mid + 0.3, l);
                 vec3 sc = hsv(shH, 1.0, 1.0), hc = hsv(hiH, 1.0, 1.0);
                 col += (sc - lum(sc)) * shS * ws * 0.5 + (hc - lum(hc)) * hiS * (1.0 - ws) * 0.5;
+            }
+            if (gd0.y > 0.0 || gd1.y > 0.0 || gd2.y > 0.0 || gd0.z != 0.0 || gd1.z != 0.0 || gd2.z != 0.0) {
+                float gl2 = lum(col);
+                float w0 = 1.0 - smoothstep(0.0, 0.55, gl2), w2 = smoothstep(0.45, 1.0, gl2), w1 = clamp(1.0 - w0 - w2, 0.0, 1.0);
+                vec3 t0 = hsv(gd0.x, 1.0, 1.0), t1 = hsv(gd1.x, 1.0, 1.0), t2 = hsv(gd2.x, 1.0, 1.0);
+                col += (t0 - lum(t0)) * gd0.y * w0 * 0.6 + (t1 - lum(t1)) * gd1.y * w1 * 0.6 + (t2 - lum(t2)) * gd2.y * w2 * 0.6;
+                col += gd0.z * w0 * 0.3 + gd1.z * w1 * 0.3 + gd2.z * w2 * 0.3;
             }
             if (sfAmt > 0.0) {
                 float rad = 0.004 + sfSize * 0.03;
@@ -3310,7 +3354,40 @@
                 float dotm = 1.0 - smoothstep(hrad - 0.1, hrad + 0.1, hd);
                 col = mix(col, col * dotm, htAmt);
             }
-            if (lkAmt > 0.0) {
+            if (lkAmt > 0.0 && lkStyle > 0.5) {
+                vec2 lq = c * vec2(aspect, 1.0);
+                vec3 leak = vec3(0.0);
+                float lan = lkPos * 3.14159;
+                vec2 ld = vec2(cos(lan), sin(lan)), lp = vec2(-ld.y, ld.x);
+                float along = dot(lq, ld), perp = dot(lq, lp);
+                if (lkStyle < 1.5) {
+                    for (int i = 0; i < 4; i++) {
+                        float fi = float(i);
+                        float pos = (hash(vec2(fi, seed)) - 0.5) * 1.6;
+                        float wd = 0.012 + 0.05 * hash(vec2(fi, 3.0));
+                        float z = (perp - pos) / wd;
+                        leak += hsv(fract(lkHue + 0.07 * fi), 0.8, 1.0) * exp(-z * z) * (0.5 + 0.5 * hash(vec2(fi, 9.0)));
+                    }
+                    leak *= 0.5 + 0.5 * smoothstep(-0.9, 0.9, along);
+                } else if (lkStyle < 2.5) {
+                    vec2 bd = vec2(cos(lkPos * 6.2832), sin(lkPos * 6.2832));
+                    float e = 0.5 - dot(c, bd);
+                    float n = vnoise(uv * vec2(aspect, 1.0) * 6.0) * 0.6 + vnoise(uv * vec2(aspect, 1.0) * 17.0 + 3.0) * 0.4;
+                    float t = clamp(1.0 - e / 0.45, 0.0, 1.0);
+                    t = clamp(pow(t, 1.4) * (0.4 + 1.2 * n), 0.0, 1.0);
+                    leak = mix(hsv(lkHue, 1.0, 0.7), vec3(1.0, 0.92, 0.65), t * t) * t * 1.5;
+                } else if (lkStyle < 3.5) {
+                    float z = perp / 0.22;
+                    leak = hsv(fract(along * 1.6 + lkHue), 0.9, 1.0) * exp(-z * z) * 0.9 * smoothstep(-0.9, 0.4, along);
+                } else {
+                    vec2 p1 = vec2(cos(lkPos * 6.2832), sin(lkPos * 6.2832)) * vec2(aspect, 1.0) * 0.5;
+                    float g1 = pow(clamp(1.0 - length(lq - p1), 0.0, 1.0), 2.0);
+                    float g2 = pow(clamp(1.0 - length(lq + p1), 0.0, 1.0), 2.0);
+                    leak = hsv(lkHue, 0.85, 1.0) * g1 + hsv(fract(lkHue + 0.5), 0.85, 1.0) * g2 * 0.8;
+                }
+                col = 1.0 - (1.0 - col) * (1.0 - clamp(leak * lkAmt * 0.9, 0.0, 1.0));
+            }
+            if (lkAmt > 0.0 && lkStyle < 0.5) {
                 float a = lkPos * 6.2832;
                 vec2 q = c * vec2(aspect, 1.0);
                 vec2 ctr = vec2(cos(a), sin(a)) * vec2(aspect, 1.0) * 0.55;
@@ -3435,7 +3512,7 @@
             gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
         }`;
     const FX_UNI = ['tex','lut','res','aspect','seed','ca','dist','useLut','shH','shS','hiH','hiS','bal','gAmt','gSize','gRough','gShadow',
-        'lkAmt','lkHue','lkPos','dust','scr','mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp','mShow','stamp','useStamp','stR','stG','stB','U1','U2','U3','U4','U5','U6'];
+        'lkAmt','lkHue','lkPos','dust','scr','mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp','mShow','stamp','useStamp','stR','stG','stB','U1','U2','U3','U4','U5','U6','U7','U8','U9','U10','U11'];
 
     function createFxRenderer(canvas) {
         const gl = canvas._ && canvas._.gl;
@@ -3509,7 +3586,7 @@
 
     function fxActive() {
         const s = fxs;
-        return s.dsOn || s.pixAmt || s.htAmt || s.vhsAmt || s.scanAmt || s.vNoise || s.glitch || s.flAmt || s.flRays || s.sfAmt || s.ptAmt || s.frStyle || s.ca || s.dist || s.shS || s.hiS || s.gAmt || s.lkAmt || s.dust || s.scr ||
+        return s.bwOn || s.anaAmt || s.gdS0 || s.gdS1 || s.gdS2 || s.gdL0 || s.gdL1 || s.gdL2 || s.dsOn || s.pixAmt || s.htAmt || s.vhsAmt || s.scanAmt || s.vNoise || s.glitch || s.flAmt || s.flRays || s.sfAmt || s.ptAmt || s.frStyle || s.ca || s.dist || s.shS || s.hiS || s.gAmt || s.lkAmt || s.dust || s.scr ||
             (s.mType > 0 && (s.mExp || s.mSat || s.mTemp || fxMaskShow)) || fxCurvesOn();
     }
     function fxParams(canvas) {
@@ -3520,7 +3597,9 @@
             U3: [s.flRays / 100, s.flX / 100, 1 - s.flY / 100, s.flHue / 360],
             U4: [s.sfAmt / 100, s.sfSize / 100, s.ptType, s.ptAmt / 100],
             U5: [s.ptSize / 100, s.ptAng, s.frStyle, s.frSize / 100],
-            U6: [s.frCol, 0, 0, 0],
+            U6: [s.frCol, s.bwOn, s.lkStyle, s.anaAmt / 100],
+            U7: [s.gdH0 / 360, s.gdS0 / 100, s.gdL0 / 100, 0], U8: [s.gdH1 / 360, s.gdS1 / 100, s.gdL1 / 100, 0], U9: [s.gdH2 / 360, s.gdS2 / 100, s.gdL2 / 100, 0],
+            U10: [s.bw0 / 100, s.bw1 / 100, s.bw2 / 100, s.bw3 / 100], U11: [s.bw4 / 100, s.bw5 / 100, s.bw6 / 100, s.bw7 / 100],
             seed: 1.37, useStamp: s.dsOn ? 1 : 0, stR: DS_COLORS[s.dsCol][0], stG: DS_COLORS[s.dsCol][1], stB: DS_COLORS[s.dsCol][2], ca: s.ca / 100, dist: s.dist / 200, useLut: fxCurvesOn() ? 1 : 0,
             shH: s.shH / 360, shS: s.shS / 100, hiH: s.hiH / 360, hiS: s.hiS / 100, bal: s.bal / 100,
             gAmt: s.gAmt / 100, gSize: s.gSize / 100, gRough: s.gRough / 100, gShadow: s.gShadow / 100,
@@ -3596,6 +3675,13 @@
         fxBody.innerHTML = '';
         if (def.custom === 'curves') return fxCurvesUI(fxBody);
         if (def.custom === 'stamp') return fxStampUI(fxBody);
+        if (def.custom === 'grade') return fxGradeUI(fxBody);
+        if (def.custom === 'leaks' || def.custom === 'bw') {
+            const bar = document.createElement('div'); bar.className = 'fx-chips'; fxBody.appendChild(bar);
+            const re = () => { fxBuild(); updatePhotoFilter(); };
+            if (def.custom === 'leaks') [['Классика', 0], ['Полосы', 1], ['Ожог', 2], ['Призма', 3], ['Дуэт', 4]].forEach(([t, v]) => fxChip(bar, t, fxs.lkStyle === v, () => { fxs.lkStyle = v; re(); }));
+            else fxChip(bar, fxs.bwOn ? 'Ч/Б включён' : 'Ч/Б выключен', !!fxs.bwOn, () => { fxs.bwOn = fxs.bwOn ? 0 : 1; re(); });
+        }
         if (def.custom === 'frame' || def.custom === 'particles') {
             const bar = document.createElement('div'); bar.className = 'fx-chips'; fxBody.appendChild(bar);
             const re = () => { fxBuild(); updatePhotoFilter(); };
@@ -3685,6 +3771,7 @@
         fxId = id; fxBackup = JSON.stringify(fxs);
         if (id === 'mask' && !fxs.mType) fxs.mType = 1;
         if (id === 'stamp') fxs.dsOn = 1;
+        if (id === 'bw') fxs.bwOn = 1;
         if (id === 'frame' && !fxs.frStyle) fxs.frStyle = 1;
         if (id === 'particles' && !fxs.ptAmt) fxs.ptAmt = 40;
         fxMaskShow = (id === 'mask');
@@ -3900,9 +3987,9 @@
     };
     const DBX_SVG = inner => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
     const DBX_TOOLS = [
-        { id: 'blurbrush', name: 'Обл. разм.', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
+        { id: 'blurbrush', name: 'Кисть размытия', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
         { id: 'heal', name: 'Лечение', icon: DBX_SVG('<rect x="2" y="9" width="20" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M10.5 10.5h.01M13.5 13.5h.01"/>'), isPro: false },
-        { id: 'detail', name: 'Резк./Шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
+        { id: 'detail', name: 'Резкость / шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
     ];
     toolsData.splice(toolsData.findIndex(t => t.id === 'dodgeburn') + 1, 0, ...DBX_TOOLS);
 
@@ -4117,16 +4204,144 @@
         window.toggleFavorite = function (ev, id) { _tf(ev, id); save(); };
     })();
 
-    // ---------- кроп: поворот / отражение / выравнивание ----------
-    const cxS = document.getElementById('cx-straight'), cxV = document.getElementById('cx-val');
-    let cxBase = 0;
-    const cxApply = () => { if (cropperInstance) cropperInstance.rotateTo(cxBase + parseFloat(cxS.value)); };
-    const cxZero = () => { cxBase = 0; cxS.value = 0; cxV.textContent = '0°'; };
+
+    // ==================================================================================
+    //  Цветокоррекция (колёса), ч/б микшер, 3D-анаглиф, стили засветов, копирование настроек
+    // ==================================================================================
+    let fxGradeCur = 0, fxWheelBmp = null;
+    function fxWheel(S) {
+        if (fxWheelBmp && fxWheelBmp.width === S) return fxWheelBmp;
+        const c = document.createElement('canvas'); c.width = c.height = S;
+        const x = c.getContext('2d'), im = x.createImageData(S, S), R = S / 2;
+        for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {
+            const dx = px + 0.5 - R, dy = py + 0.5 - R, r = Math.hypot(dx, dy) / R;
+            if (r > 1) continue;
+            const h = (Math.atan2(dy, dx) / (2 * Math.PI) + 1) % 1, i = (py * S + px) * 4;
+            const f = (n, k = (n + h * 6) % 6) => 1 - r * Math.max(0, Math.min(k, 4 - k, 1));
+            im.data[i] = f(5) * 255; im.data[i + 1] = f(3) * 255; im.data[i + 2] = f(1) * 255; im.data[i + 3] = r > 0.985 ? 255 * (1 - r) / 0.015 : 255;
+        }
+        x.putImageData(im, 0, 0);
+        return (fxWheelBmp = c);
+    }
+    function fxGradeUI(body) {
+        const bar = document.createElement('div'); bar.className = 'fx-chips'; body.appendChild(bar);
+        ['Тени', 'Средние', 'Света'].forEach((t, i) => fxChip(bar, t, fxGradeCur === i, () => { fxGradeCur = i; fxBuild(); }));
+        const dpr = Math.min(window.devicePixelRatio || 1, 2), S = 150, cv = document.createElement('canvas');
+        cv.width = cv.height = S * dpr;
+        cv.style.cssText = `width:${S}px;height:${S}px;touch-action:none;display:block;margin:0 auto 10px`;
+        body.appendChild(cv);
+        const ctx = cv.getContext('2d');
+        const draw = () => {
+            const W = cv.width, R = W / 2, i = fxGradeCur;
+            ctx.clearRect(0, 0, W, W); ctx.drawImage(fxWheel(W), 0, 0);
+            const a = fxs['gdH' + i] / 360 * 2 * Math.PI, r = fxs['gdS' + i] / 100 * R;
+            ctx.beginPath(); ctx.arc(R + Math.cos(a) * r, R + Math.sin(a) * r, 7 * dpr, 0, 7);
+            ctx.lineWidth = 2.5 * dpr; ctx.strokeStyle = '#fff'; ctx.stroke();
+            ctx.lineWidth = 1 * dpr; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.stroke();
+        };
+        const set = e => {
+            const rc = cv.getBoundingClientRect(), dx = e.clientX - rc.left - rc.width / 2, dy = e.clientY - rc.top - rc.height / 2;
+            const r = Math.min(1, Math.hypot(dx, dy) / (rc.width / 2));
+            fxs['gdH' + fxGradeCur] = Math.round(((Math.atan2(dy, dx) / (2 * Math.PI) + 1) % 1) * 360);
+            fxs['gdS' + fxGradeCur] = Math.round(r * 100);
+            draw(); updatePhotoFilter();
+        };
+        let down = false;
+        cv.addEventListener('pointerdown', e => { down = true; cv.setPointerCapture(e.pointerId); set(e); });
+        cv.addEventListener('pointermove', e => { if (down) set(e); });
+        cv.addEventListener('pointerup', () => { down = false; }); cv.addEventListener('pointercancel', () => { down = false; });
+        draw();
+        fxGrid(body, [['gdL' + fxGradeCur, 'Яркость', -100, 100]]);
+    }
+
+    // ---------- копирование / вставка настроек (кнопка в верхней панели + всплывающее меню) ----------
+    const clipBtn = document.getElementById('btn-clip');
+    let fxClip = null;
+    try { fxClip = JSON.parse(localStorage.getItem('fxClipboard') || 'null'); } catch (e) {}
+    const clipPop = document.createElement('div');
+    clipPop.style.cssText = 'position:fixed;z-index:300;display:none;background:#1c1c1e;border:1px solid #333;border-radius:12px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:200px';
+    clipPop.innerHTML = ['copy', 'paste'].map(a => `<button data-a="${a}" style="display:block;width:100%;text-align:left;background:none;border:none;color:#fff;padding:11px 14px;font-size:14px;border-radius:8px;cursor:pointer"></button>`).join('');
+    document.body.appendChild(clipPop);
+    const clipToast = document.createElement('div');
+    clipToast.style.cssText = 'position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:301;background:rgba(40,40,42,.95);color:#fff;font-size:13px;padding:8px 14px;border-radius:16px;opacity:0;transition:opacity .2s;pointer-events:none';
+    document.body.appendChild(clipToast);
+    let clipToastT = null;
+    function toast(msg) { clipToast.textContent = msg; clipToast.style.opacity = 1; clearTimeout(clipToastT); clipToastT = setTimeout(() => { clipToast.style.opacity = 0; }, 1600); }
+    function clipRefresh() {
+        const cb = clipPop.querySelector('[data-a="copy"]'), pb = clipPop.querySelector('[data-a="paste"]');
+        cb.textContent = 'Скопировать настройки';
+        pb.textContent = fxClip ? 'Вставить настройки' : 'Нет скопированных настроек';
+        pb.style.opacity = fxClip ? 1 : 0.4;
+    }
+    clipBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (clipPop.style.display === 'block') { clipPop.style.display = 'none'; return; }
+        clipRefresh();
+        const r = clipBtn.getBoundingClientRect();
+        clipPop.style.top = (r.bottom + 6) + 'px';
+        clipPop.style.right = Math.max(8, window.innerWidth - r.right - 10) + 'px';
+        clipPop.style.display = 'block';
+    });
+    document.addEventListener('pointerdown', e => { if (!clipPop.contains(e.target) && !clipBtn.contains(e.target)) clipPop.style.display = 'none'; }, true);
+    const clipHaptic = () => { try { tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success'); } catch (e) {} };
+    clipPop.addEventListener('click', e => {
+        const a = e.target.dataset && e.target.dataset.a;
+        if (!a) return;
+        clipPop.style.display = 'none';
+        if (!fxTexture) { toast('Сначала загрузите фото'); return; }
+        if (a === 'copy') {
+            fxClip = JSON.parse(fxSnap()); delete fxClip.fx.dsDate;
+            try { localStorage.setItem('fxClipboard', JSON.stringify(fxClip)); } catch (err) {}
+            toast('Настройки скопированы'); clipHaptic();
+        } else if (fxClip) {
+            if (histBusy()) return;
+            histCommit(); undoStack.push(fxSnap()); redoStack = [];
+            const snap = JSON.parse(JSON.stringify(fxClip));
+            snap.fx = { ...fxDefaults(), ...snap.fx, dsDate: fxs.dsDate };
+            histRestore(JSON.stringify(snap)); histBtns();
+            toast('Настройки вставлены'); clipHaptic();
+        }
+    });
+
+    // ---------- кроп: поворот / отражение / выравнивание / перспектива ----------
+    const cxS = document.getElementById('cx-straight'), cxV = document.getElementById('cx-val'), cxModeBtn = document.getElementById('cx-mode');
+    let cxBase = 0, cxMode = 0, cxFx = false, cxFy = false, cxPc = null;
+    const cxVals = [0, 0, 0];   // угол, перспектива по вертикали, перспектива по горизонтали
+    const CX_MODES = [['УГОЛ', -45, 45, 0.5, '°'], ['ВЕРТ', -100, 100, 1, ''], ['ГОР', -100, 100, 1, '']];
+    const cxShow = () => { const m = CX_MODES[cxMode]; cxModeBtn.textContent = m[0]; cxS.min = m[1]; cxS.max = m[2]; cxS.step = m[3]; cxS.value = cxVals[cxMode]; cxV.textContent = cxVals[cxMode] + m[4]; };
+    const cxApply = () => { if (cropperInstance) cropperInstance.rotateTo(cxBase + cxVals[0]); };
+    const cxZero = () => { cxBase = 0; cxMode = 0; cxVals[0] = cxVals[1] = cxVals[2] = 0; cxFx = cxFy = false; cxShow(); };
+    function cxWarp(v, h) {   // перспективное искажение исходного превью через glfx
+        if (!cxPc) cxPc = fx.canvas();
+        const w = previewImg.naturalWidth || previewImg.width, ht = previewImg.naturalHeight || previewImg.height;
+        const kx = Math.abs(v) * w * 0.25, ky = Math.abs(h) * ht * 0.25;
+        const tl = [0, 0], tr = [w, 0], bl = [0, ht], br = [w, ht];
+        if (v > 0) { tl[0] += kx; tr[0] -= kx; } else if (v < 0) { bl[0] += kx; br[0] -= kx; }
+        if (h > 0) { tl[1] += ky; bl[1] -= ky; } else if (h < 0) { tr[1] += ky; br[1] -= ky; }
+        const tex = cxPc.texture(previewImg);
+        cxPc.draw(tex).perspective([0, 0, w, 0, 0, ht, w, ht], [...tl, ...tr, ...bl, ...br]).update();
+        const url = cxPc.toDataURL('image/jpeg', 0.95);
+        tex.destroy();
+        return url;
+    }
+    function cxReapply() { if (!cropperInstance) return; cxApply(); if (cxFx) cropperInstance.scaleX(-1); if (cxFy) cropperInstance.scaleY(-1); }
+    function cxKeystone() {
+        if (!cropperInstance) return;
+        const url = (cxVals[1] || cxVals[2]) ? cxWarp(cxVals[1] / 100, cxVals[2] / 100) : previewImg.src;
+        cropperImage.addEventListener('ready', cxReapply, { once: true });
+        cropperInstance.replace(url);
+    }
     document.getElementById('cx-rot').onclick = () => { cxBase -= 90; cxApply(); };
-    document.getElementById('cx-flipx').onclick = () => { if (cropperInstance) cropperInstance.scaleX(cropperInstance.getData().scaleX === -1 ? 1 : -1); };
-    document.getElementById('cx-flipy').onclick = () => { if (cropperInstance) cropperInstance.scaleY(cropperInstance.getData().scaleY === -1 ? 1 : -1); };
-    cxS.addEventListener('input', () => { cxV.textContent = cxS.value + '°'; cxApply(); });
-    document.getElementById('btn-reset-crop').addEventListener('click', cxZero);
+    document.getElementById('cx-flipx').onclick = () => { if (cropperInstance) { cxFx = !cxFx; cropperInstance.scaleX(cxFx ? -1 : 1); } };
+    document.getElementById('cx-flipy').onclick = () => { if (cropperInstance) { cxFy = !cxFy; cropperInstance.scaleY(cxFy ? -1 : 1); } };
+    cxModeBtn.onclick = () => { cxMode = (cxMode + 1) % 3; cxShow(); };
+    cxS.addEventListener('input', () => { cxVals[cxMode] = parseFloat(cxS.value); cxV.textContent = cxVals[cxMode] + CX_MODES[cxMode][4]; if (cxMode === 0) cxApply(); });
+    cxS.addEventListener('change', () => { if (cxMode > 0) cxKeystone(); });
+    document.getElementById('btn-reset-crop').addEventListener('click', () => {
+        const warped = cxVals[1] || cxVals[2];
+        cxZero();
+        if (warped && cropperInstance) cropperInstance.replace(previewImg.src);
+    });
     const _fxOpenCropper = openCropper;
     openCropper = function () { _fxOpenCropper(); cxZero(); };
 </script>
