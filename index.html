@@ -2497,10 +2497,38 @@
 
     document.getElementById('btn-cancel-crop').onclick = closeCropper;
     document.getElementById('btn-reset-crop').onclick = () => {
-    if (cropperInstance) {
-        cropperInstance.reset();
-    }
-};
+        if (!cropperInstance) return;
+        // Если кроп уже был подтверждён – возвращаем исходное фото (до всех обрезок)
+        if (uploadedOriginalSrc && originalImage.src !== uploadedOriginalSrc) {
+            const restoreImg = new Image();
+            restoreImg.onload = function() {
+                const maxPreviewDim = 1080;
+                let pw = restoreImg.width, ph = restoreImg.height;
+                if (pw > maxPreviewDim || ph > maxPreviewDim) {
+                    const ratio = Math.min(maxPreviewDim / pw, maxPreviewDim / ph);
+                    pw = Math.round(pw * ratio);
+                    ph = Math.round(ph * ratio);
+                }
+                const c = document.createElement('canvas');
+                c.width = pw; c.height = ph;
+                c.getContext('2d').drawImage(restoreImg, 0, 0, pw, ph);
+                const previewUrl = c.toDataURL('image/jpeg', 0.9);
+
+                originalImage.onload = function() {
+                    previewImg.onload = function() {
+                        if (fxTexture) fxTexture.destroy();
+                        fxTexture = glCanvas.texture(previewImg);
+                        if (cropperInstance) cropperInstance.replace(previewImg.src);
+                    };
+                    previewImg.src = previewUrl;
+                };
+                originalImage.src = uploadedOriginalSrc;
+            };
+            restoreImg.src = uploadedOriginalSrc;
+        } else {
+            cropperInstance.reset();
+        }
+    };
 
     document.getElementById('btn-apply-crop').onclick = () => {
         if (cropperInstance) {
@@ -2538,6 +2566,7 @@
     });
 
     let originalImage = new Image(); 
+    let uploadedOriginalSrc = null; // исходное фото без обрезок – для СБРОС в кропе
     upload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -2568,6 +2597,7 @@
                     };
                     previewImg.src = downscaleCanvas.toDataURL('image/jpeg', 0.9);
                 };
+                uploadedOriginalSrc = e.target.result;
                 originalImage.src = e.target.result;
             }
             reader.readAsDataURL(file);
@@ -2589,6 +2619,7 @@
         previewImg.src = '';
         originalImage.src = '';
         upload.value = '';
+        uploadedOriginalSrc = null;
         glCanvas.style.display = 'none';
         placeholder.classList.remove('hidden');
 
