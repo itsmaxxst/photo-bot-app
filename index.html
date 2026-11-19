@@ -145,6 +145,18 @@
         /* ===================== Halation panel (Сила / Размер / Диапазон / Оттенок) ===================== */
         .hal-panel .bloom-head, .hal-panel .hsl-head { padding-left: 0; font-size: 12px; }
         .hal-panel .hsl-val { font-size: 12px; }
+        .fx-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 18px; width: 100%; max-width: 350px; max-height: 30vh; overflow-y: auto; margin: 0 auto 12px; }
+        .fx-lab { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #aaa; margin-bottom: 2px; }
+        .fx-grid input[type=range] { width: 100%; margin: 0 0 6px; }
+        .fx-chips { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+        .fx-chip { border: 1px solid #444; color: #aaa; background: none; border-radius: 14px; padding: 5px 12px; font-size: 11px; cursor: pointer; }
+        .fx-chip.on { background: #fff; color: #000; border-color: #fff; }
+        .icon-btn:disabled { opacity: 0.3; }
+        #k-row { display: flex; align-items: center; gap: 10px; padding: 0 20px 6px; font-size: 11px; color: #aaa; }
+        #k-row input[type=range] { flex: 1; margin: 0; }
+        #crop-xform { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 350px; padding: 12px 20px 0; box-sizing: border-box; font-size: 11px; color: #aaa; }
+        #crop-xform .icon-btn { font-size: 22px; }
+        #crop-xform input[type=range] { flex: 1; margin: 0; }
     </style>
 </head>
 <body>
@@ -164,7 +176,9 @@
         <span class="badge active" data-mode="HDR">HDR</span>
         <span class="badge" data-mode="SDR">SDR</span>
     </div>
-    <div style="display: flex; gap: 15px;">
+    <div style="display: flex; gap: 15px; align-items: center;">
+        <button class="icon-btn" id="btn-undo" title="Отменить" disabled><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+        <button class="icon-btn" id="btn-redo" title="Повторить" disabled><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
         <button class="icon-btn" onclick="document.getElementById('upload').click()" title="Загрузить фото"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
         <button class="icon-btn" id="btn-delete-photo" title="Удалить фото" style="color: #ff3b30;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
         <button class="icon-btn" id="btn-save" title="Сохранить"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
@@ -194,6 +208,13 @@
     </div>
 
     <div id="crop-panel">
+        <div id="crop-xform">
+            <button class="icon-btn" id="cx-rot" title="Повернуть на 90°">⟲</button>
+            <button class="icon-btn" id="cx-flipx" title="Отразить по горизонтали">⇋</button>
+            <button class="icon-btn" id="cx-flipy" title="Отразить по вертикали">⇵</button>
+            <input type="range" id="cx-straight" min="-45" max="45" step="0.5" value="0">
+            <span id="cx-val" style="width:34px;text-align:right">0°</span>
+        </div>
         <div class="crop-ratios">
             <div class="ratio-btn active" data-ratio="NaN">
                 <div class="ratio-icon" style="width:22px; height:22px; border-style: dashed;"></div>
@@ -224,6 +245,16 @@
             <button class="action-btn" id="btn-cancel-crop">✕</button>
             <button class="action-btn" id="btn-reset-crop" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
             <button class="action-btn" id="btn-apply-crop">✓</button>
+        </div>
+    </div>
+
+    <div class="slider-panel" id="fx-panel">
+        <div class="slider-label"><span id="fx-title">Инструмент</span></div>
+        <div id="fx-body" style="width:100%"></div>
+        <div class="slider-actions">
+            <button class="action-btn" id="fx-cancel">✕</button>
+            <button class="action-btn" id="fx-reset" style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px;">СБРОС</button>
+            <button class="action-btn" id="fx-apply">✓</button>
         </div>
     </div>
 
@@ -341,6 +372,7 @@
     </div>
 
     <div id="selection-panel">
+        <div id="k-row"><span>Интенсивность</span><input type="range" id="k-input" min="0" max="100" value="100"><span id="k-val" style="width:36px;text-align:right">100%</span></div>
         <div class="sub-tabs" id="sub-tabs-container"></div>
         <div class="items-scroll" id="items-container"></div>
     </div>
@@ -3050,6 +3082,478 @@
         brushCursor.style.display = 'none';
         if (!isDBActive) { isHolding = false; updatePhotoFilter(); }
     });
+
+    // ==================================================================================
+    //  ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ: кривые, сплит-тон, линза, зерно+, засветы/пыль, маски,
+    //  интенсивность пресета, отмена/повтор, поворот/отражение/выравнивание в кропе
+    //  (всё подключено поверх существующей логики через обёртки)
+    // ==================================================================================
+    const FX_SVG = inner => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+    function fxDefaults() {
+        return {
+            ca: 0, dist: 0, shH: 220, shS: 0, hiH: 35, hiS: 0, bal: 0,
+            gAmt: 0, gSize: 30, gRough: 50, gShadow: 50,
+            lkAmt: 0, lkHue: 20, lkPos: 15, dust: 0, scr: 0,
+            mType: 0, mX: 50, mY: 50, mSize: 40, mAng: 0, mFeather: 50, mInv: 0, mExp: 0, mSat: 0, mTemp: 0,
+            curves: { m: [[0, 0], [1, 1]], r: [[0, 0], [1, 1]], g: [[0, 0], [1, 1]], b: [[0, 0], [1, 1]] }
+        };
+    }
+    let fxs = fxDefaults();
+    let presetK = 1;          // интенсивность пресета 0…1
+    let fxMaskShow = false;   // показывать маску красным, пока открыта панель маски
+    let fxId = null, fxBackup = null;
+
+    const FXT = {
+        curves: { name: 'Кривые', icon: FX_SVG('<path d="M3 21C9 21 9 3 21 3"/>'), custom: 'curves' },
+        split:  { name: 'Сплит-тон', icon: FX_SVG('<circle cx="12" cy="12" r="9"/><path d="M12 3v18"/>'),
+                  keys: ['shH','shS','hiH','hiS','bal'],
+                  rows: () => [['shH','Тени: оттенок',0,360],['shS','Тени: сила',0,100],['hiH','Света: оттенок',0,360],['hiS','Света: сила',0,100],['bal','Баланс',-100,100]] },
+        lens:   { name: 'Линза', icon: FX_SVG('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'),
+                  keys: ['ca','dist'], rows: () => [['ca','Аберрация',0,100],['dist','Дисторсия',-100,100]] },
+        grain:  { name: 'Зерно+', icon: FX_SVG('<circle cx="6" cy="6" r="1"/><circle cx="12" cy="9" r="1"/><circle cx="18" cy="6" r="1"/><circle cx="8" cy="14" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="12" cy="19" r="1"/>'),
+                  keys: ['gAmt','gSize','gRough','gShadow'],
+                  rows: () => [['gAmt','Количество',0,100],['gSize','Размер',0,100],['gRough','Жёсткость',0,100],['gShadow','В тенях',0,100]] },
+        leaks:  { name: 'Засветы', icon: FX_SVG('<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'),
+                  keys: ['lkAmt','lkHue','lkPos','dust','scr'],
+                  rows: () => [['lkAmt','Засветка',0,100],['lkHue','Цвет',0,360],['lkPos','Положение',0,100],['dust','Пыль',0,100],['scr','Царапины',0,100]] },
+        mask:   { name: 'Маска', icon: FX_SVG('<circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="3"/>'),
+                  keys: ['mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp'], custom: 'mask',
+                  rows: () => fxs.mType === 2
+                      ? [['mX','Позиция X',0,100],['mY','Позиция Y',0,100],['mSize','Размер',5,100],['mFeather','Мягкость',0,100],['mExp','Экспозиция',-100,100],['mSat','Насыщ.',-100,100],['mTemp','Темп.',-100,100]]
+                      : [['mX','Позиция X',0,100],['mY','Позиция Y',0,100],['mAng','Угол',-180,180],['mFeather','Мягкость',0,100],['mExp','Экспозиция',-100,100],['mSat','Насыщ.',-100,100],['mTemp','Темп.',-100,100]] }
+    };
+    // новые инструменты — после «Обрезки»
+    toolsData.splice(1, 0, ...Object.keys(FXT).map(id => ({ id, name: FXT[id].name, icon: FXT[id].icon, isPro: false })));
+
+    // ---------- кривые: монотонный кубический сплайн → LUT 256 ----------
+    function fxSpline(p) {
+        const n = p.length, x = p.map(a => a[0]), y = p.map(a => a[1]);
+        if (n < 2) return v => v;
+        const d = [], m = [];
+        for (let i = 0; i < n - 1; i++) d[i] = (y[i + 1] - y[i]) / Math.max(1e-6, x[i + 1] - x[i]);
+        m[0] = d[0]; m[n - 1] = d[n - 2];
+        for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+        for (let i = 0; i < n - 1; i++) {
+            if (d[i] === 0) { m[i] = m[i + 1] = 0; continue; }
+            const a = m[i] / d[i], b = m[i + 1] / d[i], s = a * a + b * b;
+            if (s > 9) { const t = 3 / Math.sqrt(s); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; }
+        }
+        return v => {
+            if (v <= x[0]) return y[0];
+            if (v >= x[n - 1]) return y[n - 1];
+            let i = 0; while (v > x[i + 1]) i++;
+            const h = x[i + 1] - x[i], t = (v - x[i]) / h, t2 = t * t, t3 = t2 * t;
+            return (2 * t3 - 3 * t2 + 1) * y[i] + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * y[i + 1] + (t3 - t2) * h * m[i + 1];
+        };
+    }
+    const fxCl = v => Math.max(0, Math.min(1, v));
+    function fxCurveIdentity(p) { return p.length === 2 && p[0][1] === 0 && p[1][1] === 1; }
+    function fxCurvesOn() { return ['m','r','g','b'].some(k => !fxCurveIdentity(fxs.curves[k])); }
+    function fxLutData() {
+        const f = {}; ['m','r','g','b'].forEach(k => f[k] = fxSpline(fxs.curves[k]));
+        const d = new Uint8Array(1024);
+        for (let i = 0; i < 256; i++) {
+            const x = i / 255;
+            d[i*4]   = Math.round(fxCl(f.m(fxCl(f.r(x)))) * 255);
+            d[i*4+1] = Math.round(fxCl(f.m(fxCl(f.g(x)))) * 255);
+            d[i*4+2] = Math.round(fxCl(f.m(fxCl(f.b(x)))) * 255);
+            d[i*4+3] = 255;
+        }
+        return d;
+    }
+
+    // ---------- шейдер ----------
+    const FX_FS = `
+        uniform sampler2D tex; uniform sampler2D lut; uniform vec2 res;
+        uniform float aspect, seed, ca, dist, useLut, shH, shS, hiH, hiS, bal, gAmt, gSize, gRough, gShadow,
+            lkAmt, lkHue, lkPos, dust, scr, mType, mX, mY, mSize, mAng, mFeather, mInv, mExp, mSat, mTemp, mShow;
+        float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+        vec3 hsv(float h, float s, float v){ vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1.0), k, s); }
+        float lum(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
+        void main(){
+            vec2 c = uv - 0.5;
+            vec2 ca2 = c * vec2(aspect, 1.0);
+            float r2 = dot(ca2, ca2);
+            vec2 cd = c * (1.0 + dist * r2) / (1.0 + max(dist, 0.0) * 0.9);
+            vec3 col;
+            if (ca > 0.0) {
+                float a = ca * 0.03;
+                col = vec3(texture2D(tex, 0.5 + cd * (1.0 + a)).r, texture2D(tex, 0.5 + cd).g, texture2D(tex, 0.5 + cd * (1.0 - a)).b);
+            } else col = texture2D(tex, 0.5 + cd).rgb;
+
+            if (useLut > 0.5) {
+                col = vec3(texture2D(lut, vec2(col.r * 0.99609375 + 0.001953125, 0.5)).r,
+                           texture2D(lut, vec2(col.g * 0.99609375 + 0.001953125, 0.5)).g,
+                           texture2D(lut, vec2(col.b * 0.99609375 + 0.001953125, 0.5)).b);
+            }
+            if (shS > 0.0 || hiS > 0.0) {
+                float l = lum(col);
+                float mid = 0.5 + bal * 0.25;
+                float ws = 1.0 - smoothstep(mid - 0.3, mid + 0.3, l);
+                vec3 sc = hsv(shH, 1.0, 1.0), hc = hsv(hiH, 1.0, 1.0);
+                col += (sc - lum(sc)) * shS * ws * 0.5 + (hc - lum(hc)) * hiS * (1.0 - ws) * 0.5;
+            }
+            if (mType > 0.5) {
+                vec2 p = (uv - vec2(mX, mY)) * vec2(aspect, 1.0);
+                float cs = cos(mAng), sn = sin(mAng);
+                p = vec2(p.x * cs + p.y * sn, -p.x * sn + p.y * cs);
+                float f = max(mFeather, 0.02);
+                float m;
+                if (mType < 1.5) m = smoothstep(-f * 0.5, f * 0.5, p.y);
+                else m = 1.0 - smoothstep(max(1.0 - f, 0.0), 1.0, length(p) / max(mSize, 0.02));
+                if (mInv > 0.5) m = 1.0 - m;
+                col *= exp2(mExp * 1.5 * m);
+                col = mix(vec3(lum(col)), col, 1.0 + mSat * m);
+                col.r *= 1.0 + mTemp * 0.25 * m; col.b *= 1.0 - mTemp * 0.25 * m;
+                if (mShow > 0.5) col = mix(col, vec3(1.0, 0.1, 0.1), m * 0.45);
+            }
+            if (lkAmt > 0.0) {
+                float a = lkPos * 6.2832;
+                vec2 q = c * vec2(aspect, 1.0);
+                vec2 ctr = vec2(cos(a), sin(a)) * vec2(aspect, 1.0) * 0.55;
+                float g1 = pow(clamp(1.0 - length(q - ctr) / 0.9, 0.0, 1.0), 2.2);
+                float g2 = pow(clamp(1.0 - length(q - vec2(-ctr.y, ctr.x) * 0.6) / 0.7, 0.0, 1.0), 2.5);
+                vec3 leak = hsv(lkHue, 0.85, 1.0) * g1 + hsv(fract(lkHue + 0.08), 0.9, 1.0) * g2 * 0.6;
+                col = 1.0 - (1.0 - col) * (1.0 - clamp(leak * lkAmt * 0.9, 0.0, 1.0));
+            }
+            if (dust > 0.0) {
+                vec2 g = uv * vec2(aspect, 1.0) * 45.0;
+                vec2 id = floor(g), f = fract(g);
+                if (hash(id + seed) > 1.0 - dust * 0.07) {
+                    vec2 pos = vec2(hash(id + 3.1), hash(id + 7.7));
+                    float rad = 0.05 + 0.2 * hash(id + 9.3);
+                    float sp = 1.0 - smoothstep(rad * 0.6, rad, length(f - pos));
+                    float dark = step(0.5, hash(id + 1.9));
+                    col = mix(col, mix(vec3(1.0), vec3(0.0), dark * 0.8), sp * 0.85);
+                }
+            }
+            if (scr > 0.0) {
+                float cols = 36.0;
+                float ci = floor(uv.x * cols);
+                if (hash(vec2(ci, seed + 5.0)) > 1.0 - scr * 0.35) {
+                    float lx = 0.2 + 0.6 * hash(vec2(ci, 2.0));
+                    float line = 1.0 - smoothstep(0.0, 0.05, abs(fract(uv.x * cols) - lx));
+                    float seg = step(0.5, hash(vec2(ci, floor(uv.y * 5.0) + seed)));
+                    col = mix(col, vec3(1.0), line * seg * 0.5);
+                }
+            }
+            if (gAmt > 0.0) {
+                float ps = max(1.0, res.y / 1080.0) * (1.0 + gSize * 3.0);
+                vec2 q = floor(gl_FragCoord.xy / ps);
+                float n1 = (hash(q + seed) + hash(q * 1.7 + 5.3) + hash(q + 9.1)) / 3.0 - 0.5;
+                float n2 = hash(q + seed * 1.3) - 0.5;
+                float n = mix(n1, n2, gRough) * 2.0;
+                float w = mix(1.0, 1.7 - 1.5 * lum(col), gShadow);
+                col += n * gAmt * 0.35 * w;
+            }
+            gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+        }`;
+    const FX_UNI = ['tex','lut','res','aspect','seed','ca','dist','useLut','shH','shS','hiH','hiS','bal','gAmt','gSize','gRough','gShadow',
+        'lkAmt','lkHue','lkPos','dust','scr','mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp','mShow'];
+
+    function createFxRenderer(canvas) {
+        const gl = canvas._ && canvas._.gl;
+        if (!gl) return null;
+        const attrs = gl.getContextAttributes();
+        const frameFormat = (attrs && attrs.alpha === false) ? gl.RGB : gl.RGBA;
+        function compile(type, src) {
+            const sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh);
+            if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error('fx shader: ' + gl.getShaderInfoLog(sh));
+            return sh;
+        }
+        const prog = gl.createProgram();
+        gl.attachShader(prog, compile(gl.VERTEX_SHADER, BLOOM_VS));
+        gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, BLOOM_FS_HEAD + FX_FS));
+        gl.bindAttribLocation(prog, 0, 'p');
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('fx link: ' + gl.getProgramInfoLog(prog));
+        const u = {}; FX_UNI.forEach(n => { u[n] = gl.getUniformLocation(prog, n); });
+        const quad = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+        function makeTex(w, h, format, data) {
+            const t = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, t);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D, 0, format, w, h, 0, format, gl.UNSIGNED_BYTE, data || null);
+            return t;
+        }
+        const lutTex = makeTex(256, 1, gl.RGBA, new Uint8Array(1024));
+        const R = { frameTex: null, w: 0, h: 0 };
+        function release() { if (R.frameTex) gl.deleteTexture(R.frameTex); R.frameTex = null; }
+        function bindTex(unit, t) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t); }
+        R.render = function (P, lutData) {
+            const dw = gl.drawingBufferWidth, dh = gl.drawingBufferHeight;
+            if (!dw || !dh) return;
+            if (!(R.w === dw && R.h === dh && R.frameTex)) { release(); R.w = dw; R.h = dh; R.frameTex = makeTex(dw, dh, frameFormat); }
+            gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.disable(gl.SCISSOR_TEST);
+            gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            bindTex(0, R.frameTex);
+            gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, dw, dh);
+            if (lutData) { bindTex(1, lutTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, lutData); }
+            bindTex(1, lutTex);
+            gl.useProgram(prog);
+            gl.viewport(0, 0, dw, dh);
+            gl.uniform1i(u.tex, 0); gl.uniform1i(u.lut, 1);
+            gl.uniform2f(u.res, dw, dh); gl.uniform1f(u.aspect, dw / dh);
+            for (const k in P) if (u[k] !== undefined && u[k] !== null && k !== 'tex' && k !== 'lut') gl.uniform1f(u[k], P[k]);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            bindTex(1, null); bindTex(0, null);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, dw, dh);
+        };
+        R.dispose = function () { release(); gl.deleteTexture(lutTex); gl.deleteProgram(prog); gl.deleteBuffer(quad); };
+        return R;
+    }
+
+    function fxActive() {
+        const s = fxs;
+        return s.ca || s.dist || s.shS || s.hiS || s.gAmt || s.lkAmt || s.dust || s.scr ||
+            (s.mType > 0 && (s.mExp || s.mSat || s.mTemp || fxMaskShow)) || fxCurvesOn();
+    }
+    function fxParams(canvas) {
+        const s = fxs;
+        return {
+            seed: 1.37, ca: s.ca / 100, dist: s.dist / 200, useLut: fxCurvesOn() ? 1 : 0,
+            shH: s.shH / 360, shS: s.shS / 100, hiH: s.hiH / 360, hiS: s.hiS / 100, bal: s.bal / 100,
+            gAmt: s.gAmt / 100, gSize: s.gSize / 100, gRough: s.gRough / 100, gShadow: s.gShadow / 100,
+            lkAmt: s.lkAmt / 100, lkHue: s.lkHue / 360, lkPos: s.lkPos / 100, dust: s.dust / 100, scr: s.scr / 100,
+            mType: s.mType, mX: s.mX / 100, mY: 1 - s.mY / 100, mSize: s.mSize / 100, mAng: s.mAng * Math.PI / 180,
+            mFeather: s.mFeather / 100, mInv: s.mInv, mExp: s.mExp / 100, mSat: s.mSat / 100, mTemp: s.mTemp / 100,
+            mShow: (fxMaskShow && canvas === glCanvas) ? 1 : 0
+        };
+    }
+    function fxPost(canvas) {
+        if (!fxActive()) return;
+        let r = canvas._fxRenderer;
+        if (r === undefined) {
+            try { r = createFxRenderer(canvas); } catch (e) { console.warn('FX unavailable:', e); r = null; }
+            canvas._fxRenderer = r;
+        }
+        if (!r) return;
+        try { r.render(fxParams(canvas), fxCurvesOn() ? fxLutData() : null); } catch (e) { console.warn('FX failed:', e); }
+        if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._fxRenderer = null; }
+    }
+
+    // ---------- интенсивность пресета ----------
+    function fxScalePreset(b) {
+        if (presetK >= 1) return b;
+        const o = {};
+        for (const key in b) {
+            const v = b[key];
+            if (typeof v === 'number') o[key] = v * presetK;
+            else if (key === 'curves' && v) {
+                o[key] = {};
+                ['red','green','blue'].forEach(ch => { o[key][ch] = v[ch].map(p => [p[0], p[0] + (p[1] - p[0]) * presetK]); });
+            } else if (key === 'duotone' && v) o[key] = { ...v, mix: (v.mix === undefined ? 1 : v.mix) * presetK };
+            else o[key] = v;
+        }
+        return o;
+    }
+    const _fxApplyOrig = applyFiltersToCanvas;
+    applyFiltersToCanvas = function (targetCanvas, texture, settingsToApply, baseSettings) {
+        _fxApplyOrig(targetCanvas, texture, settingsToApply, fxScalePreset(baseSettings));
+        fxPost(targetCanvas);
+    };
+
+    // ---------- панель новых инструментов ----------
+    const fxPanel = document.getElementById('fx-panel');
+    const fxTitle = document.getElementById('fx-title');
+    const fxBody = document.getElementById('fx-body');
+
+    function fxFmt(key, v) {
+        return (key === 'shH' || key === 'hiH' || key === 'lkHue')
+            ? `<i style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;background:hsl(${v},85%,55%)"></i>${v}` : String(v);
+    }
+    function fxGrid(parent, rows) {
+        const g = document.createElement('div');
+        g.className = 'fx-grid';
+        if (rows.length <= 2) g.style.gridTemplateColumns = '1fr';
+        rows.forEach(([key, label, min, max]) => {
+            const row = document.createElement('div');
+            row.innerHTML = `<div class="fx-lab"><span>${label}</span><span class="fx-val">${fxFmt(key, fxs[key])}</span></div>
+                <input type="range" min="${min}" max="${max}" value="${fxs[key]}">`;
+            const inp = row.querySelector('input'), val = row.querySelector('.fx-val');
+            inp.addEventListener('input', () => { fxs[key] = parseFloat(inp.value); val.innerHTML = fxFmt(key, fxs[key]); updatePhotoFilter(); });
+            g.appendChild(row);
+        });
+        parent.appendChild(g);
+    }
+    function fxChip(parent, text, on, fn) {
+        const b = document.createElement('button');
+        b.className = 'fx-chip' + (on ? ' on' : ''); b.textContent = text; b.onclick = fn;
+        parent.appendChild(b); return b;
+    }
+    function fxBuild() {
+        const def = FXT[fxId];
+        fxBody.innerHTML = '';
+        if (def.custom === 'curves') return fxCurvesUI(fxBody);
+        if (def.custom === 'mask') {
+            const bar = document.createElement('div');
+            bar.className = 'fx-chips';
+            fxChip(bar, 'Линейная', fxs.mType === 1, () => { fxs.mType = 1; fxBuild(); updatePhotoFilter(); });
+            fxChip(bar, 'Радиальная', fxs.mType === 2, () => { fxs.mType = 2; fxBuild(); updatePhotoFilter(); });
+            fxChip(bar, 'Инверсия', !!fxs.mInv, () => { fxs.mInv = fxs.mInv ? 0 : 1; fxBuild(); updatePhotoFilter(); });
+            fxBody.appendChild(bar);
+        }
+        fxGrid(fxBody, def.rows());
+    }
+    function fxCurvesUI(body) {
+        const CH = [['m','RGB','#fff'],['r','R','#ff5252'],['g','G','#69f0ae'],['b','B','#448aff']];
+        let cur = 'm', drag = -1, lastTap = { t: 0, i: -1 };
+        const bar = document.createElement('div'); bar.className = 'fx-chips';
+        const chips = CH.map(([k, name]) => fxChip(bar, name, k === cur, () => { cur = k; chips.forEach((c, i) => c.classList.toggle('on', CH[i][0] === k)); draw(); }));
+        body.appendChild(bar);
+        const cv = document.createElement('canvas');
+        const S = 190, dpr = Math.min(window.devicePixelRatio || 1, 2);
+        cv.width = cv.height = S * dpr; cv.style.cssText = `width:${S}px;height:${S}px;touch-action:none;background:#111;border-radius:8px;display:block;margin:0 auto 12px`;
+        body.appendChild(cv);
+        const ctx = cv.getContext('2d');
+        function draw() {
+            const W = cv.width;
+            ctx.clearRect(0, 0, W, W);
+            ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1;
+            for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(W * i / 4, 0); ctx.lineTo(W * i / 4, W); ctx.moveTo(0, W * i / 4); ctx.lineTo(W, W * i / 4); ctx.stroke(); }
+            ctx.strokeStyle = '#444'; ctx.beginPath(); ctx.moveTo(0, W); ctx.lineTo(W, 0); ctx.stroke();
+            CH.forEach(([k, , col]) => {
+                if (k !== cur && fxCurveIdentity(fxs.curves[k])) return;
+                const f = fxSpline(fxs.curves[k]);
+                ctx.strokeStyle = col; ctx.globalAlpha = k === cur ? 1 : 0.35; ctx.lineWidth = (k === cur ? 2 : 1) * dpr;
+                ctx.beginPath();
+                for (let i = 0; i <= 64; i++) { const x = i / 64, y = fxCl(f(x)); if (i) ctx.lineTo(x * W, (1 - y) * W); else ctx.moveTo(x * W, (1 - y) * W); }
+                ctx.stroke();
+            });
+            ctx.globalAlpha = 1; ctx.fillStyle = CH.find(c => c[0] === cur)[2];
+            fxs.curves[cur].forEach(p => { ctx.beginPath(); ctx.arc(p[0] * W, (1 - p[1]) * W, 5 * dpr, 0, 7); ctx.fill(); });
+        }
+        function pos(e) { const r = cv.getBoundingClientRect(); return [fxCl((e.clientX - r.left) / r.width), fxCl(1 - (e.clientY - r.top) / r.height)]; }
+        cv.addEventListener('pointerdown', e => {
+            const pts = fxs.curves[cur], [x, y] = pos(e);
+            let idx = -1, best = 0.09;
+            pts.forEach((p, i) => { const d = Math.hypot(p[0] - x, p[1] - y); if (d < best) { best = d; idx = i; } });
+            const now = Date.now();
+            if (idx > 0 && idx < pts.length - 1 && lastTap.i === idx && now - lastTap.t < 320) {   // двойной тап – удалить точку
+                pts.splice(idx, 1); lastTap = { t: 0, i: -1 }; draw(); updatePhotoFilter(); return;
+            }
+            if (idx < 0 && pts.length < 8) {
+                idx = pts.findIndex(p => p[0] > x); if (idx < 0) idx = pts.length - 1;
+                pts.splice(idx, 0, [x, y]);
+            }
+            lastTap = { t: now, i: idx };
+            drag = idx; cv.setPointerCapture(e.pointerId); draw(); updatePhotoFilter();
+        });
+        cv.addEventListener('pointermove', e => {
+            if (drag < 0) return;
+            const pts = fxs.curves[cur], [x, y] = pos(e), last = pts.length - 1;
+            const nx = (drag === 0 || drag === last) ? pts[drag][0] : Math.max(pts[drag - 1][0] + 0.02, Math.min(pts[drag + 1][0] - 0.02, x));
+            pts[drag] = [nx, y]; draw(); updatePhotoFilter();
+        });
+        const end = () => { drag = -1; };
+        cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size:10px;color:#666;text-align:center;margin:-6px 0 10px';
+        hint.textContent = 'Тап – добавить точку, двойной тап – удалить';
+        body.appendChild(hint);
+        draw();
+    }
+    function fxOpen(id) {
+        fxId = id; fxBackup = JSON.stringify(fxs);
+        if (id === 'mask' && !fxs.mType) fxs.mType = 1;
+        fxMaskShow = (id === 'mask');
+        selectionPanel.classList.add('hidden');
+        fxPanel.classList.add('active');
+        fxTitle.textContent = FXT[id].name;
+        fxBuild(); updatePhotoFilter();
+    }
+    function fxClose(revert) {
+        if (revert && fxBackup) fxs = JSON.parse(fxBackup);
+        fxMaskShow = false; fxId = null;
+        fxPanel.classList.remove('active');
+        selectionPanel.classList.remove('hidden');
+        updatePhotoFilter();
+    }
+    document.getElementById('fx-cancel').onclick = () => fxClose(true);
+    document.getElementById('fx-apply').onclick = () => fxClose(false);
+    document.getElementById('fx-reset').onclick = () => {
+        if (!fxId) return;
+        const d = fxDefaults(), def = FXT[fxId];
+        if (def.custom === 'curves') fxs.curves = d.curves;
+        else def.keys.forEach(k => { fxs[k] = d[k]; });
+        if (fxId === 'mask') fxs.mType = 1;
+        fxBuild(); updatePhotoFilter();
+    };
+    const _fxOpenTool = window.openTool;
+    window.openTool = function (id) {
+        if (FXT[id]) {
+            if (!fxTexture) { if (tg.showAlert) tg.showAlert("Сначала загрузите фото!"); else alert("Сначала загрузите фото!"); return; }
+            fxOpen(id); return;
+        }
+        _fxOpenTool(id);
+    };
+    const _fxCloseSlider = closeSlider;
+    closeSlider = function () { _fxCloseSlider(); fxMaskShow = false; fxPanel.classList.remove('active'); };
+
+    // ---------- слайдер интенсивности пресета ----------
+    const kRow = document.getElementById('k-row'), kInput = document.getElementById('k-input'), kVal = document.getElementById('k-val');
+    kInput.addEventListener('input', () => { presetK = parseFloat(kInput.value) / 100; kVal.textContent = kInput.value + '%'; updatePhotoFilter(); });
+    function kSync() { kInput.value = Math.round(presetK * 100); kVal.textContent = kInput.value + '%'; }
+    const _fxApplyPreset = window.applyPreset;
+    window.applyPreset = function (id) { presetK = 1; kSync(); _fxApplyPreset(id); };
+    const _fxRenderPresets = renderPresets, _fxRenderTools = renderTools;
+    renderPresets = function (t) { _fxRenderPresets(t); kRow.style.display = 'flex'; };
+    renderTools = function () { _fxRenderTools(); kRow.style.display = 'none'; };
+
+    // ---------- отмена / повтор ----------
+    const undoBtn = document.getElementById('btn-undo'), redoBtn = document.getElementById('btn-redo');
+    let undoStack = [], redoStack = [], lastSnap = null;
+    const fxSnap = () => JSON.stringify({ cs: currentSettings, ps: presetSettings, id: activePresetId, fx: fxs, k: presetK });
+    function histBtns() { undoBtn.disabled = !undoStack.length; redoBtn.disabled = !redoStack.length; }
+    function histReset() { undoStack = []; redoStack = []; lastSnap = fxSnap(); histBtns(); }
+    function histCommit() {
+        const s = fxSnap();
+        if (lastSnap === null) lastSnap = s;
+        if (s === lastSnap) return;
+        undoStack.push(lastSnap); if (undoStack.length > 60) undoStack.shift();
+        redoStack = []; lastSnap = s; histBtns();
+    }
+    function histRestore(str) {
+        const s = JSON.parse(str);
+        closeSlider();
+        currentSettings = s.cs; presetSettings = s.ps; activePresetId = s.id; fxs = s.fx; presetK = s.k; kSync();
+        document.querySelectorAll('.preset-item').forEach(el => el.classList.toggle('selected', el.dataset.id === activePresetId));
+        lastSnap = str;
+        updatePhotoFilter(); updateLockState(); histBtns();
+    }
+    function histBusy() { return !fxTexture || cropperInstance || isDBActive; }
+    undoBtn.onclick = () => { histCommit(); if (histBusy() || !undoStack.length) return; redoStack.push(fxSnap()); histRestore(undoStack.pop()); histBtns(); };
+    redoBtn.onclick = () => { if (histBusy() || !redoStack.length) return; undoStack.push(fxSnap()); histRestore(redoStack.pop()); histBtns(); };
+    ['pointerup', 'change', 'click'].forEach(ev => document.addEventListener(ev, e => {
+        if (e.target && e.target.closest && e.target.closest('#btn-undo,#btn-redo')) return;
+        setTimeout(histCommit, 60);
+    }, true));
+    upload.addEventListener('change', () => setTimeout(histReset, 0));
+    const _fxResetEditor = resetEditor;
+    resetEditor = function () { _fxResetEditor(); fxs = fxDefaults(); presetK = 1; kSync(); histReset(); };
+    histReset();
+
+    // ---------- кроп: поворот / отражение / выравнивание ----------
+    const cxS = document.getElementById('cx-straight'), cxV = document.getElementById('cx-val');
+    let cxBase = 0;
+    const cxApply = () => { if (cropperInstance) cropperInstance.rotateTo(cxBase + parseFloat(cxS.value)); };
+    const cxZero = () => { cxBase = 0; cxS.value = 0; cxV.textContent = '0°'; };
+    document.getElementById('cx-rot').onclick = () => { cxBase -= 90; cxApply(); };
+    document.getElementById('cx-flipx').onclick = () => { if (cropperInstance) cropperInstance.scaleX(cropperInstance.getData().scaleX === -1 ? 1 : -1); };
+    document.getElementById('cx-flipy').onclick = () => { if (cropperInstance) cropperInstance.scaleY(cropperInstance.getData().scaleY === -1 ? 1 : -1); };
+    cxS.addEventListener('input', () => { cxV.textContent = cxS.value + '°'; cxApply(); });
+    document.getElementById('btn-reset-crop').addEventListener('click', cxZero);
+    const _fxOpenCropper = openCropper;
+    openCropper = function () { _fxOpenCropper(); cxZero(); };
 </script>
 </body>
 </html>
