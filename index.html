@@ -154,6 +154,7 @@
         .k-icon { position: absolute; top: 24px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; display: flex; align-items: center; justify-content: center; }
         .k-icon.mod { background: #fff; color: #000; }
         .u-edit { position: absolute; top: 42px; right: 4px; width: 16px; height: 16px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; padding-bottom: 3px; box-sizing: border-box; }
+        .exp-more { font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 12px; color: #aaa; cursor: pointer; border-left: 1px solid #333; margin-left: 2px; white-space: nowrap; }
         .icon-btn:disabled { opacity: 0.3; }
         #k-row { display: flex; align-items: center; gap: 10px; padding: 0 20px 6px; font-size: 11px; color: #aaa; }
         #k-row input[type=range] { flex: 1; margin: 0; }
@@ -177,6 +178,7 @@
     <div class="top-badges" id="hdr-sdr-toggle">
         <span class="badge" data-mode="2K">2K</span>
         <span class="badge active" data-mode="HDR">HDR</span>
+        <span class="exp-more" id="exp-more" title="Формат и качество">JPG ▾</span>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
         <button class="icon-btn" id="btn-undo" title="Отменить" disabled><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
@@ -2730,9 +2732,11 @@
         exportCanvas.height = tempGlCanvas.height;
         exportCanvas.getContext('2d').drawImage(tempGlCanvas, 0, 0);
 
-        let quality = exportMode === '2K' ? 1.0 : (exportMode === 'HDR' ? 0.95 : 0.85);
-        const dataUrl = exportCanvas.toDataURL('image/jpeg', quality);
-        const fileName = `edited_photo_${exportMode}_${Date.now()}.jpg`;
+        const exportMime = 'image/' + exportFmt;
+        const exportExt = exportFmt === 'jpeg' ? 'jpg' : exportFmt;
+        const quality = exportQ !== null ? exportQ : (exportMode === '2K' ? 1.0 : 0.95);
+        const dataUrl = exportFmt === 'png' ? exportCanvas.toDataURL('image/png') : exportCanvas.toDataURL(exportMime, quality);
+        const fileName = `edited_photo_${exportMode}_${Date.now()}.${exportExt}`;
 
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const isTelegramMiniApp = Boolean(tg && tg.initData);
@@ -2740,7 +2744,7 @@
         fetch(dataUrl)
             .then(res => res.blob())
             .then(async blob => {
-                const file = new File([blob], fileName, { type: 'image/jpeg' });
+                const file = new File([blob], fileName, { type: exportMime });
                 tempTex.destroy();
 
                 if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -4534,6 +4538,56 @@
         });
         kIconSync();
     };
+
+    // ==================================================================================
+    //  ПАРАМЕТРЫ ЭКСПОРТА: формат (JPEG / PNG / WebP) и качество — маленькое меню у плашек HDR/2K
+    // ==================================================================================
+    const webpOK = (() => { try { return document.createElement('canvas').toDataURL('image/webp').startsWith('data:image/webp'); } catch (e) { return false; } })();
+    let exportFmt = 'jpeg', exportQ = null;       // exportQ: null = «Авто» (HDR 95%, 2K 100%)
+    try {
+        const o = JSON.parse(localStorage.getItem('exportOpts') || 'null');
+        if (o) { if (['jpeg', 'png', 'webp'].includes(o.fmt) && (o.fmt !== 'webp' || webpOK)) exportFmt = o.fmt; if (typeof o.q === 'number') exportQ = o.q; }
+    } catch (e) {}
+    const expMore = document.getElementById('exp-more');
+    const EXP_LABEL = { jpeg: 'JPG', png: 'PNG', webp: 'WEBP' };
+    const expSave = () => { try { localStorage.setItem('exportOpts', JSON.stringify({ fmt: exportFmt, q: exportQ })); } catch (e) {} };
+    const expSync = () => { expMore.textContent = EXP_LABEL[exportFmt] + ' ▾'; };
+    expSync();
+
+    const expPop = document.createElement('div');
+    expPop.style.cssText = 'position:fixed;z-index:300;display:none;background:#1c1c1e;border:1px solid #333;border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.5);width:250px;box-sizing:border-box';
+    document.body.appendChild(expPop);
+    function expBuild() {
+        const fmts = [['jpeg', 'JPEG'], ['png', 'PNG']].concat(webpOK ? [['webp', 'WebP']] : []);
+        const auto = exportQ === null, q = auto ? (exportMode === '2K' ? 100 : 95) : Math.round(exportQ * 100);
+        const hint = exportFmt === 'png' ? 'Без потерь, файл заметно больше' : exportFmt === 'webp' ? 'Меньше размер при том же качестве' : 'Подходит везде, самый совместимый';
+        expPop.innerHTML = `
+            <div style="font-size:11px;color:#8e8e93;margin-bottom:8px">ФОРМАТ</div>
+            <div class="fx-chips" id="exp-fmts" style="justify-content:flex-start;margin-bottom:6px"></div>
+            <div style="font-size:11px;color:#8e8e93;margin-bottom:12px">${hint}</div>
+            ${exportFmt === 'png' ? '' : `
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8e8e93;margin-bottom:8px"><span>КАЧЕСТВО</span><span id="exp-qv" style="color:#fff">${auto ? 'Авто · ' : ''}${q}%</span></div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <button class="fx-chip ${auto ? 'on' : ''}" id="exp-auto">Авто</button>
+                <input type="range" id="exp-q" min="50" max="100" value="${q}" style="flex:1;margin:0;${auto ? 'opacity:.4' : ''}">
+            </div>`}`;
+        const row = expPop.querySelector('#exp-fmts');
+        fmts.forEach(([k, t]) => fxChip(row, t, exportFmt === k, () => { exportFmt = k; expSave(); expSync(); expBuild(); }));
+        const a = expPop.querySelector('#exp-auto'), r = expPop.querySelector('#exp-q');
+        if (a) a.onclick = () => { exportQ = exportQ === null ? parseInt(r.value) / 100 : null; expSave(); expBuild(); };
+        if (r) r.addEventListener('input', () => { exportQ = parseInt(r.value) / 100; expSave(); expPop.querySelector('#exp-qv').textContent = r.value + '%'; a.classList.remove('on'); r.style.opacity = 1; });
+    }
+    expMore.addEventListener('click', e => {
+        e.stopPropagation();
+        if (expPop.style.display === 'block') { expPop.style.display = 'none'; return; }
+        expBuild();
+        const r = expMore.getBoundingClientRect();
+        expPop.style.top = (r.bottom + 8) + 'px';
+        expPop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 258)) + 'px';
+        expPop.style.display = 'block';
+    });
+    document.addEventListener('pointerdown', e => { if (!expPop.contains(e.target) && !expMore.contains(e.target)) expPop.style.display = 'none'; }, true);
+    hdrSdrBadges.forEach(b => b.addEventListener('click', () => { if (expPop.style.display === 'block') expBuild(); }));   // «Авто» зависит от режима
 
     // ---------- кроп: поворот / отражение / выравнивание / перспектива ----------
     const cxS = document.getElementById('cx-straight'), cxV = document.getElementById('cx-val'), cxModeBtn = document.getElementById('cx-mode');
