@@ -3468,7 +3468,7 @@
         fxMaskShow = (id === 'mask');
         selectionPanel.classList.add('hidden');
         fxPanel.classList.add('active');
-        fxTitle.textContent = FXT[id].name;
+        fxTitle.parentElement.style.display = ''; fxTitle.textContent = FXT[id].name;
         fxBuild(); updatePhotoFilter();
     }
     function fxClose(revert) {
@@ -3517,7 +3517,7 @@
     function kBuild() {
         const v = Math.round(presetK * 100);
         fxBody.innerHTML = `<div class="fx-grid" style="grid-template-columns:1fr;max-height:none"><div>
-            <div class="fx-lab"><span>Сила пресета</span><span id="k-val">${v}%</span></div>
+            <div class="fx-lab" style="justify-content:flex-end"><span id="k-val">${v}%</span></div>
             <input type="range" id="k-input" min="0" max="100" value="${v}"></div></div>`;
         const inp = document.getElementById('k-input'), val = document.getElementById('k-val');
         inp.addEventListener('input', () => { presetK = parseFloat(inp.value) / 100; val.textContent = inp.value + '%'; updatePhotoFilter(); });
@@ -3527,6 +3527,7 @@
         fxId = 'k'; fxBackup = String(presetK);
         selectionPanel.classList.add('hidden');
         fxPanel.classList.add('active');
+        fxTitle.parentElement.style.display = 'none';
         kBuild();
     }
     const _fxApplyPreset = window.applyPreset;
