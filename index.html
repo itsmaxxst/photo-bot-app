@@ -418,7 +418,7 @@
     let currentSettings = { ...defaultSettings };
     let presetSettings = { ...defaultSettings };
 
-    const presetsData = [
+ const presetsData = [
         { id: 'none', name: 'ORIG', color: '#999', isPro: false, glfx: { ...defaultSettings } },
         
         { id: 'canonr5', name: 'CANON R5', color: '#e57373', isPro: false, glfx: {
@@ -499,6 +499,78 @@
             curves: { red: [[0, 0], [0.25, 0.21], [0.75, 0.79], [1, 1]], green: [[0, 0], [0.25, 0.21], [0.75, 0.79], [1, 1]], blue: [[0, 0], [0.25, 0.21], [0.75, 0.79], [1, 1]] }
         }},
 
+        { id: 'leicaq3', name: 'LEICA Q3', color: '#e53935', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: -0.01, contrast: 0.09, saturation: 0.01, vibrance: 0.05, unsharp: 0.12, noise: 0.05, vignette: 0.12, wbTemp: 0.03, blacks: -0.05, lights: -0.05, darks: 0.04,
+            curves: { red: [[0, 0], [0.25, 0.23], [0.75, 0.775], [1, 1]], green: [[0, 0], [0.25, 0.235], [0.75, 0.77], [1, 0.995]], blue: [[0, 0.01], [0.25, 0.235], [0.75, 0.755], [1, 0.975]] }
+        }},
+
+        { id: 'leicasl3', name: 'LEICA SL3', color: '#c62828', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.08, saturation: -0.02, unsharp: 0.1, noise: 0.03, vignette: 0.08, blacks: -0.04, darks: 0.03,
+            curves: { red: [[0, 0], [0.5, 0.495], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.008], [0.5, 0.508], [1, 1]] }
+        }},
+
+        { id: 'sonya1', name: 'SONY A1', color: '#90caf9', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.05, saturation: 0.03, vibrance: 0.05, unsharp: 0.12, texture: 0.05, lights: -0.06, darks: 0.06,
+            curves: { red: [[0, 0], [0.5, 0.495], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.004], [0.5, 0.505], [1, 1]] }
+        }},
+
+        { id: 'sonya7iv', name: 'SONY A7IV', color: '#64b5f6', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.045, saturation: 0.05, vibrance: 0.06, unsharp: 0.09, wbTemp: 0.02, darks: 0.05, lights: -0.04,
+            curves: { red: [[0, 0.004], [0.5, 0.512], [1, 1]], green: [[0, 0], [0.5, 0.502], [1, 1]], blue: [[0, 0.004], [0.5, 0.494], [1, 0.996]] }
+        }},
+
+        { id: 'nikonz8', name: 'NIKON Z8', color: '#ffd54f', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.06, saturation: 0.03, vibrance: 0.05, unsharp: 0.09, wbTemp: 0.05, darks: 0.05, lights: -0.05,
+            curves: { red: [[0, 0], [0.5, 0.51], [1, 1]], green: [[0, 0], [0.5, 0.506], [1, 1]], blue: [[0, 0.004], [0.5, 0.482], [1, 0.984]] }
+        }},
+
+        { id: 'nikond850', name: 'NIKON D850', color: '#fbc02d', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.08, saturation: 0.05, vibrance: 0.06, unsharp: 0.12, noise: 0.025, vignette: 0.05, wbTemp: 0.04, blacks: -0.03,
+            curves: { red: [[0, 0], [0.25, 0.24], [0.75, 0.77], [1, 1]], green: [[0, 0], [0.25, 0.24], [0.75, 0.77], [1, 1]], blue: [[0, 0.004], [0.25, 0.24], [0.75, 0.755], [1, 0.99]] }
+        }},
+
+        { id: 'gfx100', name: 'GFX 100', color: '#80cbc4', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.01, contrast: 0.035, saturation: 0.045, vibrance: 0.07, unsharp: 0.07, texture: 0.03, darks: 0.08, lights: -0.07, blacks: -0.02, bloomStrength: 0.02, bloomSize: 0.5, bloomRange: 0.5,
+            curves: { red: [[0, 0.004], [0.5, 0.51], [1, 1]], green: [[0, 0.004], [0.5, 0.504], [1, 0.996]], blue: [[0, 0.008], [0.5, 0.494], [1, 0.99]] }
+        }},
+
+        { id: 'h6d', name: 'H6D 100C', color: '#b0bec5', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.012, contrast: 0.025, saturation: 0.025, vibrance: 0.05, unsharp: 0.05, darks: 0.1, lights: -0.07, wbTemp: 0.02,
+            curves: { red: [[0, 0.006], [0.5, 0.508], [1, 1]], green: [[0, 0.004], [0.5, 0.5], [1, 0.998]], blue: [[0, 0.006], [0.5, 0.492], [1, 0.992]] }
+        }},
+
+        { id: 'canon1dx', name: 'CANON 1DX', color: '#ef9a9a', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.08, saturation: 0.07, vibrance: 0.06, unsharp: 0.12, wbTemp: 0.04, vignette: 0.04, darks: 0.04,
+            curves: { red: [[0, 0], [0.5, 0.516], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.004], [0.5, 0.478], [1, 0.98]] }
+        }},
+
+        { id: 'pentax645', name: 'PENTAX 645', color: '#ffb74d', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.01, contrast: 0.06, saturation: 0.07, vibrance: 0.05, noise: 0.04, vignette: 0.07, wbTemp: 0.08, darks: 0.05, lights: -0.04,
+            curves: { red: [[0, 0.008], [0.5, 0.526], [1, 1]], green: [[0, 0.004], [0.5, 0.504], [1, 0.992]], blue: [[0, 0.01], [0.5, 0.466], [1, 0.956]] }
+        }},
+
+        { id: 'phaseone', name: 'PHASE ONE', color: '#cfd8dc', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.03, saturation: 0.02, vibrance: 0.04, unsharp: 0.1, texture: 0.05, darks: 0.12, lights: -0.1, blacks: -0.02,
+            curves: { red: [[0, 0], [0.5, 0.5], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.004], [0.5, 0.498], [1, 1]] }
+        }},
+
+        { id: 'leicamono', name: 'LEICA MONO', color: '#616161', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.13, saturation: -1.0, noise: 0.18, unsharp: 0.15, vignette: 0.12, blacks: -0.1, texture: 0.06,
+            curves: { red: [[0, 0], [0.25, 0.215], [0.75, 0.81], [1, 1]], green: [[0, 0], [0.25, 0.205], [0.75, 0.8], [1, 1]], blue: [[0, 0], [0.25, 0.195], [0.75, 0.78], [1, 1]] }
+        }},
+
         { id: 'trix', name: 'TRI-X 400', color: '#757575', isPro: false, glfx: {
             ...defaultSettings,
             contrast: 0.154, saturation: -1.0, noise: 0.245, unsharp: 0.15, vignette: 0.105,
@@ -572,8 +644,11 @@
         }},
         
         { id: 'g3', name: 'G3', color: '#cddc39', isPro: false, glfx: { ...defaultSettings, brightness: 0, contrast: 0.055, saturation: 0.12 } },
+        
         { id: 'hb2', name: 'HB2', color: '#90caf9', isPro: false, glfx: { ...defaultSettings, brightness: -0.03, contrast: 0.11, saturation: -0.12, vignette: 0.21 } },
+
         { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { ...defaultSettings, brightness: 0, contrast: 0.11, saturation: -0.24, hue: 0.06, sepia: 0.16, vignette: 0.07 } },
+
         { id: 'cpurple', name: 'PURPLE', color: '#ba68c8', isPro: false, glfx: {
             ...defaultSettings,
             contrast: 0.055, vignette: 0.07,
