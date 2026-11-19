@@ -151,6 +151,8 @@
         .fx-chips { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
         .fx-chip { border: 1px solid #444; color: #aaa; background: none; border-radius: 14px; padding: 5px 12px; font-size: 11px; cursor: pointer; }
         .fx-chip.on { background: #fff; color: #000; border-color: #fff; }
+        .k-icon { position: absolute; top: 24px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; display: flex; align-items: center; justify-content: center; }
+        .k-icon.mod { background: #fff; color: #000; }
         .icon-btn:disabled { opacity: 0.3; }
         #k-row { display: flex; align-items: center; gap: 10px; padding: 0 20px 6px; font-size: 11px; color: #aaa; }
         #k-row input[type=range] { flex: 1; margin: 0; }
@@ -372,7 +374,6 @@
     </div>
 
     <div id="selection-panel">
-        <div id="k-row"><span>Интенсивность</span><input type="range" id="k-input" min="0" max="100" value="100"><span id="k-val" style="width:36px;text-align:right">100%</span></div>
         <div class="sub-tabs" id="sub-tabs-container"></div>
         <div class="items-scroll" id="items-container"></div>
     </div>
@@ -383,6 +384,7 @@
     <nav class="bottom-nav">
         <div class="nav-item active" data-tab="presets"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
         <div class="nav-item" data-tab="tools"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></div>
+        <div class="nav-item" data-tab="fx" id="nav-fx"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8L21.5 17.5l-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
     </nav>
 </section>
 
@@ -3122,8 +3124,6 @@
                       ? [['mX','Позиция X',0,100],['mY','Позиция Y',0,100],['mSize','Размер',5,100],['mFeather','Мягкость',0,100],['mExp','Экспозиция',-100,100],['mSat','Насыщ.',-100,100],['mTemp','Темп.',-100,100]]
                       : [['mX','Позиция X',0,100],['mY','Позиция Y',0,100],['mAng','Угол',-180,180],['mFeather','Мягкость',0,100],['mExp','Экспозиция',-100,100],['mSat','Насыщ.',-100,100],['mTemp','Темп.',-100,100]] }
     };
-    // новые инструменты — после «Обрезки»
-    toolsData.splice(1, 0, ...Object.keys(FXT).map(id => ({ id, name: FXT[id].name, icon: FXT[id].icon, isPro: false })));
 
     // ---------- кривые: монотонный кубический сплайн → LUT 256 ----------
     function fxSpline(p) {
@@ -3472,16 +3472,17 @@
         fxBuild(); updatePhotoFilter();
     }
     function fxClose(revert) {
-        if (revert && fxBackup) fxs = JSON.parse(fxBackup);
+        if (revert && fxBackup) { if (fxId === 'k') presetK = parseFloat(fxBackup); else fxs = JSON.parse(fxBackup); }
         fxMaskShow = false; fxId = null;
         fxPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
-        updatePhotoFilter();
+        updatePhotoFilter(); kIconSync();
     }
     document.getElementById('fx-cancel').onclick = () => fxClose(true);
     document.getElementById('fx-apply').onclick = () => fxClose(false);
     document.getElementById('fx-reset').onclick = () => {
         if (!fxId) return;
+        if (fxId === 'k') { presetK = 1; kBuild(); updatePhotoFilter(); return; }
         const d = fxDefaults(), def = FXT[fxId];
         if (def.custom === 'curves') fxs.curves = d.curves;
         else def.keys.forEach(k => { fxs[k] = d[k]; });
@@ -3499,15 +3500,54 @@
     const _fxCloseSlider = closeSlider;
     closeSlider = function () { _fxCloseSlider(); fxMaskShow = false; fxPanel.classList.remove('active'); };
 
-    // ---------- слайдер интенсивности пресета ----------
-    const kRow = document.getElementById('k-row'), kInput = document.getElementById('k-input'), kVal = document.getElementById('k-val');
-    kInput.addEventListener('input', () => { presetK = parseFloat(kInput.value) / 100; kVal.textContent = kInput.value + '%'; updatePhotoFilter(); });
-    function kSync() { kInput.value = Math.round(presetK * 100); kVal.textContent = kInput.value + '%'; }
+    // ---------- интенсивность пресета: иконка на выбранной карточке → панель со слайдером ----------
+    function kIconSync() {
+        document.querySelectorAll('.k-icon').forEach(el => el.remove());
+        if (!activePresetId || activePresetId === 'none') return;
+        const card = document.querySelector('.preset-item.selected');
+        if (!card) return;
+        const ic = document.createElement('div');
+        ic.className = 'k-icon' + (presetK < 1 ? ' mod' : '');
+        ic.title = 'Интенсивность';
+        ic.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.5"/><circle cx="8" cy="16" r="2.5"/></svg>';
+        ic.addEventListener('click', e => { e.stopPropagation(); kOpen(); });
+        card.appendChild(ic);
+    }
+    function kSync() { kIconSync(); }
+    function kBuild() {
+        const v = Math.round(presetK * 100);
+        fxBody.innerHTML = `<div class="fx-grid" style="grid-template-columns:1fr;max-height:none"><div>
+            <div class="fx-lab"><span>Сила пресета</span><span id="k-val">${v}%</span></div>
+            <input type="range" id="k-input" min="0" max="100" value="${v}"></div></div>`;
+        const inp = document.getElementById('k-input'), val = document.getElementById('k-val');
+        inp.addEventListener('input', () => { presetK = parseFloat(inp.value) / 100; val.textContent = inp.value + '%'; updatePhotoFilter(); });
+    }
+    function kOpen() {
+        if (!fxTexture) return;
+        fxId = 'k'; fxBackup = String(presetK);
+        selectionPanel.classList.add('hidden');
+        fxPanel.classList.add('active');
+        fxTitle.textContent = 'Интенсивность';
+        kBuild();
+    }
     const _fxApplyPreset = window.applyPreset;
-    window.applyPreset = function (id) { presetK = 1; kSync(); _fxApplyPreset(id); };
-    const _fxRenderPresets = renderPresets, _fxRenderTools = renderTools;
-    renderPresets = function (t) { _fxRenderPresets(t); kRow.style.display = 'flex'; };
-    renderTools = function () { _fxRenderTools(); kRow.style.display = 'none'; };
+    window.applyPreset = function (id) { presetK = 1; _fxApplyPreset(id); kIconSync(); };
+    const _fxRenderPresets = renderPresets;
+    renderPresets = function (t) { _fxRenderPresets(t); kIconSync(); };
+
+    // ---------- вкладка FX ----------
+    function renderFx() {
+        subTabsContainer.innerHTML = '<div class="sub-tab active">ЭФФЕКТЫ</div>';
+        itemsContainer.innerHTML = '';
+        Object.keys(FXT).forEach(id => {
+            itemsContainer.innerHTML += `
+                <div class="tool-item" onclick="openTool('${id}')">
+                    <div class="tool-icon">${FXT[id].icon}</div>
+                    <div class="tool-name">${FXT[id].name}</div>
+                </div>`;
+        });
+    }
+    document.getElementById('nav-fx').addEventListener('click', renderFx);
 
     // ---------- отмена / повтор ----------
     const undoBtn = document.getElementById('btn-undo'), redoBtn = document.getElementById('btn-redo');
@@ -3527,6 +3567,7 @@
         closeSlider();
         currentSettings = s.cs; presetSettings = s.ps; activePresetId = s.id; fxs = s.fx; presetK = s.k; kSync();
         document.querySelectorAll('.preset-item').forEach(el => el.classList.toggle('selected', el.dataset.id === activePresetId));
+        kIconSync();
         lastSnap = str;
         updatePhotoFilter(); updateLockState(); histBtns();
     }
