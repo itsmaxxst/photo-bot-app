@@ -469,7 +469,25 @@
     try { if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } catch (e) {}
 
     const urlParams = new URLSearchParams(window.location.search);
-    const isPremium = urlParams.get('premium') === '1';
+    const API = 'https://photo-render-bot.duckdns.org';
+    let isPremium = false;            // free until the server says otherwise
+
+    (async () => {
+        try {
+            if (!tg.initData) return;  // opened outside Telegram -> free
+            const r = await fetch(API + '/api/status', {
+                method: 'POST',
+                headers: { 'Authorization': 'tma ' + tg.initData }
+            });
+            if (!r.ok) return;
+            const data = await r.json();
+            if (data.premium === isPremium) return;
+            isPremium = data.premium;
+            updateLockState();
+            const active = document.querySelector('.nav-item.active');
+            if (active) active.click();   // re-render the current tab so 🔒 icons update
+        } catch (e) {}
+    })();
 
     const upload = document.getElementById('upload');
     const previewImg = document.getElementById('photo-preview');
