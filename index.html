@@ -815,66 +815,6 @@
 
         { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { ...defaultSettings, brightness: 0, contrast: 0.11, saturation: -0.24, hue: 0.06, sepia: 0.16, vignette: 0.07 } },
         
-        { id: 'cpurple', name: 'PURPLE', color: '#ba68c8', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.1, 0.02, 0.22], high: [0.88, 0.7, 1.0] }
-        }},
-
-        { id: 'cpink', name: 'PINK', color: '#f06292', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.22, 0.03, 0.12], high: [1.0, 0.78, 0.88] }
-        }},
-
-        { id: 'cblue', name: 'BLUE', color: '#42a5f5', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.02, 0.06, 0.25], high: [0.72, 0.86, 1.0] }
-        }},
-
-        { id: 'cteal', name: 'TEAL', color: '#26c6da', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.0, 0.1, 0.14], high: [0.7, 1.0, 0.95] }
-        }},
-
-        { id: 'cgreen', name: 'GREEN', color: '#66bb6a', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.02, 0.12, 0.04], high: [0.8, 1.0, 0.78] }
-        }},
-
-        { id: 'cgold', name: 'GOLD', color: '#ffd54f', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.16, 0.09, 0.0], high: [1.0, 0.9, 0.62] }
-        }},
-
-        { id: 'corange', name: 'ORANGE', color: '#ff9800', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.2, 0.05, 0.0], high: [1.0, 0.78, 0.5] }
-        }},
-
-        { id: 'cred', name: 'RED', color: '#ef5350', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.22, 0.0, 0.02], high: [1.0, 0.72, 0.7] }
-        }},
-
-        { id: 'csunset', name: 'SUNSET', color: '#ff7043', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.15, 0.03, 0.3], high: [1.0, 0.65, 0.35] }
-        }},
-
-        { id: 'cneon', name: 'NEON', color: '#e040fb', isPro: false, glfx: {
-            ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.04, 0.02, 0.35], high: [1.0, 0.35, 0.85] }
-        }},
-
         // ===================== PRO-пресеты (плёнки, кино, настроение) =====================
         { id: 'kgold', name: 'KODAK GOLD', color: '#ffca28', isPro: true, glfx: {
             ...defaultSettings,
@@ -1031,7 +971,68 @@
             ...defaultSettings,
             contrast: 0.08, saturation: 0.06, wbTemp: -0.04, blacks: -0.04,
             bloomStrength: 0.03, bloomSize: 0.55, bloomRange: 0.45, halationStrength: 0.035, halationSize: 0.09, halationRange: 0.23
-        }, fx: { shH: 270, shS: 14, hiH: 330, hiS: 10, gAmt: 10, ca: 6 } }
+        }, fx: { shH: 270, shS: 14, hiH: 330, hiS: 10, gAmt: 10, ca: 6 } },
+
+        // ===================== цветные пресеты =====================
+        { id: 'cpurple', name: 'PURPLE', color: '#ba68c8', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.1, 0.02, 0.22], high: [0.88, 0.7, 1.0] }
+        }},
+
+        { id: 'cpink', name: 'PINK', color: '#f06292', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.22, 0.03, 0.12], high: [1.0, 0.78, 0.88] }
+        }},
+
+        { id: 'cblue', name: 'BLUE', color: '#42a5f5', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.02, 0.06, 0.25], high: [0.72, 0.86, 1.0] }
+        }},
+
+        { id: 'cteal', name: 'TEAL', color: '#26c6da', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.0, 0.1, 0.14], high: [0.7, 1.0, 0.95] }
+        }},
+
+        { id: 'cgreen', name: 'GREEN', color: '#66bb6a', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.02, 0.12, 0.04], high: [0.8, 1.0, 0.78] }
+        }},
+
+        { id: 'cgold', name: 'GOLD', color: '#ffd54f', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.16, 0.09, 0.0], high: [1.0, 0.9, 0.62] }
+        }},
+
+        { id: 'corange', name: 'ORANGE', color: '#ff9800', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.2, 0.05, 0.0], high: [1.0, 0.78, 0.5] }
+        }},
+
+        { id: 'cred', name: 'RED', color: '#ef5350', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.22, 0.0, 0.02], high: [1.0, 0.72, 0.7] }
+        }},
+
+        { id: 'csunset', name: 'SUNSET', color: '#ff7043', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.15, 0.03, 0.3], high: [1.0, 0.65, 0.35] }
+        }},
+
+        { id: 'cneon', name: 'NEON', color: '#e040fb', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.055, vignette: 0.07,
+            duotone: { shadow: [0.04, 0.02, 0.35], high: [1.0, 0.35, 0.85] }
+        }}
     ];
 
     const toolsData = [
@@ -3821,22 +3822,28 @@
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             bindTex(0, R.frameTex);
             gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, dw, dh);
-            if (lutData) { bindTex(1, lutTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, lutData); }
+            if (lutData && (lutData._k === undefined || R.lutKey !== lutData._k)) { bindTex(1, lutTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, lutData); R.lutKey = lutData._k; }
             bindTex(1, lutTex);
             if (stampCv) {
                 bindTex(2, stampTex);
-                const prevFlip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
-                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, stampCv);
-                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, prevFlip);
+                if (stampCv._k === undefined || R.stampKey !== stampCv._k) {
+                    const prevFlip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
+                    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, stampCv);
+                    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, prevFlip);
+                    R.stampKey = stampCv._k;
+                }
                 gl.uniform1i(u.stamp, 2);
             }
             if (camCv) {
                 bindTex(3, camTex);
-                const prevFlip2 = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
-                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, camCv);
-                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, prevFlip2);
+                if (camCv._k === undefined || R.camKey !== camCv._k) {
+                    const prevFlip2 = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
+                    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, camCv);
+                    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, prevFlip2);
+                    R.camKey = camCv._k;
+                }
             }
             gl.useProgram(prog);
             gl.viewport(0, 0, dw, dh);
@@ -3890,7 +3897,7 @@
             canvas._fxRenderer = r;
         }
         if (!r) return;
-        try { r.render(fxParams(canvas), fxCurvesOn() ? fxLutData() : null, fxs.dsOn ? fxStampCanvas(canvas.width, canvas.height) : null, fxs.camOn ? fxCamCanvas(canvas.width, canvas.height) : null); } catch (e) { console.warn('FX failed:', e); }
+        try { r.render(fxParams(canvas), fxCurvesOn() ? fxLutData() : null, fxs.dsOn ? fxOverlay('stamp', fxStampCanvas, JSON.stringify([fxs.dsDate, fxs.dsFmt, fxs.dsPos, fxs.dsSize]), canvas.width, canvas.height) : null, fxs.camOn ? fxOverlay('cam', fxCamCanvas, JSON.stringify([fxs.dsDate, fxs.camMode, fxs.camBat, fxs.camDate, fxs.camFrm, fxs.camSize]), canvas.width, canvas.height) : null); } catch (e) { console.warn('FX failed:', e); }
         if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._fxRenderer = null; }
     }
 
@@ -4137,15 +4144,17 @@
     function renderFx() {
         subTabsContainer.innerHTML = '<div class="sub-tab active">ЭФФЕКТЫ</div>';
         itemsContainer.innerHTML = '';
+        let fxHtml = '';
         Object.keys(FXT).forEach(id => {
             const isLocked = FXT[id].isPro && !isPremium;
-            itemsContainer.innerHTML += `
+            fxHtml += `
                 <div class="tool-item ${isLocked ? 'locked' : ''}" onclick="openTool('${id}')">
                     <div class="tool-icon">${FXT[id].icon}</div>
                     <div class="tool-name">${FXT[id].name}</div>
                     ${isLocked ? '<div class="lock-icon">🔒</div>' : ''}
                 </div>`;
         });
+        itemsContainer.innerHTML = fxHtml;
     }
     document.getElementById('nav-fx').addEventListener('click', renderFx);
 
@@ -4806,12 +4815,13 @@
             list = [...presetsData, ...userPresets].filter(p => favoritePresets.includes(p.id));
             if (!list.length) { itemsContainer.innerHTML = '<div style="color: #888; font-size: 12px; margin: auto;">Нет избранных пресетов</div>'; kIconSync(); return; }
         }
+        let html = itemsContainer.innerHTML;
         list.forEach(p => {
             const user = String(p.id).startsWith('u_'), isLocked = p.isPro && !isPremium, isFav = favoritePresets.includes(p.id);
             const favIcon = p.id !== 'none' ? `<div class="fav-icon" onclick="toggleFavorite(event, '${p.id}')">${isFav ? '★' : '☆'}</div>` : '';
             const thumb = `background-color:${p.color};opacity:0.8`;
             const label = user ? `<div class="preset-label" style="background-color:${p.color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box;padding-left:3px;padding-right:3px">${p.name.replace(/[<>&]/g, '')}</div>` : `<div class="preset-label" style="background-color:${p.color};">${p.name}</div>`;
-            itemsContainer.innerHTML += `
+            html += `
                 <div class="preset-item ${isLocked ? 'locked' : ''} ${p.id === activePresetId ? 'selected' : ''}" data-id="${p.id}" onclick="applyPreset('${p.id}')">
                     <div class="preset-thumb" style="${thumb}"></div>
                     ${label}
@@ -4820,6 +4830,7 @@
                     ${isLocked ? '<div class="lock-icon">🔒</div>' : ''}
                 </div>`;
         });
+        itemsContainer.innerHTML = html;
         kIconSync();
     };
 
@@ -4927,6 +4938,29 @@
         if (prev && prev.fx) { const d = fxDefaults(); Object.keys(prev.fx).forEach(k => { fxs[k] = d[k]; }); }   // эффекты прошлого пресета снимаются
         _pfxApply(id);
         if (next && next.fx) { presetFxScale(); updatePhotoFilter(); updateLockState(); }
+    };
+
+    // ---------- оптимизация: один рендер на кадр, кэш LUT и оверлеев ----------
+    const _ovCache = {};
+    function fxOverlay(kind, make, key, w, h) {
+        const k = w + 'x' + h + key, c = _ovCache[kind];
+        if (c && c._k === k) return c;
+        const cv = make(w, h); cv._k = k; _ovCache[kind] = cv;
+        return cv;
+    }
+    const _fxLutCompute = fxLutData;
+    let _lutKey = '', _lutCache = null;
+    fxLutData = function () {
+        const k = JSON.stringify(fxs.curves);
+        if (k !== _lutKey || !_lutCache) { _lutCache = _fxLutCompute(); _lutCache._k = k; _lutKey = k; }
+        return _lutCache;
+    };
+    const _updateNow = updatePhotoFilter;
+    let _updQueued = false;
+    updatePhotoFilter = function () {          // несколько вызовов за кадр (быстрое движение слайдера) = один рендер
+        if (_updQueued) return;
+        _updQueued = true;
+        requestAnimationFrame(() => { _updQueued = false; _updateNow(); });
     };
 
     // ---------- кроп: поворот / отражение / выравнивание / перспектива ----------
