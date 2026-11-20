@@ -171,6 +171,38 @@
         .placeholder-text small { font-size: 12px; line-height: 1.4; }
         .photo-area.drag { outline: 2px dashed #fff; outline-offset: -8px; }
         #cmp-badge { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 4px 10px; border-radius: 12px; pointer-events: none; z-index: 25; display: none; }
+
+        /* ===== Help sheet ===== */
+        .help-btn { display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--text-muted); }
+        #help-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 450; background: #1c1c1e; border-radius: 18px 18px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.6); padding: 0 20px calc(22px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; max-height: 55vh; overflow-y: auto; transform: translateY(105%); visibility: hidden; transition: transform .25s ease, visibility 0s .25s; }
+        #help-sheet.open { transform: none; visibility: visible; transition: transform .25s ease; }
+        #help-head { position: sticky; top: 0; height: 36px; display: flex; justify-content: center; align-items: center; touch-action: none; background: #1c1c1e; margin: 0 -20px; }
+        #help-head i { width: 38px; height: 4px; border-radius: 2px; background: #555; }
+        #help-x { position: absolute; right: 8px; top: 2px; width: 40px; height: 32px; background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
+        #help-anim { height: 100px; max-width: 260px; margin: 0 auto 10px; }
+        #help-anim svg { width: 100%; height: 100%; display: block; }
+        #help-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        #help-text { font-size: 13px; line-height: 1.5; color: #bbb; }
+        #help-sheet:not(.open) * { animation-play-state: paused; }
+        .hp-th { animation: hpT 3s ease-in-out infinite; }
+        .hp-fill { transform-box: fill-box; transform-origin: left; animation: hpF 3s ease-in-out infinite; }
+        .hp-dot { animation: hpD 2.4s ease-in-out infinite; }
+        .hp-c { animation: hpC 2.4s ease-in-out infinite; }
+        .hp-br { animation: hpB 3s ease-in-out infinite; }
+        .hp-tr { transform-box: fill-box; transform-origin: left; animation: hpR 3s ease-in-out infinite; }
+        .hp-cr { transform-box: fill-box; transform-origin: center; animation: hpK 3s ease-in-out infinite; }
+        .hp-or { animation: hpO 2.6s ease-in-out infinite; }
+        .hp-fg { transform-box: fill-box; transform-origin: center; animation: hpG 2.6s ease-in-out infinite; }
+        @keyframes hpT { 0%,100% { transform: translateX(0); } 50% { transform: translateX(140px); } }
+        @keyframes hpF { 0%,100% { transform: scaleX(0); } 50% { transform: scaleX(.7); } }
+        @keyframes hpD { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+        @keyframes hpC { 0%,100% { opacity: 0; } 50% { opacity: 1; } }
+        @keyframes hpB { 0%,100% { transform: translateX(0); } 50% { transform: translateX(160px); } }
+        @keyframes hpR { 0%,100% { transform: scaleX(0); } 50% { transform: scaleX(.9); } }
+        @keyframes hpK { 0%,100% { transform: scale(1); } 50% { transform: scale(.62); } }
+        @keyframes hpO { 0%,100% { opacity: 0; } 30%,70% { opacity: 1; } }
+        @keyframes hpG { 0%,100% { transform: scale(1); } 30%,70% { transform: scale(.8); } }
+        @media (prefers-reduced-motion: reduce) { #help-sheet * { animation: none !important; } }
     </style>
 </head>
 <body>
@@ -5060,6 +5092,81 @@
         const cmp = document.getElementById('cmp-badge');
         container.addEventListener('pointerdown', () => { if (isHolding) cmp.style.display = 'block'; });
         ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => container.addEventListener(ev, () => { cmp.style.display = 'none'; }));
+    })();
+
+    // ==================================================================================
+    //  ПОДСКАЗКИ: кнопка «?» рядом со СБРОС в каждом инструменте → нижняя шторка
+    //  с CSS-анимацией (без видео и загрузок) и коротким текстом
+    // ==================================================================================
+    (function () {
+        const V = (a, b) => `<svg viewBox="0 0 260 100" aria-hidden="true">${a}</svg>`;
+        const ANIM = {
+            slider: V(`<rect x="30" y="48" width="200" height="4" rx="2" fill="#444"/><rect class="hp-fill" x="30" y="48" width="200" height="4" rx="2" fill="#fff"/><circle class="hp-th" cx="30" cy="50" r="12" fill="#fff"/>`),
+            curve: V(`<rect x="80" y="5" width="100" height="90" rx="6" fill="#111" stroke="#333"/><path d="M80 95L180 5" stroke="#555" fill="none"/><path class="hp-c" d="M80 95C110 95 130 72 130 50S150 25 180 5" stroke="#fff" stroke-width="2" fill="none"/><circle class="hp-dot" cx="130" cy="50" r="6" fill="#fff"/>`),
+            brush: V(`<rect x="30" y="28" width="200" height="44" rx="6" fill="#222"/><rect class="hp-tr" x="30" y="28" width="200" height="44" rx="6" fill="#fff" opacity=".35"/><circle class="hp-br" cx="50" cy="50" r="20" fill="none" stroke="#e8e34d" stroke-width="2"/>`),
+            crop: V(`<rect x="40" y="8" width="180" height="84" rx="4" fill="#222"/><rect class="hp-cr" x="40" y="8" width="180" height="84" fill="none" stroke="#fff" stroke-width="2.5"/>`),
+            hold: V(`<rect x="60" y="12" width="140" height="76" rx="8" fill="#4a6fa5"/><rect class="hp-or" x="60" y="12" width="140" height="76" rx="8" fill="#8a8a8a"/><circle class="hp-fg" cx="130" cy="50" r="16" fill="#fff" opacity=".85"/>`)
+        };
+        const H = {
+            _: ['hold', 'Тяните ползунок, чтобы изменить значение. ✕ — отмена, СБРОС — обнулить, ✓ — применить. Удерживайте фото, чтобы увидеть оригинал.'],
+            _k: ['slider', 'Регулирует силу пресета: 0% — оригинал, 100% — полный эффект.'],
+            crop: ['crop', 'Тяните рамку за углы и края, внизу выберите пропорции. ⟲ поворачивает, ⇋ ⇵ отражают, ползунок выравнивает горизонт (УГОЛ) или меняет перспективу (ВЕРТ / ГОР).'],
+            curves: ['curve', 'Тап по линии добавляет точку, перетаскивание меняет тон. Двойной тап по точке удаляет её. Каналы RGB, R, G, B настраиваются отдельно.'],
+            hsl: ['slider', 'Выберите цвет внизу и меняйте его оттенок, насыщенность и яркость. Двойной тап по названию ползунка сбрасывает только его.'],
+            wb: ['slider', 'Температура делает кадр холоднее или теплее, оттенок смещает между зелёным и пурпурным.'],
+            grade: ['curve', 'Выберите тени, средние или света и перетащите точку по кругу: направление — цвет, расстояние от центра — сила.'],
+            bloom: ['slider', 'Сила — яркость свечения, Размер — как далеко оно расходится, Диапазон — какие светлые участки светятся.'],
+            halation: ['slider', 'Красноватое свечение вокруг ярких источников света, как на плёнке. «Оттенок» меняет цвет ореола.'],
+            flash: ['slider', 'Имитирует съёмку со вспышкой: убирает цветовой оттенок, затемняет фон и подсвечивает центр.'],
+            mask: ['slider', 'Эффекты действуют только в выбранной зоне (красная подсветка). Линейная — полоса, радиальная — круг, «Инверсия» меняет зону.'],
+            dodgeburn: ['brush', 'Водите пальцем по фото, чтобы осветлить или затемнить участок. Эффект копится с каждым проходом.'],
+            fog: ['brush', 'Рисуйте пальцем мягкую дымку или тень. Эффект слабый и накапливается.'],
+            blurbrush: ['brush', 'Проведите по области, которую нужно размыть или скрыть пикселями. «Сила» регулирует степень.'],
+            heal: ['brush', 'Лечение: закрашивайте дефекты, источник подбирается сам. Клон: сначала коснитесь места-источника, затем рисуйте там, где нужно.'],
+            detail: ['brush', 'Проведите по участку, чтобы добавить резкости или убрать шум.']
+        };
+        let helpId = null;
+        const _ot = window.openTool;
+        window.openTool = function (id) { helpId = id; closeHelp(); _ot(id); };
+
+        const sh = document.createElement('div');
+        sh.id = 'help-sheet'; sh.setAttribute('role', 'dialog');
+        sh.innerHTML = '<div id="help-head"><i></i><button id="help-x" aria-label="Закрыть">✕</button></div><div id="help-anim"></div><div id="help-title"></div><div id="help-text"></div>';
+        document.body.appendChild(sh);
+        const $ = id => sh.querySelector('#' + id);
+
+        function openHelp() {
+            const id = (typeof fxId !== 'undefined' && fxId === 'k') ? '_k' : helpId;
+            const h = H[id] || H._;
+            const t = [...toolsData, ...Object.keys(FXT).map(k => ({ id: k, name: FXT[k].name }))].find(x => x.id === id);
+            $('help-anim').innerHTML = ANIM[h[0]];       // анимация создаётся только при открытии
+            $('help-title').textContent = id === '_k' ? 'Интенсивность пресета' : (t ? t.name : 'Как пользоваться');
+            $('help-text').textContent = h[1];
+            sh.classList.add('open');
+        }
+        function closeHelp() { sh.style.transform = ''; sh.classList.remove('open'); $('help-anim').innerHTML = ''; }
+        $('help-x').onclick = closeHelp;
+
+        // закрытие свайпом вниз за «ручку»
+        const head = $('help-head');
+        let y0 = null;
+        head.addEventListener('pointerdown', e => { y0 = e.clientY; head.setPointerCapture(e.pointerId); sh.style.transition = 'none'; });
+        head.addEventListener('pointermove', e => { if (y0 !== null) sh.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`; });
+        const endDrag = e => {
+            if (y0 === null) return;
+            const dy = e.clientY - y0; y0 = null; sh.style.transition = '';
+            if (dy > 70) closeHelp(); else sh.style.transform = '';
+        };
+        head.addEventListener('pointerup', endDrag); head.addEventListener('pointercancel', endDrag);
+
+        // кнопка «?» справа от СБРОС (перед ✓) во всех панелях инструментов
+        const ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.9"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg>';
+        document.querySelectorAll('.editor-panel .slider-actions').forEach(row => {
+            const b = document.createElement('button');
+            b.className = 'action-btn help-btn'; b.setAttribute('aria-label', 'Подсказка'); b.innerHTML = ICON;
+            b.onclick = openHelp;
+            row.insertBefore(b, row.children[2]);
+        });
     })();
 </script>
 </body>
