@@ -873,7 +873,165 @@
             ...defaultSettings,
             contrast: 0.055, vignette: 0.07,
             duotone: { shadow: [0.04, 0.02, 0.35], high: [1.0, 0.35, 0.85] }
-        }}
+        }},
+
+        // ===================== PRO-пресеты (плёнки, кино, настроение) =====================
+        { id: 'kgold', name: 'KODAK GOLD', color: '#ffca28', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.02, contrast: 0.05, saturation: 0.05, vibrance: 0.04, wbTemp: 0.07, wbTint: 0.02, fade: 0.05, noise: 0.1, vignette: 0.08, lights: -0.05,
+            curves: { red: [[0, 0.03], [0.5, 0.53], [1, 0.99]], green: [[0, 0.02], [0.5, 0.5], [1, 0.97]], blue: [[0, 0.05], [0.5, 0.45], [1, 0.9]] }
+        }, fx: { gAmt: 14, gSize: 35, gRough: 55, gShadow: 60, hiH: 40, hiS: 8 } },
+
+        { id: 'ektar', name: 'EKTAR 100', color: '#ef5350', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.09, saturation: 0.1, vibrance: 0.05, wbTemp: 0.02, unsharp: 0.08, noise: 0.05, vignette: 0.06, darks: 0.03, blacks: -0.03,
+            curves: { red: [[0, 0], [0.5, 0.52], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.01], [0.5, 0.49], [1, 0.98]] }
+        }, fx: { gAmt: 6, gSize: 25, gRough: 40, gShadow: 40 } },
+
+        { id: 'portra160', name: 'PORTRA 160', color: '#f2c9a8', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: -0.02, saturation: -0.04, vibrance: 0.05, fade: 0.06, wbTemp: 0.04, wbTint: 0.02, noise: 0.07, vignette: 0.05, lights: -0.06, darks: 0.06,
+            curves: { red: [[0, 0.03], [0.5, 0.52], [1, 0.98]], green: [[0, 0.02], [0.5, 0.5], [1, 0.98]], blue: [[0, 0.05], [0.5, 0.47], [1, 0.93]] }
+        }, fx: { gAmt: 8, gSize: 30, shH: 200, shS: 6, hiH: 35, hiS: 8 } },
+
+        { id: 'cine800', name: 'CINE 800T', color: '#4dd0e1', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.06, saturation: 0.02, wbTemp: -0.06, noise: 0.12, vignette: 0.1, darks: 0.05, lights: -0.05,
+            bloomStrength: 0.025, bloomSize: 0.5, bloomRange: 0.5, halationStrength: 0.04, halationSize: 0.09, halationRange: 0.23,
+            curves: { red: [[0, 0], [0.5, 0.51], [1, 1]], green: [[0, 0.01], [0.5, 0.5], [1, 0.99]], blue: [[0, 0.03], [0.5, 0.5], [1, 0.94]] }
+        }, fx: { gAmt: 22, gSize: 40, gRough: 60, gShadow: 50, shH: 195, shS: 14, hiH: 25, hiS: 10 } },
+
+        { id: 'velvia', name: 'VELVIA 50', color: '#ab47bc', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.12, saturation: 0.16, vibrance: 0.06, unsharp: 0.1, noise: 0.04, vignette: 0.1, blacks: -0.04, lights: -0.03,
+            curves: { red: [[0, 0], [0.5, 0.51], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0], [0.5, 0.49], [1, 0.99]] }
+        }, fx: { gAmt: 4, gSize: 20 } },
+
+        { id: 'pro400h', name: 'PRO 400H', color: '#80cbc4', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.03, contrast: -0.03, saturation: -0.03, vibrance: 0.04, fade: 0.08, wbTemp: -0.02, wbTint: -0.02, noise: 0.06, lights: -0.08, darks: 0.08,
+            curves: { red: [[0, 0.02], [0.5, 0.5], [1, 0.97]], green: [[0, 0.03], [0.5, 0.52], [1, 0.99]], blue: [[0, 0.05], [0.5, 0.5], [1, 0.96]] }
+        }, fx: { gAmt: 9, shH: 170, shS: 8, hiH: 50, hiS: 5 } },
+
+        { id: 'superia', name: 'SUPERIA', color: '#66bb6a', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.06, saturation: 0.06, wbTemp: 0.01, wbTint: -0.03, fade: 0.03, noise: 0.12, vignette: 0.08,
+            curves: { red: [[0, 0.01], [0.5, 0.49], [1, 0.98]], green: [[0, 0.02], [0.5, 0.53], [1, 1]], blue: [[0, 0.03], [0.5, 0.48], [1, 0.95]] }
+        }, fx: { gAmt: 16, gSize: 35, gRough: 60, gShadow: 55 } },
+
+        { id: 'delta', name: 'DELTA 100', color: '#9e9e9e', isPro: false, glfx: {
+            ...defaultSettings,
+            saturation: -1, contrast: 0.1, unsharp: 0.09, noise: 0.07, vignette: 0.07, darks: 0.03, blacks: -0.03
+        }},
+
+        { id: 'polaroid', name: 'POLAROID', color: '#ffcc80', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.03, contrast: -0.04, saturation: -0.05, fade: 0.14, wbTemp: 0.05, noise: 0.08, vignette: 0.12,
+            curves: { red: [[0, 0.06], [0.5, 0.54], [1, 0.97]], green: [[0, 0.05], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.1], [0.5, 0.46], [1, 0.88]] }
+        }, fx: { sfAmt: 8, sfSize: 30, gAmt: 10 } },
+
+        { id: 'kchrome', name: 'KODACHROME', color: '#d32f2f', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.1, saturation: 0.08, vibrance: 0.05, wbTemp: 0.06, noise: 0.06, vignette: 0.12,
+            curves: { red: [[0, 0], [0.5, 0.54], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 0.99]], blue: [[0, 0.01], [0.5, 0.46], [1, 0.95]] }
+        }, fx: { gAmt: 8, gSize: 28 } },
+
+        { id: 'agfa', name: 'AGFA VISTA', color: '#f06292', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.02, contrast: 0.06, saturation: 0.04, wbTemp: 0.05, wbTint: 0.04, fade: 0.04, noise: 0.1, vignette: 0.09,
+            curves: { red: [[0, 0.02], [0.5, 0.54], [1, 1]], green: [[0, 0.01], [0.5, 0.49], [1, 0.97]], blue: [[0, 0.03], [0.5, 0.46], [1, 0.94]] }
+        }, fx: { gAmt: 13, hiH: 20, hiS: 6 } },
+
+        { id: 'arri', name: 'ARRI SOFT', color: '#bcaaa4', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.03, saturation: -0.02, fade: 0.02, noise: 0.04, vignette: 0.06, lights: -0.1, darks: 0.06, blacks: -0.02,
+            curves: { red: [[0, 0.015], [0.25, 0.24], [0.75, 0.77], [1, 0.985]], green: [[0, 0.015], [0.25, 0.245], [0.75, 0.765], [1, 0.985]], blue: [[0, 0.02], [0.25, 0.25], [0.75, 0.75], [1, 0.975]] }
+        }, fx: { shH: 210, shS: 5, hiH: 40, hiS: 6, gAmt: 8 } },
+
+        { id: 'cineteal', name: 'CINE TEAL', color: '#26a69a', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.07, saturation: 0.02, vignette: 0.1, darks: 0.04, lights: -0.04
+        }, fx: { shH: 190, shS: 22, hiH: 30, hiS: 16, gAmt: 8 } },
+
+        { id: 'bluehour', name: 'BLUE HOUR', color: '#5c6bc0', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.05, saturation: -0.02, wbTemp: -0.12, fade: 0.03, darks: 0.05, vignette: 0.08,
+            bloomStrength: 0.02, bloomSize: 0.5, bloomRange: 0.5
+        }, fx: { shH: 225, shS: 14, hiH: 215, hiS: 6, gAmt: 10 } },
+
+        { id: 'goldenhr', name: 'GOLDEN HR', color: '#ffb74d', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.05, saturation: 0.05, vibrance: 0.05, wbTemp: 0.12, lights: -0.06, darks: 0.06, vignette: 0.09
+        }, fx: { hiH: 38, hiS: 14, shH: 20, shS: 6, sfAmt: 6, sfSize: 35 } },
+
+        { id: 'forest', name: 'FOREST', color: '#2e7d32', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: -0.02, contrast: 0.1, saturation: -0.04, wbTemp: -0.02, wbTint: -0.03, fade: 0.03, blacks: -0.06, lights: -0.06, vignette: 0.18
+        }, fx: { shH: 160, shS: 12, hiH: 70, hiS: 6, gAmt: 8 } },
+
+        { id: 'fog', name: 'FOG', color: '#b0bec5', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.03, contrast: -0.1, saturation: -0.08, fade: 0.16, wbTemp: -0.03, noise: 0.03, dehaze: -0.1
+        }, fx: { sfAmt: 12, sfSize: 45, shH: 210, shS: 6 } },
+
+        { id: 'urban', name: 'URBAN', color: '#757575', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.18, saturation: -0.12, texture: 0.1, clarity: 0.08, unsharp: 0.15, noise: 0.1, vignette: 0.15, blacks: -0.08
+        }, fx: { shH: 200, shS: 8, gAmt: 14, gRough: 70 } },
+
+        { id: 'portraitc', name: 'PORTRAIT', color: '#ffab91', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.02, contrast: 0.02, saturation: 0.02, vibrance: 0.05, wbTemp: 0.03, unsharp: 0.03, vignette: 0.04, lights: -0.04, darks: 0.05
+        }},
+
+        { id: 'matte', name: 'MATTE', color: '#90a4ae', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.03, saturation: -0.08, fade: 0.22, lights: -0.05, vignette: 0.05
+        }, fx: { shH: 215, shS: 8, hiH: 30, hiS: 5 } },
+
+        { id: 'travel', name: 'TRAVEL', color: '#4fc3f7', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.07, saturation: 0.08, vibrance: 0.08, wbTemp: 0.04, unsharp: 0.07, vignette: 0.05, lights: -0.05, darks: 0.05,
+            curves: { red: [[0, 0], [0.5, 0.5], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0], [0.5, 0.515], [1, 1]] }
+        }},
+
+        { id: 'food', name: 'FOOD', color: '#ff8a65', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.02, contrast: 0.06, saturation: 0.08, vibrance: 0.06, wbTemp: 0.08, clarity: 0.04, unsharp: 0.08
+        }},
+
+        { id: 'winter', name: 'WINTER', color: '#b3e5fc', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.03, contrast: 0.04, saturation: -0.03, wbTemp: -0.09, lights: -0.04, vignette: 0.04
+        }},
+
+        { id: 'desert', name: 'DESERT', color: '#d4a76a', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.07, saturation: 0.03, wbTemp: 0.1, wbTint: 0.02, fade: 0.04, vignette: 0.1,
+            curves: { red: [[0, 0.02], [0.5, 0.53], [1, 1]], green: [[0, 0.01], [0.5, 0.5], [1, 0.98]], blue: [[0, 0.02], [0.5, 0.46], [1, 0.94]] }
+        }, fx: { hiH: 40, hiS: 12, shH: 15, shS: 8 } },
+
+        { id: 'vintage70', name: 'VINTAGE 70s', color: '#d98e04', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: -0.02, saturation: -0.04, sepia: 0.06, fade: 0.12, wbTemp: 0.08, wbTint: 0.03, noise: 0.16, vignette: 0.18,
+            curves: { red: [[0, 0.04], [0.5, 0.52], [1, 0.97]], green: [[0, 0.03], [0.5, 0.49], [1, 0.94]], blue: [[0, 0.09], [0.5, 0.44], [1, 0.86]] }
+        }, fx: { lkAmt: 12, lkStyle: 0, lkHue: 25, lkPos: 80, dust: 10, scr: 6, gAmt: 14 } },
+
+        { id: 'y2k', name: 'Y2K', color: '#e1bee7', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.03, contrast: 0.08, saturation: 0.06, unsharp: 0.18, noise: 0.1, vignette: 0.12
+        }, fx: { ca: 8, gAmt: 8, gShadow: 20, sfAmt: 5, dsOn: 1, dsFmt: 0, dsCol: 0, dsPos: 3, dsSize: 45 } },
+
+        { id: 'flash', name: 'FLASH', color: '#ffe082', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.03, contrast: 0.12, saturation: 0.08, noise: 0.13, vignette: 0.2
+        }, fx: { gAmt: 20, hiH: 55, hiS: 10 } },
+
+        { id: 'nightcity', name: 'NIGHT CITY', color: '#7e57c2', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.08, saturation: 0.06, wbTemp: -0.04, blacks: -0.04,
+            bloomStrength: 0.03, bloomSize: 0.55, bloomRange: 0.45, halationStrength: 0.035, halationSize: 0.09, halationRange: 0.23
+        }, fx: { shH: 270, shS: 14, hiH: 330, hiS: 10, gAmt: 10, ca: 6 } }
     ];
 
     const toolsData = [
@@ -3175,7 +3333,7 @@
         glow:   { name: 'Шлейф', icon: FX_SVG('<path d="M4 17c4 0 4-10 8-10s4 10 8 10"/><path d="M3 21h18" stroke-dasharray="2 3"/>'),
                   keys: ['geAmt','trAmt','geHue','trLen','trAng','trThr','geWid'],
                   rows: () => [['geAmt','Неон по краям',0,100],['trAmt','Шлейф света',0,100],['geHue','Цвет',0,360],['trLen','Длина шлейфа',0,100],['trAng','Угол',0,180],['trThr','Порог яркости',0,95],['geWid','Толщина краёв',0,100]] },
-        motion: { name: 'Движение', icon: FX_SVG('<path d="M3 8h10M3 12h18M3 16h12"/>'),
+        motion: { name: 'Моушн / зум', icon: FX_SVG('<path d="M3 8h10M3 12h18M3 16h12"/>'),
                   keys: ['mbAmt','mbAng','mbX','mbY','mbKeep','mbMode'], custom: 'motion',
                   rows: () => fxs.mbMode === 1
                       ? [['mbAmt','Сила',0,100],['mbKeep','Чёткий центр',0,100],['mbX','Центр X',0,100],['mbY','Центр Y',0,100]]
@@ -3912,7 +4070,7 @@
         fxBuild(); updatePhotoFilter();
     }
     function fxClose(revert) {
-        if (revert && fxBackup) { if (fxId === 'k') presetK = parseFloat(fxBackup); else fxs = JSON.parse(fxBackup); }
+        if (revert && fxBackup) { if (fxId === 'k') { presetK = parseFloat(fxBackup); presetFxScale(); } else fxs = JSON.parse(fxBackup); }
         fxMaskShow = false; fxId = null;
         fxPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
@@ -3922,7 +4080,7 @@
     document.getElementById('fx-apply').onclick = () => fxClose(false);
     document.getElementById('fx-reset').onclick = () => {
         if (!fxId) return;
-        if (fxId === 'k') { presetK = 1; kBuild(); updatePhotoFilter(); return; }
+        if (fxId === 'k') { presetK = 1; presetFxScale(); kBuild(); updatePhotoFilter(); return; }
         const d = fxDefaults(), def = FXT[fxId];
         if (def.custom === 'curves') fxs.curves = d.curves;
         else def.keys.forEach(k => { fxs[k] = d[k]; });
@@ -3960,7 +4118,7 @@
             <div class="fx-lab" style="justify-content:flex-end"><span id="k-val">${v}%</span></div>
             <input type="range" id="k-input" min="0" max="100" value="${v}"></div></div>`;
         const inp = document.getElementById('k-input'), val = document.getElementById('k-val');
-        inp.addEventListener('input', () => { presetK = parseFloat(inp.value) / 100; val.textContent = inp.value + '%'; updatePhotoFilter(); });
+        inp.addEventListener('input', () => { presetK = parseFloat(inp.value) / 100; val.textContent = inp.value + '%'; presetFxScale(); updatePhotoFilter(); });
     }
     function kOpen() {
         if (!fxTexture) return;
@@ -4753,6 +4911,23 @@
         }
         return c;
     }
+
+    // ---------- встроенные пресеты с эффектами (поле fx): применение, откат при смене, интенсивность ----------
+    const FX_NOSCALE = /(H|Hue|H\d|Pos|Fmt|Col|Mode|Style|Type|On)$/;   // оттенки и дискретные значения интенсивностью не масштабируются
+    function presetFxScale() {
+        const p = presetsData.find(x => x.id === activePresetId);
+        if (!p || !p.fx) return;
+        const d = fxDefaults();
+        for (const k in p.fx) { const v = p.fx[k]; fxs[k] = (typeof v === 'number' && !FX_NOSCALE.test(k)) ? d[k] + (v - d[k]) * presetK : v; }
+    }
+    const _pfxApply = window.applyPreset;
+    window.applyPreset = function (id) {
+        if (!fxTexture) return _pfxApply(id);
+        const prev = presetsData.find(x => x.id === activePresetId), next = presetsData.find(x => x.id === id);
+        if (prev && prev.fx) { const d = fxDefaults(); Object.keys(prev.fx).forEach(k => { fxs[k] = d[k]; }); }   // эффекты прошлого пресета снимаются
+        _pfxApply(id);
+        if (next && next.fx) { presetFxScale(); updatePhotoFilter(); updateLockState(); }
+    };
 
     // ---------- кроп: поворот / отражение / выравнивание / перспектива ----------
     const cxS = document.getElementById('cx-straight'), cxV = document.getElementById('cx-val'), cxModeBtn = document.getElementById('cx-mode');
