@@ -554,51 +554,59 @@
 
         { id: 'canon7d3', name: 'CANON 7D3', color: '#ff8a65', isPro: false, glfx: {
             ...defaultSettings,
-            // Lower base exposure & lights so the ambient twilight sky and sea drop dark
-            exposure: -0.10,
-            luminance: -0.04,
-            brightness: 0.01,
-            contrast: 0.02,
-            // Lift shadows slightly so hair, eyes, and arm shadows stay clean, while keeping deep blacks in the sea/sky
-            highlights: 0.08,
-            shadows: 0.12,
-            lights: -0.08,
-            darks: 0.04,
-            blacks: -0.08,
-            whites: 0.16,
-            // Keep rich flash colors on skin & pink shirt without muddying
-            saturation: -0.04,
-            vibrance: 0.06,
-            wbTemp: 0.05,
-            wbTint: 0.015,
-            // Zero out clarity & texture to eliminate dark crunchy halos; keep only a tiny crispness
+            // Darker ambient base so the twilight sky and sea drop deep like the 2nd photo
+            exposure: -0.22,
+            luminance: -0.06,
+            brightness: 0.0,
+            contrast: 0.03,
+            // Keep clean shadow detail on hair/arms while letting the background stay dark
+            highlights: -0.06,
+            shadows: 0.14,
+            lights: -0.14,
+            darks: 0.02,
+            blacks: -0.12,
+            whites: 0.22,
+            // Slightly cooler/neutral flash balance so skin isn't yellow/orange
+            saturation: -0.08,
+            vibrance: 0.04,
+            wbTemp: 0.01,
+            wbTint: 0.02,
+            // Keep the clean, premium sharpness & subtle vignette
             unsharp: 0.02,
             texture: 0,
             clarity: 0,
             noise: 0.015,
-            vignette: 0.18,
-            // Direct flash pop + subtle specular skin glare (bloom)
-            flashStrength: 0.78,
-            bloomStrength: 0.022,
-            bloomSize: 0.32,
-            bloomRange: 0.22,
-            // Selective HSL: deepen & shift the twilight sky toward deep teal-navy, warm & brighten skin tones
-            hsl1s: 0.08,
-            hsl1l: 0.14,
-            hsl4h: -0.18,
-            hsl4s: -0.15,
-            hsl4l: -0.35,
-            // Smooth Canon filmic curve: deep shadow toe, warm glowing upper-midtones for flash glare
+            vignette: 0.24,
+            // Direct flash pop + soft specular glare on skin
+            flashStrength: 0.85,
+            bloomStrength: 0.024,
+            bloomSize: 0.30,
+            bloomRange: 0.20,
+            // HSL:
+            // - Red (hsl0) & Orange (hsl1): desaturate orange/yellow cast, shift slightly toward clean peach, and boost lightness for bright flash skin
+            hsl0s: -0.06,
+            hsl0l: 0.16,
+            hsl1h: -0.06,
+            hsl1s: -0.22,
+            hsl1l: 0.28,
+            // - Yellow (hsl2): pull down yellow cast on skin & sunset glow
+            hsl2s: -0.25,
+            hsl2l: -0.15,
+            // - Blue (hsl4): much darker, deeper twilight sky & sea
+            hsl4h: -0.22,
+            hsl4s: -0.20,
+            hsl4l: -0.58,
+            // Neutral-cool flash curve: removes the yellow midtone push while keeping crisp flash whites
             curves: {
-                red:   [[0, 0], [0.25, 0.235], [0.5, 0.525], [0.75, 0.805], [1, 1]],
-                green: [[0, 0], [0.25, 0.230], [0.5, 0.505], [0.75, 0.780], [1, 1]],
-                blue:  [[0, 0], [0.25, 0.225], [0.5, 0.480], [0.75, 0.745], [1, 0.97]]
+                red:   [[0, 0], [0.25, 0.225], [0.5, 0.505], [0.75, 0.795], [1, 1]],
+                green: [[0, 0], [0.25, 0.225], [0.5, 0.502], [0.75, 0.790], [1, 1]],
+                blue:  [[0, 0], [0.25, 0.225], [0.5, 0.498], [0.75, 0.780], [1, 0.99]]
             }
         }, fx: {
-            // Radial subject flash mask: brightens & warms the person in the foreground while leaving the background dark
-            mType: 2, mX: 50, mY: 56, mSize: 46, mFeather: 82, mInv: 0, mExp: 24, mSat: 4, mTemp: 10,
-            // Subtle warm highlight / deep teal-blue shadow toning like the 2nd reference photo
-            shH: 208, shS: 10, hiH: 34, hiS: 8, bal: -15
+            // Tighter radial flash mask on the person: brighter subject (+34 exp), zero yellow warmth (mTemp: -2)
+            mType: 2, mX: 50, mY: 60, mSize: 36, mFeather: 68, mInv: 0, mExp: 34, mSat: -4, mTemp: -2,
+            // Deep teal-navy shadows in the sky/sea, no yellow tint on highlights (hiS: 2)
+            shH: 205, shS: 12, hiH: 30, hiS: 2, bal: -25
         }},
         
         { id: 'canonr5', name: 'CANON R5', color: '#e57373', isPro: false, glfx: {
@@ -1950,14 +1958,14 @@
     //   2) flash pass (in linear light): ambient light is dimmed, a close-range flash falloff (inverse-square-like hotspot)
     //      is added, highlights get a soft shoulder, then a contrast S-curve gives the hard "flash" look
     const FLASH_TUNING = {
-        cast: 0.35,                      // how much of the colour cast is removed at full Сила
+        cast: 0.4,                      // how much of the colour cast is removed at full Сила
         castMin: 0.6, castMax: 1.5,      // limits of the per-channel correction
         ambient: 0.42,                   // ambient light lost at full Сила
-        gain: 0.95,                      // flash power at the hotspot at full Сила
+        gain: 0.105,                      // flash power at the hotspot at full Сила
         centerX: 0.5, centerY: 0.55,     // hotspot position (0…1, y from the bottom)
-        falloff: 2.4,                    // hotspot tightness (bigger = tighter)
+        falloff: 2.55,                    // hotspot tightness (bigger = tighter)
         shoulder: 0.5, white: 1.95,       // highlight roll-off amount / white point
-        contrast: 0.35                   // S-curve amount
+        contrast: 0.32                   // S-curve amount
     };
     const FLASH_UI_MAX = 12;   // slider shows 0.0 … 12.0; settings store 0…1
 
