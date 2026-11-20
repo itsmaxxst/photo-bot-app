@@ -401,7 +401,7 @@
     <div class="bloom-panel" id="flash-panel">
         <div class="bloom-row" data-key="flashStrength">
             <div class="bloom-head"><span>Сила</span><span class="bloom-zero">0,0</span><span class="bloom-val"></span></div>
-            <div class="bloom-track"><input type="range" class="bloom-slider" min="0" max="120" step="1" value="0"></div>
+            <div class="bloom-track"><input type="range" class="bloom-slider" min="0" max="250" step="1" value="0"></div>
         </div>
         <div class="slider-actions bloom-actions">
             <button class="action-btn" id="flash-cancel">✕</button>
@@ -1966,7 +1966,8 @@
         shoulder: 0.42, white: 2.12,       // highlight roll-off amount / white point
         contrast: 0.32                   // S-curve amount
     };
-    const FLASH_UI_MAX = 20;   // slider shows 0.0 … 12.0; settings store 0…1
+    const FLASH_UI_MAX = 25;   // slider shows 0.0 … 12.0; settings store 0…1
+    const FLASH_BASE_UNIT = 12; // 12.0 = 1.0x baseline (keeps existing presets identical; 25.0 = 2.08x stronger)
 
     const FLASH_FS_MEAN = `
         uniform sampler2D tex;
@@ -1986,26 +1987,27 @@
             vec3 m = max(texture2D(mean, vec2(0.5)).rgb, vec3(0.02));
             float gray = (m.r + m.g + m.b) / 3.0;
 
-            // 1) take the room-light colour cast out
+            // 1) take the room-light colour cast out (clamped at 1.0 so >12 doesn't invert colors)
             vec3 sc = clamp(vec3(gray) / m, vec3(${FLASH_TUNING.castMin.toFixed(3)}), vec3(${FLASH_TUNING.castMax.toFixed(3)}));
-            c = clamp(c * (1.0 + (sc - 1.0) * ${FLASH_TUNING.cast.toFixed(3)} * k), 0.0, 1.0);
+            float castK = min(k, 1.35);
+            c = clamp(c * (1.0 + (sc - 1.0) * ${FLASH_TUNING.cast.toFixed(3)} * castK), 0.0, 1.0);
 
-            // 2) flash lighting in linear light
+            // 2) flash lighting in linear light (ambient dimming capped at 0.88 so background never goes negative)
             c = pow(c, vec3(2.2));
             vec2 d2 = (uv - vec2(${FLASH_TUNING.centerX.toFixed(3)}, ${FLASH_TUNING.centerY.toFixed(3)})) * vec2(aspect, 1.0);
             float hot = 1.0 / (1.0 + dot(d2, d2) * ${(FLASH_TUNING.falloff * FLASH_TUNING.falloff).toFixed(3)});
-            c *= (1.0 - ${FLASH_TUNING.ambient.toFixed(3)} * k) + ${FLASH_TUNING.gain.toFixed(3)} * k * hot;
+            float amb = min(${FLASH_TUNING.ambient.toFixed(3)} * k, 0.88);
+            c *= (1.0 - amb) + ${FLASH_TUNING.gain.toFixed(3)} * k * hot;
 
-            // soft shoulder so bright surfaces don't clip harshly
+            // soft shoulder so bright surfaces don't clip harshly even at 25.0
             vec3 shd = c * (1.0 + c / ${(FLASH_TUNING.white * FLASH_TUNING.white).toFixed(3)}) / (1.0 + c) * 1.05;
-            c = mix(c, shd, ${FLASH_TUNING.shoulder.toFixed(3)} * k);
+            c = mix(c, shd, min(${FLASH_TUNING.shoulder.toFixed(3)} * k, 0.85));
             c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2));
 
             // 3) hard-light contrast
-            c = mix(c, c * c * (3.0 - 2.0 * c), ${FLASH_TUNING.contrast.toFixed(3)} * k);
+            c = mix(c, c * c * (3.0 - 2.0 * c), min(${FLASH_TUNING.contrast.toFixed(3)} * k, 0.75));
             gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
         }`;
-
     function createFlashRenderer(canvas) {
         const gl = canvas._ && canvas._.gl;
         if (!gl) return null;
@@ -2279,7 +2281,7 @@
         targetCanvas.update();
         const hslVals = hslCollect(baseSettings, settingsToApply);
         if (hslVals) applyHsl(targetCanvas, hslVals);
-        const flashStrength = Math.max(0, Math.min(1, (baseSettings.flashStrength || 0) + (settingsToApply.flashStrength || 0)));
+        const flashStrength = Math.max(0, Math.min(FLASH_UI_MAX / FLASH_BASE_UNIT, (baseSettings.flashStrength || 0) + (settingsToApply.flashStrength || 0)));
         if (flashStrength > 0) applyFlash(targetCanvas, flashStrength);
         const halStrength = Math.max(0, Math.min(1, (baseSettings.halationStrength || 0) + (settingsToApply.halationStrength || 0)));
         if (halStrength > 0) {
@@ -2558,7 +2560,7 @@
 
     function setFlashValue(r, uiValue) {
         r.input.value = Math.round(uiValue * 10);
-        currentSettings[r.key] = (parseFloat(r.input.value) / 10) / FLASH_UI_MAX;
+        currentSettings[r.key] = (parseFloat(r.input.value) / 10) / FLASH_BASE_UNIT;
         syncFlashRow(r);
     }
 
@@ -2591,7 +2593,7 @@
     function openFlash() {
         activeToolKey = null;
         flashRows.forEach(r => {
-            r.input.value = Math.round((currentSettings[r.key] || 0) * FLASH_UI_MAX * 10);
+            r.input.value = Math.round((currentSettings[r.key] || 0) * FLASH_BASE_UNIT * 10);
             syncFlashRow(r);
         });
         selectionPanel.classList.add('hidden');
