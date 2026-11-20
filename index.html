@@ -5323,6 +5323,18 @@
         window.showWalkthrough = () => { wi = 0; wtDraw(); wt.classList.add('on'); };
         $('wt-skip').onclick = wtClose;
         $('wt-next').onclick = () => { if (wi >= STEPS.length - 1) wtClose(); else { wi++; wtDraw(); } };
+        // свайп по обучению: вправо — следующий шаг, влево — предыдущий
+        let sx = null, sy = 0;
+        wt.style.touchAction = 'pan-y';
+        wt.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; sx = e.clientX; sy = e.clientY; });
+        wt.addEventListener('pointerup', e => {
+            if (sx === null) return;
+            const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
+            if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+            if (dx > 0 && wi < STEPS.length - 1) { wi++; wtDraw(); }
+            else if (dx < 0 && wi > 0) { wi--; wtDraw(); }
+        });
+        wt.addEventListener('pointercancel', () => { sx = null; });
         const hb = document.createElement('button');
         hb.style.cssText = clipPop.querySelector('button').style.cssText + ';border-top:1px solid #333;border-radius:0 0 8px 8px';
         hb.textContent = 'Как пользоваться';
@@ -5338,240 +5350,240 @@
     // ==================================================================================
     (function () {
         const RAW = `Формат и качество|Format and quality|Формат і якість
-            Отменить|Undo|Скасувати
-            Повторить|Redo|Повторити
-            Копировать / вставить настройки|Copy / paste settings|Копіювати / вставити налаштування
-            Удалить фото|Delete photo|Видалити фото
-            Сохранить|Save|Зберегти
-            Удерживайте фото, чтобы сохранить в галерею|Press and hold the photo to save it to your gallery|Утримуйте фото, щоб зберегти в галерею
-            Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...»|Right-click the photo → “Save image as...”|Натисніть правою кнопкою миші на фото → «Зберегти зображення як...»
-            Загрузить фото|Upload a photo|Завантажити фото
-            Нажмите, перетащите файл или вставьте из буфера обмена|Tap, drag a file here or paste from the clipboard|Натисніть, перетягніть файл або вставте з буфера обміну
-            ОРИГИНАЛ|ORIGINAL|ОРИГІНАЛ
-            Настройка|Adjustment|Налаштування
-            СБРОС|RESET|СКИНУТИ
-            Инструмент|Tool|Інструмент
-            Размер|Size|Розмір
-            Сила|Strength|Сила
-            Осветлить|Dodge|Освітлити
-            Затемнить|Burn|Затемнити
-            Диапазон|Range|Діапазон
-            Оттенок|Tint|Відтінок
-            Температура|Temperature|Температура
-            Насыщенность|Saturation|Насиченість
-            Осветление|Lightness|Освітлення
-            Повернуть на 90°|Rotate 90°|Повернути на 90°
-            Отразить по горизонтали|Flip horizontally|Віддзеркалити по горизонталі
-            Отразить по вертикали|Flip vertically|Віддзеркалити по вертикалі
-            Угол / перспектива|Angle / perspective|Кут / перспектива
-            УГОЛ|ANGLE|КУТ
-            ВЕРТ|VERT|ВЕРТ
-            ГОР|HORIZ|ГОР
-            Своб.|Free|Віл.
-            Эффект Premium. Сохранение недоступно.|Premium effect. Saving is unavailable.|Ефект Premium. Збереження недоступне.
-            ПРЕСЕТЫ|PRESETS|ПРЕСЕТИ
-            МОИ|MINE|МОЇ
-            ИЗБРАННОЕ|FAVORITES|ОБРАНЕ
-            ВСЕ ИНСТРУМЕНТЫ|ALL TOOLS|УСІ ІНСТРУМЕНТИ
-            ЭФФЕКТЫ|EFFECTS|ЕФЕКТИ
-            СБРОСИТЬ ВСЕ|RESET ALL|СКИНУТИ ВСЕ
-            Нет избранных пресетов|No favorite presets|Немає обраних пресетів
-            СОЗДАТЬ|CREATE|СТВОРИТИ
-            Обрезка|Crop|Обрізка
-            Экспозиция|Exposure|Експозиція
-            Выдержка|EV gain|Витримка
-            Яркость|Brightness|Яскравість
-            Контраст|Contrast|Контраст
-            Светлые уч.|Lights|Світлі д.
-            Темные уч.|Darks|Темні д.
-            Белые|Whites|Білі
-            Чёрные|Blacks|Чорні
-            Сочность|Vibrance|Соковитість
-            Баланс|Balance|Баланс
-            Блум|Bloom|Блум
-            Блум ⌄|Bloom ⌄|Блум ⌄
-            Ореол|Halation|Ореол
-            Вспышка|Flash|Спалах
-            Свет|Highlights|Світло
-            Тени|Shadows|Тіні
-            Фейд|Fade|Фейд
-            Дымка|Dehaze|Серпанок
-            Текстура|Texture|Текстура
-            Четкость|Clarity|Чіткість
-            Тон|Hue|Тон
-            Сепия|Sepia|Сепія
-            Осв/Зат|Dodge/Burn|Освіт./Затем.
-            Туман|Fog|Туман
-            Виньетка|Vignette|Віньєтка
-            Резкость|Sharpen|Різкість
-            Размытие|Blur|Розмиття
-            Зерно|Grain|Зерно
-            Антишум|Denoise|Антишум
-            Обл. разм.|Area blur|Обл. розм.
-            Лечение|Heal|Ретуш
-            Клон|Clone|Клон
-            Пиксели|Pixels|Пікселі
-            Резк./Шум|Sharp/Noise|Різк./Шум
-            Кривые|Curves|Криві
-            Сплит-тон|Split tone|Спліт-тон
-            Линза|Lens|Лінза
-            Зерно+|Grain+|Зерно+
-            Засветы|Light leaks|Засвічення
-            Маска|Mask|Маска
-            Дата|Date|Дата
-            Рамка|Frame|Рамка
-            Растр|Halftone|Растр
-            Блик|Flare|Відблиск
-            Софт-фокус|Soft focus|Софт-фокус
-            Частицы|Particles|Частинки
-            Колёса|Color wheels|Колеса
-            Ч/Б микшер|B&W mixer|Ч/Б мікшер
-            Цвет-поп|Color pop|Колір-поп
-            Камкордер|Camcorder|Камкордер
-            Шлейф|Glow trail|Шлейф
-            Движение|Motion|Рух
-            Тени: оттенок|Shadows: hue|Тіні: відтінок
-            Тени: сила|Shadows: strength|Тіні: сила
-            Света: оттенок|Highlights: hue|Світла: відтінок
-            Света: сила|Highlights: strength|Світла: сила
-            Аберрация|Aberration|Аберація
-            Дисторсия|Distortion|Дисторсія
-            Количество|Amount|Кількість
-            Жёсткость|Harshness|Жорсткість
-            В тенях|In shadows|У тінях
-            Засветка|Leak|Засвітка
-            Цвет|Color|Колір
-            Положение|Position|Положення
-            Пыль|Dust|Пил
-            Царапины|Scratches|Подряпини
-            Позиция X|Position X|Позиція X
-            Позиция Y|Position Y|Позиція Y
-            Мягкость|Softness|М'якість
-            Угол|Angle|Кут
-            Насыщ.|Sat.|Насич.
-            Темп.|Temp.|Темп.
-            Толщина|Thickness|Товщина
-            Дрожание|Jitter|Тремтіння
-            Строки|Scanlines|Рядки
-            Шум ленты|Tape noise|Шум стрічки
-            Глитч|Glitch|Глітч
-            Размер точек|Dot size|Розмір точок
-            Пикселизация|Pixelation|Пікселізація
-            Лучи|Rays|Промені
-            Длина|Length|Довжина
-            Наклон|Tilt|Нахил
-            Красные|Reds|Червоні
-            Оранжевые|Oranges|Помаранчеві
-            Жёлтые|Yellows|Жовті
-            Зелёные|Greens|Зелені
-            Голубые|Cyans|Блакитні
-            Синие|Blues|Сині
-            Фиолетовые|Violets|Фіолетові
-            Пурпурные|Magentas|Пурпурові
-            Неон по краям|Edge neon|Неон по краях
-            Шлейф света|Light trail|Шлейф світла
-            Длина шлейфа|Trail length|Довжина шлейфу
-            Порог яркости|Brightness threshold|Поріг яскравості
-            Толщина краёв|Edge thickness|Товщина країв
-            Чёткий центр|Sharp center|Чіткий центр
-            Центр X|Center X|Центр X
-            Центр Y|Center Y|Центр Y
-            Сдвиг|Offset|Зсув
-            Зум|Zoom|Зум
-            Выкл|Off|Вимк
-            Вкл|On|Увімк
-            Батарея|Battery|Батарея
-            Классика|Classic|Класика
-            Полосы|Streaks|Смуги
-            Ожог|Burn|Опік
-            Призма|Prism|Призма
-            Дуэт|Duo|Дует
-            Ч/Б включён|B&W on|Ч/Б увімкнено
-            Ч/Б выключен|B&W off|Ч/Б вимкнено
-            Тонкая|Thin|Тонка
-            Полароид|Polaroid|Полароїд
-            Плёнка|Film|Плівка
-            Дождь|Rain|Дощ
-            Снег|Snow|Сніг
-            Линейная|Linear|Лінійна
-            Радиальная|Radial|Радіальна
-            Инверсия|Invert|Інверсія
-            Средние|Midtones|Середні
-            Света|Highlights|Світла
-            Тап – добавить точку, двойной тап – удалить|Tap to add a point, double-tap to delete|Тап — додати точку, подвійний тап — видалити
-            ФОРМАТ|FORMAT|ФОРМАТ
-            КАЧЕСТВО|QUALITY|ЯКІСТЬ
-            Авто|Auto|Авто
-            Без потерь, файл заметно больше|Lossless, noticeably larger file|Без втрат, файл помітно більший
-            Меньше размер при том же качестве|Smaller size at the same quality|Менший розмір за тієї ж якості
-            Подходит везде, самый совместимый|Works everywhere, most compatible|Підходить усюди, найсумісніший
-            Скопировать настройки|Copy settings|Скопіювати налаштування
-            Вставить настройки|Paste settings|Вставити налаштування
-            Нет скопированных настроек|No copied settings|Немає скопійованих налаштувань
-            Как пользоваться|How to use|Як користуватися
-            Настройки скопированы|Settings copied|Налаштування скопійовано
-            Настройки вставлены|Settings pasted|Налаштування вставлено
-            Сначала загрузите фото|Upload a photo first|Спочатку завантажте фото
-            Сначала загрузите фото!|Upload a photo first!|Спочатку завантажте фото!
-            Сначала удалите текущее фото|Delete the current photo first|Спочатку видаліть поточне фото
-            Сброшено|Reset|Скинуто
-            Пресет обновлён|Preset updated|Пресет оновлено
-            Пресет удалён|Preset deleted|Пресет видалено
-            Сначала настройте фото: пресет, инструменты или эффекты|Edit the photo first: a preset, tools or effects|Спочатку відредагуйте фото: пресет, інструменти або ефекти
-            Удалить загруженное фото? Все изменения будут потеряны.|Delete the uploaded photo? All changes will be lost.|Видалити завантажене фото? Усі зміни буде втрачено.
-            Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.|To save the photo, remove the Premium effects or get a subscription.|Щоб зберегти фото, приберіть Premium-ефекти або оформіть підписку.
-            Ошибка рендера высокого качества.|High-quality render error.|Помилка рендеру у високій якості.
-            Фото из редактора|Photo from the editor|Фото з редактора
-            Сохраняю…|Saving…|Зберігаю…
-            Сохранено|Saved|Збережено
-            Не удалось открыть фото. Попробуйте другой файл (JPG, PNG или WebP): формат HEIC поддерживается не везде.|Couldn't open the photo. Try another file (JPG, PNG or WebP): HEIC isn't supported everywhere.|Не вдалося відкрити фото. Спробуйте інший файл (JPG, PNG або WebP): формат HEIC підтримується не всюди.
-            Сбросить все эффекты?|Reset all effects?|Скинути всі ефекти?
-            Сбросить все настройки инструментов?|Reset all tool settings?|Скинути всі налаштування інструментів?
-            WebGL не поддерживается вашим браузером|WebGL isn't supported by your browser|WebGL не підтримується вашим браузером
-            Удерживайте фото, чтобы увидеть оригинал|Press and hold the photo to see the original|Утримуйте фото, щоб побачити оригінал
-            Новый пресет|New preset|Новий пресет
-            Мой пресет|My preset|Мій пресет
-            Название|Name|Назва
-            Обновить текущим видом|Update with the current look|Оновити поточним виглядом
-            Удалить|Delete|Видалити
-            Отмена|Cancel|Скасувати
-            Точно удалить?|Really delete?|Точно видалити?
-            Содержит Pro-эффекты|Contains Pro effects|Містить Pro-ефекти
-            Подсказка|Help|Підказка
-            Закрыть|Close|Закрити
-            Интенсивность пресета|Preset intensity|Інтенсивність пресета
-            Интенсивность|Intensity|Інтенсивність
-            Пропустить|Skip|Пропустити
-            Далее|Next|Далі
-            Начать|Start|Почати
-            Тяните ползунок, чтобы изменить значение. ✕ — отмена, СБРОС — обнулить, ✓ — применить. Удерживайте фото, чтобы увидеть оригинал.|Drag the slider to change the value. ✕ cancels, RESET zeroes it, ✓ applies. Press and hold the photo to see the original.|Тягніть повзунок, щоб змінити значення. ✕ — скасувати, СКИНУТИ — обнулити, ✓ — застосувати. Утримуйте фото, щоб побачити оригінал.
-            Регулирует силу пресета: 0% — оригинал, 100% — полный эффект.|Sets the preset strength: 0% is the original, 100% is the full effect.|Регулює силу пресета: 0% — оригінал, 100% — повний ефект.
-            Тяните рамку за углы и края, внизу выберите пропорции. ⟲ поворачивает, ⇋ ⇵ отражают, ползунок выравнивает горизонт (УГОЛ) или меняет перспективу (ВЕРТ / ГОР).|Drag the frame by its corners and edges and pick a ratio below. ⟲ rotates, ⇋ ⇵ flip, the slider straightens the horizon (ANGLE) or changes perspective (VERT / HORIZ).|Тягніть рамку за кути й краї, внизу оберіть пропорції. ⟲ повертає, ⇋ ⇵ віддзеркалюють, повзунок вирівнює горизонт (КУТ) або змінює перспективу (ВЕРТ / ГОР).
-            Тап по линии добавляет точку, перетаскивание меняет тон. Двойной тап по точке удаляет её. Каналы RGB, R, G, B настраиваются отдельно.|Tap the line to add a point and drag it to change the tone. Double-tap a point to delete it. The RGB, R, G and B channels are adjusted separately.|Тап по лінії додає точку, перетягування змінює тон. Подвійний тап по точці видаляє її. Канали RGB, R, G, B налаштовуються окремо.
-            Выберите цвет внизу и меняйте его оттенок, насыщенность и яркость. Двойной тап по названию ползунка сбрасывает только его.|Pick a color below and change its hue, saturation and lightness. Double-tap a slider's name to reset only that slider.|Оберіть колір внизу та змінюйте його відтінок, насиченість і яскравість. Подвійний тап по назві повзунка скидає лише його.
-            Температура делает кадр холоднее или теплее, оттенок смещает между зелёным и пурпурным.|Temperature makes the shot cooler or warmer, tint shifts it between green and magenta.|Температура робить кадр холоднішим або теплішим, відтінок зміщує між зеленим і пурпуровим.
-            Выберите тени, средние или света и перетащите точку по кругу: направление — цвет, расстояние от центра — сила.|Pick shadows, midtones or highlights and drag the point around the wheel: direction sets the color, distance from the center sets the strength.|Оберіть тіні, середні або світла й перетягніть точку по колу: напрямок — колір, відстань від центру — сила.
-            Для свечения нужны все три ползунка: Сила, Размер и Диапазон должны быть выше нуля, иначе эффекта не будет видно. Сила — яркость свечения, Размер — как далеко оно расходится, Диапазон — какие светлые участки светятся.|The glow needs all three sliders: Strength, Size and Range must all be above zero, otherwise no effect will be visible. Strength is the glow brightness, Size is how far it spreads, Range is which bright areas glow.|Для сяйва потрібні всі три повзунки: Сила, Розмір і Діапазон мають бути вище нуля, інакше ефекту не буде видно. Сила — яскравість сяйва, Розмір — як далеко воно розходиться, Діапазон — які світлі ділянки світяться.
-            Красноватое свечение вокруг ярких источников света, как на плёнке. Сила, Размер и Диапазон должны быть выше нуля одновременно, иначе эффекта не будет видно. «Оттенок» только меняет цвет ореола.|A reddish glow around bright light sources, like on film. Strength, Size and Range must all be above zero at the same time, otherwise no effect will be visible. “Tint” only changes the halo color.|Червонувате сяйво навколо яскравих джерел світла, як на плівці. Сила, Розмір і Діапазон мають бути вище нуля одночасно, інакше ефекту не буде видно. «Відтінок» лише змінює колір ореолу.
-            Имитирует съёмку со вспышкой: убирает цветовой оттенок, затемняет фон и подсвечивает центр.|Imitates on-camera flash: removes the color cast, darkens the background and lights up the center.|Імітує зйомку зі спалахом: прибирає колірний відтінок, затемнює тло та підсвічує центр.
-            Включите Ч/Б и меняйте ползунки цветов: каждый осветляет или затемняет соответствующий цвет в чёрно-белом снимке. Например, затемните синие — небо станет глубже, осветлите красные и оранжевые — кожа посветлеет.|Turn B&W on and move the color sliders: each one lightens or darkens its color in the black-and-white photo. For example, darken blues for a deeper sky, or lighten reds and oranges for lighter skin.|Увімкніть Ч/Б і рухайте повзунки кольорів: кожен освітлює або затемнює відповідний колір на чорно-білому знімку. Наприклад, затемніть сині — небо стане глибшим, освітліть червоні та помаранчеві — шкіра посвітлішає.
-            Оставляет один цвет, а остальное делает чёрно-белым. «Цвет» выбирает оттенок, «Диапазон» — сколько близких оттенков сохраняется, «Мягкость» — плавность границы, «Сила» — степень обесцвечивания фона.|Keeps one color and turns the rest black and white. “Color” picks the hue, “Range” how many nearby hues are kept, “Softness” the edge smoothness, “Strength” how much the background is desaturated.|Залишає один колір, а решту робить чорно-білою. «Колір» обирає відтінок, «Діапазон» — скільки близьких відтінків зберігається, «М'якість» — плавність межі, «Сила» — міру знебарвлення тла.
-            Эффекты действуют только в выбранной зоне (красная подсветка). Линейная — полоса, радиальная — круг, «Инверсия» меняет зону.|Effects apply only inside the selected zone (red highlight). Linear is a band, radial is a circle, “Invert” flips the zone.|Ефекти діють лише у вибраній зоні (червоне підсвічування). Лінійна — смуга, радіальна — коло, «Інверсія» змінює зону.
-            Водите пальцем по фото, чтобы осветлить или затемнить участок. Эффект копится с каждым проходом.|Drag your finger over the photo to lighten or darken an area. The effect builds up with every pass.|Водіть пальцем по фото, щоб освітлити або затемнити ділянку. Ефект накопичується з кожним проходом.
-            Рисуйте пальцем мягкую дымку или тень. Эффект слабый и накапливается.|Paint soft haze or shadow with your finger. The effect is subtle and builds up.|Малюйте пальцем м'який серпанок або тінь. Ефект слабкий і накопичується.
-            Проведите по области, которую нужно размыть или скрыть пикселями. «Сила» регулирует степень.|Swipe over the area you want to blur or hide with pixels. “Strength” sets the amount.|Проведіть по ділянці, яку потрібно розмити або приховати пікселями. «Сила» регулює міру.
-            Лечение: закрашивайте дефекты, источник подбирается сам. Клон: сначала коснитесь места-источника, затем рисуйте там, где нужно.|Heal: paint over blemishes, the source is picked automatically. Clone: first tap the source spot, then paint where you need it.|Ретуш: замальовуйте дефекти, джерело добирається саме. Клон: спочатку торкніться місця-джерела, потім малюйте там, де потрібно.
-            Проведите по участку, чтобы добавить резкости или убрать шум.|Swipe over an area to add sharpness or remove noise.|Проведіть по ділянці, щоб додати різкості або прибрати шум.
-            Загрузите фото|Upload a photo|Завантажте фото
-            Нажмите на область фото, перетащите файл или вставьте картинку из буфера обмена. Корзина сверху удаляет фото, чтобы выбрать другое.|Tap the photo area, drag a file in or paste an image from the clipboard. The trash can at the top deletes the photo so you can pick another.|Натисніть на область фото, перетягніть файл або вставте зображення з буфера обміну. Кошик угорі видаляє фото, щоб обрати інше.
-            Пресеты|Presets|Пресети
-            Первая вкладка — готовые стили. Нажмите на пресет, чтобы применить его. ☆ добавляет в избранное, во вкладке МОИ можно сохранить свой стиль. Значок с ползунками на выбранной карточке меняет силу пресета.|The first tab has ready-made styles. Tap a preset to apply it. ☆ adds it to favorites, and the MINE tab lets you save your own style. The sliders icon on the selected card changes the preset strength.|Перша вкладка — готові стилі. Натисніть на пресет, щоб застосувати його. ☆ додає в обране, у вкладці МОЇ можна зберегти свій стиль. Значок із повзунками на вибраній картці змінює силу пресета.
-            Инструменты|Tools|Інструменти
-            Экспозиция, цвет, детали и кисти. Кнопка «?» внутри инструмента объясняет, как им пользоваться. Точка на иконке значит, что инструмент изменён, а «СБРОСИТЬ ВСЕ» обнуляет все настройки.|Exposure, color, detail and brushes. The “?” button inside a tool explains how to use it. A dot on an icon means the tool has been changed, and “RESET ALL” zeroes every setting.|Експозиція, колір, деталі та пензлі. Кнопка «?» всередині інструмента пояснює, як ним користуватися. Крапка на іконці означає, що інструмент змінено, а «СКИНУТИ ВСЕ» обнуляє всі налаштування.
-            Эффекты|Effects|Ефекти
-            Кривые, зерно, засветы, рамки, VHS и другое. Работают так же, как инструменты, и тоже отмечаются точкой.|Curves, grain, light leaks, frames, VHS and more. They work like tools and are marked with a dot too.|Криві, зерно, засвічення, рамки, VHS та інше. Працюють так само, як інструменти, і теж позначаються крапкою.
-            Сравнение и сохранение|Compare and save|Порівняння та збереження
-            Удерживайте фото, чтобы увидеть оригинал. Стрелки сверху отменяют и повторяют действия, значок буфера копирует настройки. Кнопка со стрелкой вверх сохраняет фото; формат и размер выбираются слева. Значок 🔒 — Premium, с ним на фото будет водяной знак.|Press and hold the photo to see the original. The arrows at the top undo and redo, the clipboard icon copies settings. The up-arrow button saves the photo; format and size are chosen on the left. The 🔒 icon means Premium, and the photo will carry a watermark.|Утримуйте фото, щоб побачити оригінал. Стрілки вгорі скасовують і повторюють дії, значок буфера копіює налаштування. Кнопка зі стрілкою вгору зберігає фото; формат і розмір обираються ліворуч. Значок 🔒 — Premium, із ним на фото буде водяний знак.`;
+Отменить|Undo|Скасувати
+Повторить|Redo|Повторити
+Копировать / вставить настройки|Copy / paste settings|Копіювати / вставити налаштування
+Удалить фото|Delete photo|Видалити фото
+Сохранить|Save|Зберегти
+Удерживайте фото, чтобы сохранить в галерею|Press and hold the photo to save it to your gallery|Утримуйте фото, щоб зберегти в галерею
+Нажмите правой кнопкой мыши по фото → «Сохранить картинку как...»|Right-click the photo → “Save image as...”|Натисніть правою кнопкою миші на фото → «Зберегти зображення як...»
+Загрузить фото|Upload a photo|Завантажити фото
+Нажмите, перетащите файл или вставьте из буфера обмена|Tap, drag a file here or paste from the clipboard|Натисніть, перетягніть файл або вставте з буфера обміну
+ОРИГИНАЛ|ORIGINAL|ОРИГІНАЛ
+Настройка|Adjustment|Налаштування
+СБРОС|RESET|СКИНУТИ
+Инструмент|Tool|Інструмент
+Размер|Size|Розмір
+Сила|Strength|Сила
+Осветлить|Dodge|Освітлити
+Затемнить|Burn|Затемнити
+Диапазон|Range|Діапазон
+Оттенок|Tint|Відтінок
+Температура|Temperature|Температура
+Насыщенность|Saturation|Насиченість
+Осветление|Lightness|Освітлення
+Повернуть на 90°|Rotate 90°|Повернути на 90°
+Отразить по горизонтали|Flip horizontally|Віддзеркалити по горизонталі
+Отразить по вертикали|Flip vertically|Віддзеркалити по вертикалі
+Угол / перспектива|Angle / perspective|Кут / перспектива
+УГОЛ|ANGLE|КУТ
+ВЕРТ|VERT|ВЕРТ
+ГОР|HORIZ|ГОР
+Своб.|Free|Віл.
+Эффект Premium. Сохранение недоступно.|Premium effect. Saving is unavailable.|Ефект Premium. Збереження недоступне.
+ПРЕСЕТЫ|PRESETS|ПРЕСЕТИ
+МОИ|MINE|МОЇ
+ИЗБРАННОЕ|FAVORITES|ОБРАНЕ
+ВСЕ ИНСТРУМЕНТЫ|ALL TOOLS|УСІ ІНСТРУМЕНТИ
+ЭФФЕКТЫ|EFFECTS|ЕФЕКТИ
+СБРОСИТЬ ВСЕ|RESET ALL|СКИНУТИ ВСЕ
+Нет избранных пресетов|No favorite presets|Немає обраних пресетів
+СОЗДАТЬ|CREATE|СТВОРИТИ
+Обрезка|Crop|Обрізка
+Экспозиция|Exposure|Експозиція
+Выдержка|EV gain|Витримка
+Яркость|Brightness|Яскравість
+Контраст|Contrast|Контраст
+Светлые уч.|Lights|Світлі д.
+Темные уч.|Darks|Темні д.
+Белые|Whites|Білі
+Чёрные|Blacks|Чорні
+Сочность|Vibrance|Соковитість
+Баланс|Balance|Баланс
+Блум|Bloom|Блум
+Блум ⌄|Bloom ⌄|Блум ⌄
+Ореол|Halation|Ореол
+Вспышка|Flash|Спалах
+Свет|Highlights|Світло
+Тени|Shadows|Тіні
+Фейд|Fade|Фейд
+Дымка|Dehaze|Серпанок
+Текстура|Texture|Текстура
+Четкость|Clarity|Чіткість
+Тон|Hue|Тон
+Сепия|Sepia|Сепія
+Осв/Зат|Dodge/Burn|Освіт./Затем.
+Туман|Fog|Туман
+Виньетка|Vignette|Віньєтка
+Резкость|Sharpen|Різкість
+Размытие|Blur|Розмиття
+Зерно|Grain|Зерно
+Антишум|Denoise|Антишум
+Обл. разм.|Area blur|Обл. розм.
+Лечение|Heal|Ретуш
+Клон|Clone|Клон
+Пиксели|Pixels|Пікселі
+Резк./Шум|Sharp/Noise|Різк./Шум
+Кривые|Curves|Криві
+Сплит-тон|Split tone|Спліт-тон
+Линза|Lens|Лінза
+Зерно+|Grain+|Зерно+
+Засветы|Light leaks|Засвічення
+Маска|Mask|Маска
+Дата|Date|Дата
+Рамка|Frame|Рамка
+Растр|Halftone|Растр
+Блик|Flare|Відблиск
+Софт-фокус|Soft focus|Софт-фокус
+Частицы|Particles|Частинки
+Колёса|Color wheels|Колеса
+Ч/Б микшер|B&W mixer|Ч/Б мікшер
+Цвет-поп|Color pop|Колір-поп
+Камкордер|Camcorder|Камкордер
+Шлейф|Glow trail|Шлейф
+Движение|Motion|Рух
+Тени: оттенок|Shadows: hue|Тіні: відтінок
+Тени: сила|Shadows: strength|Тіні: сила
+Света: оттенок|Highlights: hue|Світла: відтінок
+Света: сила|Highlights: strength|Світла: сила
+Аберрация|Aberration|Аберація
+Дисторсия|Distortion|Дисторсія
+Количество|Amount|Кількість
+Жёсткость|Harshness|Жорсткість
+В тенях|In shadows|У тінях
+Засветка|Leak|Засвітка
+Цвет|Color|Колір
+Положение|Position|Положення
+Пыль|Dust|Пил
+Царапины|Scratches|Подряпини
+Позиция X|Position X|Позиція X
+Позиция Y|Position Y|Позиція Y
+Мягкость|Softness|М'якість
+Угол|Angle|Кут
+Насыщ.|Sat.|Насич.
+Темп.|Temp.|Темп.
+Толщина|Thickness|Товщина
+Дрожание|Jitter|Тремтіння
+Строки|Scanlines|Рядки
+Шум ленты|Tape noise|Шум стрічки
+Глитч|Glitch|Глітч
+Размер точек|Dot size|Розмір точок
+Пикселизация|Pixelation|Пікселізація
+Лучи|Rays|Промені
+Длина|Length|Довжина
+Наклон|Tilt|Нахил
+Красные|Reds|Червоні
+Оранжевые|Oranges|Помаранчеві
+Жёлтые|Yellows|Жовті
+Зелёные|Greens|Зелені
+Голубые|Cyans|Блакитні
+Синие|Blues|Сині
+Фиолетовые|Violets|Фіолетові
+Пурпурные|Magentas|Пурпурові
+Неон по краям|Edge neon|Неон по краях
+Шлейф света|Light trail|Шлейф світла
+Длина шлейфа|Trail length|Довжина шлейфу
+Порог яркости|Brightness threshold|Поріг яскравості
+Толщина краёв|Edge thickness|Товщина країв
+Чёткий центр|Sharp center|Чіткий центр
+Центр X|Center X|Центр X
+Центр Y|Center Y|Центр Y
+Сдвиг|Offset|Зсув
+Зум|Zoom|Зум
+Выкл|Off|Вимк
+Вкл|On|Увімк
+Батарея|Battery|Батарея
+Классика|Classic|Класика
+Полосы|Streaks|Смуги
+Ожог|Burn|Опік
+Призма|Prism|Призма
+Дуэт|Duo|Дует
+Ч/Б включён|B&W on|Ч/Б увімкнено
+Ч/Б выключен|B&W off|Ч/Б вимкнено
+Тонкая|Thin|Тонка
+Полароид|Polaroid|Полароїд
+Плёнка|Film|Плівка
+Дождь|Rain|Дощ
+Снег|Snow|Сніг
+Линейная|Linear|Лінійна
+Радиальная|Radial|Радіальна
+Инверсия|Invert|Інверсія
+Средние|Midtones|Середні
+Света|Highlights|Світла
+Тап – добавить точку, двойной тап – удалить|Tap to add a point, double-tap to delete|Тап — додати точку, подвійний тап — видалити
+ФОРМАТ|FORMAT|ФОРМАТ
+КАЧЕСТВО|QUALITY|ЯКІСТЬ
+Авто|Auto|Авто
+Без потерь, файл заметно больше|Lossless, noticeably larger file|Без втрат, файл помітно більший
+Меньше размер при том же качестве|Smaller size at the same quality|Менший розмір за тієї ж якості
+Подходит везде, самый совместимый|Works everywhere, most compatible|Підходить усюди, найсумісніший
+Скопировать настройки|Copy settings|Скопіювати налаштування
+Вставить настройки|Paste settings|Вставити налаштування
+Нет скопированных настроек|No copied settings|Немає скопійованих налаштувань
+Как пользоваться|How to use|Як користуватися
+Настройки скопированы|Settings copied|Налаштування скопійовано
+Настройки вставлены|Settings pasted|Налаштування вставлено
+Сначала загрузите фото|Upload a photo first|Спочатку завантажте фото
+Сначала загрузите фото!|Upload a photo first!|Спочатку завантажте фото!
+Сначала удалите текущее фото|Delete the current photo first|Спочатку видаліть поточне фото
+Сброшено|Reset|Скинуто
+Пресет обновлён|Preset updated|Пресет оновлено
+Пресет удалён|Preset deleted|Пресет видалено
+Сначала настройте фото: пресет, инструменты или эффекты|Edit the photo first: a preset, tools or effects|Спочатку відредагуйте фото: пресет, інструменти або ефекти
+Удалить загруженное фото? Все изменения будут потеряны.|Delete the uploaded photo? All changes will be lost.|Видалити завантажене фото? Усі зміни буде втрачено.
+Для сохранения фото необходимо убрать Premium-эффекты или оплатить подписку.|To save the photo, remove the Premium effects or get a subscription.|Щоб зберегти фото, приберіть Premium-ефекти або оформіть підписку.
+Ошибка рендера высокого качества.|High-quality render error.|Помилка рендеру у високій якості.
+Фото из редактора|Photo from the editor|Фото з редактора
+Сохраняю…|Saving…|Зберігаю…
+Сохранено|Saved|Збережено
+Не удалось открыть фото. Попробуйте другой файл (JPG, PNG или WebP): формат HEIC поддерживается не везде.|Couldn't open the photo. Try another file (JPG, PNG or WebP): HEIC isn't supported everywhere.|Не вдалося відкрити фото. Спробуйте інший файл (JPG, PNG або WebP): формат HEIC підтримується не всюди.
+Сбросить все эффекты?|Reset all effects?|Скинути всі ефекти?
+Сбросить все настройки инструментов?|Reset all tool settings?|Скинути всі налаштування інструментів?
+WebGL не поддерживается вашим браузером|WebGL isn't supported by your browser|WebGL не підтримується вашим браузером
+Удерживайте фото, чтобы увидеть оригинал|Press and hold the photo to see the original|Утримуйте фото, щоб побачити оригінал
+Новый пресет|New preset|Новий пресет
+Мой пресет|My preset|Мій пресет
+Название|Name|Назва
+Обновить текущим видом|Update with the current look|Оновити поточним виглядом
+Удалить|Delete|Видалити
+Отмена|Cancel|Скасувати
+Точно удалить?|Really delete?|Точно видалити?
+Содержит Pro-эффекты|Contains Pro effects|Містить Pro-ефекти
+Подсказка|Help|Підказка
+Закрыть|Close|Закрити
+Интенсивность пресета|Preset intensity|Інтенсивність пресета
+Интенсивность|Intensity|Інтенсивність
+Пропустить|Skip|Пропустити
+Далее|Next|Далі
+Начать|Start|Почати
+Тяните ползунок, чтобы изменить значение. ✕ — отмена, СБРОС — обнулить, ✓ — применить. Удерживайте фото, чтобы увидеть оригинал.|Drag the slider to change the value. ✕ cancels, RESET zeroes it, ✓ applies. Press and hold the photo to see the original.|Тягніть повзунок, щоб змінити значення. ✕ — скасувати, СКИНУТИ — обнулити, ✓ — застосувати. Утримуйте фото, щоб побачити оригінал.
+Регулирует силу пресета: 0% — оригинал, 100% — полный эффект.|Sets the preset strength: 0% is the original, 100% is the full effect.|Регулює силу пресета: 0% — оригінал, 100% — повний ефект.
+Тяните рамку за углы и края, внизу выберите пропорции. ⟲ поворачивает, ⇋ ⇵ отражают, ползунок выравнивает горизонт (УГОЛ) или меняет перспективу (ВЕРТ / ГОР).|Drag the frame by its corners and edges and pick a ratio below. ⟲ rotates, ⇋ ⇵ flip, the slider straightens the horizon (ANGLE) or changes perspective (VERT / HORIZ).|Тягніть рамку за кути й краї, внизу оберіть пропорції. ⟲ повертає, ⇋ ⇵ віддзеркалюють, повзунок вирівнює горизонт (КУТ) або змінює перспективу (ВЕРТ / ГОР).
+Тап по линии добавляет точку, перетаскивание меняет тон. Двойной тап по точке удаляет её. Каналы RGB, R, G, B настраиваются отдельно.|Tap the line to add a point and drag it to change the tone. Double-tap a point to delete it. The RGB, R, G and B channels are adjusted separately.|Тап по лінії додає точку, перетягування змінює тон. Подвійний тап по точці видаляє її. Канали RGB, R, G, B налаштовуються окремо.
+Выберите цвет внизу и меняйте его оттенок, насыщенность и яркость. Двойной тап по названию ползунка сбрасывает только его.|Pick a color below and change its hue, saturation and lightness. Double-tap a slider's name to reset only that slider.|Оберіть колір внизу та змінюйте його відтінок, насиченість і яскравість. Подвійний тап по назві повзунка скидає лише його.
+Температура делает кадр холоднее или теплее, оттенок смещает между зелёным и пурпурным.|Temperature makes the shot cooler or warmer, tint shifts it between green and magenta.|Температура робить кадр холоднішим або теплішим, відтінок зміщує між зеленим і пурпуровим.
+Выберите тени, средние или света и перетащите точку по кругу: направление — цвет, расстояние от центра — сила.|Pick shadows, midtones or highlights and drag the point around the wheel: direction sets the color, distance from the center sets the strength.|Оберіть тіні, середні або світла й перетягніть точку по колу: напрямок — колір, відстань від центру — сила.
+Для свечения нужны все три ползунка: Сила, Размер и Диапазон должны быть выше нуля, иначе эффекта не будет видно. Сила — яркость свечения, Размер — как далеко оно расходится, Диапазон — какие светлые участки светятся.|The glow needs all three sliders: Strength, Size and Range must all be above zero, otherwise no effect will be visible. Strength is the glow brightness, Size is how far it spreads, Range is which bright areas glow.|Для сяйва потрібні всі три повзунки: Сила, Розмір і Діапазон мають бути вище нуля, інакше ефекту не буде видно. Сила — яскравість сяйва, Розмір — як далеко воно розходиться, Діапазон — які світлі ділянки світяться.
+Красноватое свечение вокруг ярких источников света, как на плёнке. Сила, Размер и Диапазон должны быть выше нуля одновременно, иначе эффекта не будет видно. «Оттенок» только меняет цвет ореола.|A reddish glow around bright light sources, like on film. Strength, Size and Range must all be above zero at the same time, otherwise no effect will be visible. “Tint” only changes the halo color.|Червонувате сяйво навколо яскравих джерел світла, як на плівці. Сила, Розмір і Діапазон мають бути вище нуля одночасно, інакше ефекту не буде видно. «Відтінок» лише змінює колір ореолу.
+Имитирует съёмку со вспышкой: убирает цветовой оттенок, затемняет фон и подсвечивает центр.|Imitates on-camera flash: removes the color cast, darkens the background and lights up the center.|Імітує зйомку зі спалахом: прибирає колірний відтінок, затемнює тло та підсвічує центр.
+Включите Ч/Б и меняйте ползунки цветов: каждый осветляет или затемняет соответствующий цвет в чёрно-белом снимке. Например, затемните синие — небо станет глубже, осветлите красные и оранжевые — кожа посветлеет.|Turn B&W on and move the color sliders: each one lightens or darkens its color in the black-and-white photo. For example, darken blues for a deeper sky, or lighten reds and oranges for lighter skin.|Увімкніть Ч/Б і рухайте повзунки кольорів: кожен освітлює або затемнює відповідний колір на чорно-білому знімку. Наприклад, затемніть сині — небо стане глибшим, освітліть червоні та помаранчеві — шкіра посвітлішає.
+Оставляет один цвет, а остальное делает чёрно-белым. «Цвет» выбирает оттенок, «Диапазон» — сколько близких оттенков сохраняется, «Мягкость» — плавность границы, «Сила» — степень обесцвечивания фона.|Keeps one color and turns the rest black and white. “Color” picks the hue, “Range” how many nearby hues are kept, “Softness” the edge smoothness, “Strength” how much the background is desaturated.|Залишає один колір, а решту робить чорно-білою. «Колір» обирає відтінок, «Діапазон» — скільки близьких відтінків зберігається, «М'якість» — плавність межі, «Сила» — міру знебарвлення тла.
+Эффекты действуют только в выбранной зоне (красная подсветка). Линейная — полоса, радиальная — круг, «Инверсия» меняет зону.|Effects apply only inside the selected zone (red highlight). Linear is a band, radial is a circle, “Invert” flips the zone.|Ефекти діють лише у вибраній зоні (червоне підсвічування). Лінійна — смуга, радіальна — коло, «Інверсія» змінює зону.
+Водите пальцем по фото, чтобы осветлить или затемнить участок. Эффект копится с каждым проходом.|Drag your finger over the photo to lighten or darken an area. The effect builds up with every pass.|Водіть пальцем по фото, щоб освітлити або затемнити ділянку. Ефект накопичується з кожним проходом.
+Рисуйте пальцем мягкую дымку или тень. Эффект слабый и накапливается.|Paint soft haze or shadow with your finger. The effect is subtle and builds up.|Малюйте пальцем м'який серпанок або тінь. Ефект слабкий і накопичується.
+Проведите по области, которую нужно размыть или скрыть пикселями. «Сила» регулирует степень.|Swipe over the area you want to blur or hide with pixels. “Strength” sets the amount.|Проведіть по ділянці, яку потрібно розмити або приховати пікселями. «Сила» регулює міру.
+Лечение: закрашивайте дефекты, источник подбирается сам. Клон: сначала коснитесь места-источника, затем рисуйте там, где нужно.|Heal: paint over blemishes, the source is picked automatically. Clone: first tap the source spot, then paint where you need it.|Ретуш: замальовуйте дефекти, джерело добирається саме. Клон: спочатку торкніться місця-джерела, потім малюйте там, де потрібно.
+Проведите по участку, чтобы добавить резкости или убрать шум.|Swipe over an area to add sharpness or remove noise.|Проведіть по ділянці, щоб додати різкості або прибрати шум.
+Загрузите фото|Upload a photo|Завантажте фото
+Нажмите на область фото, перетащите файл или вставьте картинку из буфера обмена. Корзина сверху удаляет фото, чтобы выбрать другое.|Tap the photo area, drag a file in or paste an image from the clipboard. The trash can at the top deletes the photo so you can pick another.|Натисніть на область фото, перетягніть файл або вставте зображення з буфера обміну. Кошик угорі видаляє фото, щоб обрати інше.
+Пресеты|Presets|Пресети
+Первая вкладка — готовые стили. Нажмите на пресет, чтобы применить его. ☆ добавляет в избранное, во вкладке МОИ можно сохранить свой стиль. Значок с ползунками на выбранной карточке меняет силу пресета.|The first tab has ready-made styles. Tap a preset to apply it. ☆ adds it to favorites, and the MINE tab lets you save your own style. The sliders icon on the selected card changes the preset strength.|Перша вкладка — готові стилі. Натисніть на пресет, щоб застосувати його. ☆ додає в обране, у вкладці МОЇ можна зберегти свій стиль. Значок із повзунками на вибраній картці змінює силу пресета.
+Инструменты|Tools|Інструменти
+Экспозиция, цвет, детали и кисти. Кнопка «?» внутри инструмента объясняет, как им пользоваться. Точка на иконке значит, что инструмент изменён, а «СБРОСИТЬ ВСЕ» обнуляет все настройки.|Exposure, color, detail and brushes. The “?” button inside a tool explains how to use it. A dot on an icon means the tool has been changed, and “RESET ALL” zeroes every setting.|Експозиція, колір, деталі та пензлі. Кнопка «?» всередині інструмента пояснює, як ним користуватися. Крапка на іконці означає, що інструмент змінено, а «СКИНУТИ ВСЕ» обнуляє всі налаштування.
+Эффекты|Effects|Ефекти
+Кривые, зерно, засветы, рамки, VHS и другое. Работают так же, как инструменты, и тоже отмечаются точкой.|Curves, grain, light leaks, frames, VHS and more. They work like tools and are marked with a dot too.|Криві, зерно, засвічення, рамки, VHS та інше. Працюють так само, як інструменти, і теж позначаються крапкою.
+Сравнение и сохранение|Compare and save|Порівняння та збереження
+Удерживайте фото, чтобы увидеть оригинал. Стрелки сверху отменяют и повторяют действия, значок буфера копирует настройки. Кнопка со стрелкой вверх сохраняет фото; формат и размер выбираются слева. Значок 🔒 — Premium, с ним на фото будет водяной знак.|Press and hold the photo to see the original. The arrows at the top undo and redo, the clipboard icon copies settings. The up-arrow button saves the photo; format and size are chosen on the left. The 🔒 icon means Premium, and the photo will carry a watermark.|Утримуйте фото, щоб побачити оригінал. Стрілки вгорі скасовують і повторюють дії, значок буфера копіює налаштування. Кнопка зі стрілкою вгору зберігає фото; формат і розмір обираються ліворуч. Значок 🔒 — Premium, із ним на фото буде водяний знак.`;
         let code = '';
         try { code = new URLSearchParams(location.search).get('lang') || (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code) || navigator.language || 'en'; } catch (e) { code = 'en'; }
         code = String(code).toLowerCase();
