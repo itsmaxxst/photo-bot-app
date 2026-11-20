@@ -205,6 +205,28 @@
         @keyframes hpO { 0%,100% { opacity: 0; } 30%,70% { opacity: 1; } }
         @keyframes hpG { 0%,100% { transform: scale(1); } 30%,70% { transform: scale(.8); } }
         @media (prefers-reduced-motion: reduce) { #help-sheet * { animation: none !important; } }
+
+        /* ===== Save status, edit dots, walkthrough ===== */
+        #busy { position: fixed; inset: 0; z-index: 480; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
+        #busy.on { display: flex; }
+        #busy > div { background: #1c1c1e; border: 1px solid #333; border-radius: 16px; padding: 22px 30px; display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; color: #fff; }
+        .spin { width: 32px; height: 32px; border: 3px solid #444; border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .tool-item .edit-dot { position: absolute; top: -3px; left: 10px; width: 9px; height: 9px; border-radius: 50%; background: #4dd0e1; box-shadow: 0 0 0 2px #000; display: none; }
+        .tool-item.edited .edit-dot { display: block; }
+        .sub-tab.reset-all { margin-left: auto; color: #ff453a; }
+        .sub-tab.reset-all.off { opacity: .35; pointer-events: none; }
+        #wt { position: fixed; inset: 0; z-index: 500; display: none; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.7); padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+        #wt.on { display: flex; }
+        #wt > div { width: 100%; max-width: 380px; background: #1c1c1e; border-radius: 20px; padding: 22px 20px 18px; box-sizing: border-box; text-align: center; }
+        #wt-ic svg { width: 44px; height: 44px; }
+        #wt-t { font-size: 18px; font-weight: 700; margin: 12px 0 8px; }
+        #wt-d { font-size: 13px; line-height: 1.5; color: #bbb; min-height: 100px; }
+        #wt-dots i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #444; margin: 10px 3px 14px; }
+        #wt-dots i.on { background: #fff; }
+        #wt-b { display: flex; gap: 8px; }
+        #wt-b button { flex: 1; border: none; border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; background: #2a2a2c; color: #ddd; }
+        #wt-b #wt-next { background: #fff; color: #000; }
     </style>
 </head>
 <body>
@@ -5173,6 +5195,141 @@
             b.onclick = openHelp;
             row.insertBefore(b, row.children[2]);
         });
+    })();
+
+    // ==================================================================================
+    //  Статус сохранения, ошибка загрузки фото, точки «изменено» + «СБРОСИТЬ ВСЕ», обучение
+    // ==================================================================================
+    (function () {
+        const $ = id => document.getElementById(id);
+        const alertMsg = m => { try { if (tg.showAlert) { tg.showAlert(m); return; } } catch (e) {} alert(m); };
+        const confirmAsk = (m, ok) => {
+            try { if (tg.initData && tg.showConfirm) { tg.showConfirm(m, y => { if (y) ok(); }); return; } } catch (e) {}
+            if (confirm(m)) ok();
+        };
+
+        // ---- 1. сохранение: индикатор загрузки → «Сохранено» ----
+        const busy = document.createElement('div');
+        busy.id = 'busy'; busy.innerHTML = '<div></div>'; document.body.appendChild(busy);
+        const SPIN = '<i class="spin"></i>';
+        const OK = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#30d158" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+        let saving = false, bypass = false, busyT = 0, saveT = 0;
+        const busySet = (icon, text) => { busy.firstChild.innerHTML = icon + '<span>' + text + '</span>'; busy.classList.add('on'); };
+        const busyHide = () => { busy.classList.remove('on'); clearTimeout(busyT); };
+        document.addEventListener('click', e => {
+            if (bypass || !e.target.closest || !e.target.closest('#btn-save')) return;
+            if (!fxTexture || hasLockedActive || !originalImage.src) return;      // предупреждения оставляем штатному обработчику
+            e.stopImmediatePropagation(); e.preventDefault();
+            saving = true; busySet(SPIN, 'Сохраняю…');
+            clearTimeout(busyT); busyT = setTimeout(busyHide, 8000);
+            clearTimeout(saveT); saveT = setTimeout(() => { saving = false; }, 20000);
+            requestAnimationFrame(() => setTimeout(() => { bypass = true; try { btnSave.click(); } finally { bypass = false; } }, 40));   // даём спиннеру отрисоваться
+        }, true);
+        if (navigator.share) {
+            const _sh = navigator.share.bind(navigator);
+            navigator.share = function (d) {
+                if (saving) { busyHide(); clearTimeout(saveT); saveT = setTimeout(() => { saving = false; }, 120000); }
+                return _sh(d).catch(err => { saving = false; throw err; });
+            };
+        }
+        const _reSave = resetEditor;
+        resetEditor = function () {
+            const was = saving; _reSave();
+            if (!was) return;
+            saving = false;
+            if ($('save-overlay').classList.contains('active')) busyHide();       // фото показано для долгого нажатия
+            else { clearTimeout(busyT); busySet(OK, 'Сохранено'); busyT = setTimeout(busyHide, 1300); }
+        };
+
+        // ---- 2. фото не открылось ----
+        originalImage.addEventListener('error', () => {
+            if (!originalImage.getAttribute('src')) return;
+            upload.value = '';
+            alertMsg('Не удалось открыть фото. Попробуйте другой файл (JPG, PNG или WebP): формат HEIC поддерживается не везде.');
+        });
+
+        // ---- 3. точки «изменено» и «СБРОСИТЬ ВСЕ» ----
+        const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+        function fxBase() {      // эффекты, которые даёт сам пресет – не считаются правкой пользователя
+            const d = fxDefaults(), o = { ...d };
+            const p = presetsData.find(x => x.id === activePresetId), u = userPresets.find(x => x.id === activePresetId);
+            if (p && p.fx) for (const k in p.fx) { const v = p.fx[k]; o[k] = (typeof v === 'number' && !FX_NOSCALE.test(k)) ? d[k] + (v - d[k]) * presetK : v; }
+            if (u) Object.assign(o, u.fx);
+            return o;
+        }
+        const fxOn = (id, b) => FXT[id].custom === 'curves' ? !same(fxs.curves, b.curves) : FXT[id].keys.some(k => !same(fxs[k], b[k]));
+        const toolOn = t => t.id === 'crop' ? false : t.id === 'wb' ? !!(currentSettings.wbTemp || currentSettings.wbTint) : upToolUsed(t);
+        function markDots() {
+            const b = fxBase(); let any = false;
+            itemsContainer.querySelectorAll('.tool-item').forEach(el => {
+                const m = /openTool\('([^']+)'\)/.exec(el.getAttribute('onclick') || ''); if (!m) return;
+                const t = toolsData.find(x => x.id === m[1]);
+                const on = !!fxTexture && (FXT[m[1]] ? fxOn(m[1], b) : (t ? toolOn(t) : false));
+                if (!el.querySelector('.edit-dot')) el.insertAdjacentHTML('beforeend', '<i class="edit-dot"></i>');
+                el.classList.toggle('edited', on); if (on) any = true;
+            });
+            const ra = subTabsContainer.querySelector('.reset-all'); if (ra) ra.classList.toggle('off', !any);
+        }
+        function decorate() {
+            const st = subTabsContainer.querySelector('.sub-tab.active'), n = st ? st.textContent.trim() : '';
+            const mode = n === 'ВСЕ ИНСТРУМЕНТЫ' ? 'tools' : n === 'ЭФФЕКТЫ' ? 'fx' : null;
+            if (!mode) return;
+            if (!subTabsContainer.querySelector('.reset-all')) subTabsContainer.insertAdjacentHTML('beforeend', '<div class="sub-tab reset-all">СБРОСИТЬ ВСЕ</div>');
+            subTabsContainer.dataset.mode = mode; markDots();
+        }
+        new MutationObserver(decorate).observe(itemsContainer, { childList: true });
+        let dT = 0; const _upf = updatePhotoFilter;
+        updatePhotoFilter = function () { _upf(); clearTimeout(dT); dT = setTimeout(() => { if (subTabsContainer.querySelector('.reset-all')) markDots(); }, 100); };
+        subTabsContainer.addEventListener('click', e => {
+            if (!e.target.closest('.reset-all')) return;
+            if (!fxTexture) { toast('Сначала загрузите фото'); return; }
+            const mode = subTabsContainer.dataset.mode;
+            confirmAsk(mode === 'fx' ? 'Сбросить все эффекты?' : 'Сбросить все настройки инструментов?', () => {
+                histCommit();
+                if (mode === 'tools') {      // кисти уже изменили пиксели – их метку (и Premium-блокировку) не трогаем
+                    const keep = {}; BRUSH_IDS.forEach(k => { if (currentSettings[k] !== undefined) keep[k] = currentSettings[k]; });
+                    currentSettings = { ...defaultSettings, ...keep };
+                } else {
+                    const ds = fxs.dsDate, u = userPresets.find(x => x.id === activePresetId);
+                    fxs = { ...fxDefaults(), dsDate: ds };
+                    if (u) Object.assign(fxs, upClone(u.fx), { dsDate: ds }); else presetFxScale();
+                }
+                updatePhotoFilter(); updateLockState(); histCommit(); markDots(); toast('Сброшено');
+            });
+        });
+
+        // ---- 4. обучение при первом запуске (повтор: меню кнопки буфера → «Как пользоваться») ----
+        const svgOf = sel => { const el = document.querySelector(sel); return el ? el.outerHTML : ''; };
+        const STEPS = [
+            ['Загрузите фото', 'Нажмите на область фото, перетащите файл или вставьте картинку из буфера обмена. Корзина сверху удаляет фото, чтобы выбрать другое.', '.placeholder-text svg'],
+            ['Пресеты', 'Первая вкладка — готовые стили. Нажмите на пресет, чтобы применить его. ☆ добавляет в избранное, во вкладке МОИ можно сохранить свой стиль. Значок с ползунками на выбранной карточке меняет силу пресета.', '.nav-item[data-tab="presets"] svg'],
+            ['Инструменты', 'Экспозиция, цвет, детали и кисти. Кнопка «?» внутри инструмента объясняет, как им пользоваться. Точка на иконке значит, что инструмент изменён, а «СБРОСИТЬ ВСЕ» обнуляет все настройки.', '.nav-item[data-tab="tools"] svg'],
+            ['Эффекты', 'Кривые, зерно, засветы, рамки, VHS и другое. Работают так же, как инструменты, и тоже отмечаются точкой.', '.nav-item[data-tab="fx"] svg'],
+            ['Сравнение и сохранение', 'Удерживайте фото, чтобы увидеть оригинал. Стрелки сверху отменяют и повторяют действия, значок буфера копирует настройки. Кнопка со стрелкой вверх сохраняет фото; формат и размер выбираются слева. Значок 🔒 — Premium, с ним на фото будет водяной знак.', '#btn-save svg']
+        ];
+        const wt = document.createElement('div');
+        wt.id = 'wt';
+        wt.innerHTML = '<div><div id="wt-ic"></div><div id="wt-t"></div><div id="wt-d"></div><div id="wt-dots"></div><div id="wt-b"><button id="wt-skip">Пропустить</button><button id="wt-next">Далее</button></div></div>';
+        document.body.appendChild(wt);
+        let wi = 0;
+        function wtDraw() {
+            const st = STEPS[wi];
+            $('wt-ic').innerHTML = svgOf(st[2]); $('wt-t').textContent = st[0]; $('wt-d').textContent = st[1];
+            $('wt-dots').innerHTML = STEPS.map((_, i) => '<i class="' + (i === wi ? 'on' : '') + '"></i>').join('');
+            $('wt-next').textContent = wi === STEPS.length - 1 ? 'Начать' : 'Далее';
+            $('wt-skip').style.display = wi === STEPS.length - 1 ? 'none' : '';
+        }
+        function wtClose() { wt.classList.remove('on'); try { localStorage.setItem('walkthroughV1', '1'); } catch (e) {} }
+        window.showWalkthrough = () => { wi = 0; wtDraw(); wt.classList.add('on'); };
+        $('wt-skip').onclick = wtClose;
+        $('wt-next').onclick = () => { if (wi >= STEPS.length - 1) wtClose(); else { wi++; wtDraw(); } };
+        const hb = document.createElement('button');
+        hb.style.cssText = clipPop.querySelector('button').style.cssText + ';border-top:1px solid #333;border-radius:0 0 8px 8px';
+        hb.textContent = 'Как пользоваться';
+        hb.onclick = ev => { ev.stopPropagation(); clipPop.style.display = 'none'; window.showWalkthrough(); };
+        clipPop.appendChild(hb);
+        let seen = false; try { seen = localStorage.getItem('walkthroughV1') === '1'; } catch (e) {}
+        if (!seen) setTimeout(window.showWalkthrough, 500);
     })();
 </script>
 </body>
