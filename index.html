@@ -551,6 +551,14 @@
 
     const presetsData = [
         { id: 'none', name: 'ORIG', color: '#999', isPro: false, glfx: { ...defaultSettings } },
+
+        // Canon 7D3: подсвеченный объект (эффект вспышки), тёмное небо/море, глубокие чёрные, жёсткий контраст, чёткая детализация
+        { id: 'canon7d3', name: 'CANON 7D3', color: '#ff8a65', isPro: false, glfx: {
+            ...defaultSettings,
+            exposure: 0.08, contrast: 0.12, saturation: 0.02, vibrance: 0.05, unsharp: 0.2, texture: 0.14, clarity: 0.08, noise: 0.02, vignette: 0.06,
+            wbTemp: 0.02, wbTint: -0.02, lights: 0.08, darks: -0.12, blacks: -0.25, whites: 0.1, flashStrength: 0.6,
+            curves: { red: [[0, 0], [0.25, 0.2], [0.5, 0.5], [0.75, 0.8], [1, 1]], green: [[0, 0], [0.25, 0.215], [0.5, 0.5], [0.75, 0.78], [1, 1]], blue: [[0, 0.004], [0.25, 0.23], [0.5, 0.495], [0.75, 0.765], [1, 0.99]] }
+        }},
         
         { id: 'canonr5', name: 'CANON R5', color: '#e57373', isPro: false, glfx: {
             ...defaultSettings,
@@ -5430,7 +5438,7 @@
 Четкость|Clarity|Чіткість
 Тон|Hue|Тон
 Сепия|Sepia|Сепія
-Осв/Зат|Dodge/Burn|Освіт./Затем.
+Осв./Зат.|Dodge/Burn|Осв./Зат.
 Туман|Fog|Туман
 Виньетка|Vignette|Віньєтка
 Резкость|Sharpen|Різкість
