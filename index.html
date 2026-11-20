@@ -579,6 +579,11 @@
             vignette: 0.24,
             // Stronger direct flash + soft specular skin sheen
             flashStrength: 0.90,
+            flashTuning: {
+                cast: 0.45, ambient: 0.60, gain: 1.32,
+                centerX: 0.48, centerY: 0.45, falloff: 2.85,
+                shoulder: 0.30, white: 2.35, contrast: 0.26
+            },
             bloomStrength: 0.028,
             bloomSize: 0.28,
             bloomRange: 0.18,
@@ -1957,14 +1962,14 @@
     //   2) flash pass (in linear light): ambient light is dimmed, a close-range flash falloff (inverse-square-like hotspot)
     //      is added, highlights get a soft shoulder, then a contrast S-curve gives the hard "flash" look
     const FLASH_TUNING = {
-        cast: 0.4,                      // how much of the colour cast is removed at full Сила
+        cast: 0.5,                      // how much of the colour cast is removed at full Сила
         castMin: 0.6, castMax: 1.5,      // limits of the per-channel correction
-        ambient: 0.52,                   // ambient light lost at full Сила
-        gain: 0.115,                      // flash power at the hotspot at full Сила
+        ambient: 0.4,                   // ambient light lost at full Сила
+        gain: 1.4,                      // flash power at the hotspot at full Сила
         centerX: 0.5, centerY: 0.55,     // hotspot position (0…1, y from the bottom)
-        falloff: 2.55,                    // hotspot tightness (bigger = tighter)
+        falloff: 2,                    // hotspot tightness (bigger = tighter)
         shoulder: 0.42, white: 2.12,       // highlight roll-off amount / white point
-        contrast: 0.32                   // S-curve amount
+        contrast: 0.38                   // S-curve amount
     };
     const FLASH_UI_MAX = 25;   // slider shows 0.0 … 12.0; settings store 0…1
     const FLASH_BASE_UNIT = 12; // 12.0 = 1.0x baseline (keeps existing presets identical; 25.0 = 2.08x stronger)
@@ -1982,32 +1987,37 @@
         }`;
     const FLASH_FS_MAIN = `
         uniform sampler2D tex; uniform sampler2D mean; uniform float k; uniform float aspect;
+        uniform vec4 uTune1; // x: cast, y: ambient, z: gain, w: falloff^2
+        uniform vec4 uTune2; // x: centerX, y: centerY, z: shoulder, w: white^2
+        uniform float uContrast;
         void main(){
             vec3 c = texture2D(tex, uv).rgb;
             vec3 m = max(texture2D(mean, vec2(0.5)).rgb, vec3(0.02));
             float gray = (m.r + m.g + m.b) / 3.0;
 
-            // 1) take the room-light colour cast out (clamped at 1.0 so >12 doesn't invert colors)
+            // 1) take the room-light colour cast out
             vec3 sc = clamp(vec3(gray) / m, vec3(${FLASH_TUNING.castMin.toFixed(3)}), vec3(${FLASH_TUNING.castMax.toFixed(3)}));
             float castK = min(k, 1.35);
-            c = clamp(c * (1.0 + (sc - 1.0) * ${FLASH_TUNING.cast.toFixed(3)} * castK), 0.0, 1.0);
+            c = clamp(c * (1.0 + (sc - 1.0) * uTune1.x * castK), 0.0, 1.0);
 
-            // 2) flash lighting in linear light (ambient dimming capped at 0.88 so background never goes negative)
+            // 2) flash lighting in linear light
             c = pow(c, vec3(2.2));
-            vec2 d2 = (uv - vec2(${FLASH_TUNING.centerX.toFixed(3)}, ${FLASH_TUNING.centerY.toFixed(3)})) * vec2(aspect, 1.0);
-            float hot = 1.0 / (1.0 + dot(d2, d2) * ${(FLASH_TUNING.falloff * FLASH_TUNING.falloff).toFixed(3)});
-            float amb = min(${FLASH_TUNING.ambient.toFixed(3)} * k, 0.88);
-            c *= (1.0 - amb) + ${FLASH_TUNING.gain.toFixed(3)} * k * hot;
+            vec2 d2 = (uv - uTune2.xy) * vec2(aspect, 1.0);
+            float hot = 1.0 / (1.0 + dot(d2, d2) * uTune1.w);
+            // Smoothly cap ambient darkening so dragging past 12->25 boosts flash glare instead of just blacking out the photo
+            float amb = min(uTune1.y * min(k, 1.25), 0.72);
+            c *= (1.0 - amb) + uTune1.z * k * hot;
 
-            // soft shoulder so bright surfaces don't clip harshly even at 25.0
-            vec3 shd = c * (1.0 + c / ${(FLASH_TUNING.white * FLASH_TUNING.white).toFixed(3)}) / (1.0 + c) * 1.05;
-            c = mix(c, shd, min(${FLASH_TUNING.shoulder.toFixed(3)} * k, 0.85));
+            // soft shoulder so bright surfaces stay glossy without flat clipping
+            vec3 shd = c * (1.0 + c / uTune2.w) / (1.0 + c) * 1.08;
+            c = mix(c, shd, min(uTune2.z * k, 0.75));
             c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2));
 
             // 3) hard-light contrast
-            c = mix(c, c * c * (3.0 - 2.0 * c), min(${FLASH_TUNING.contrast.toFixed(3)} * k, 0.75));
+            c = mix(c, c * c * (3.0 - 2.0 * c), min(uContrast * k, 0.75));
             gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
         }`;
+
     function createFlashRenderer(canvas) {
         const gl = canvas._ && canvas._.gl;
         if (!gl) return null;
@@ -2033,7 +2043,7 @@
             return { p, u };
         }
         const progMean = makeProgram(FLASH_FS_MEAN, ['tex']);
-        const progMain = makeProgram(FLASH_FS_MAIN, ['tex', 'mean', 'k', 'aspect']);
+        const progMain = makeProgram(FLASH_FS_MAIN, ['tex', 'mean', 'k', 'aspect', 'uTune1', 'uTune2', 'uContrast']);
 
         const quad = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -2064,10 +2074,11 @@
         }
         function bindTex(unit, tex) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex); }
 
-        R.render = function (strength) {
+        R.render = function (strength, customTuning) {
             const dw = gl.drawingBufferWidth, dh = gl.drawingBufferHeight;
             if (!dw || !dh) return;
             ensure(dw, dh);
+            const T = customTuning ? { ...FLASH_TUNING, ...customTuning } : FLASH_TUNING;
 
             gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.disable(gl.SCISSOR_TEST);
             gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -2095,6 +2106,9 @@
             gl.uniform1i(progMain.u.mean, 1);
             gl.uniform1f(progMain.u.k, strength);
             gl.uniform1f(progMain.u.aspect, dw / dh);
+            gl.uniform4f(progMain.u.uTune1, T.cast, T.ambient, T.gain, T.falloff * T.falloff);
+            gl.uniform4f(progMain.u.uTune2, T.centerX, T.centerY, T.shoulder, T.white * T.white);
+            gl.uniform1f(progMain.u.uContrast, T.contrast);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
             // leave GL the way glfx expects it
@@ -2111,14 +2125,14 @@
         return R;
     }
 
-    function applyFlash(canvas, strength) {
+    function applyFlash(canvas, strength, customTuning) {
         let r = canvas._flashRenderer;
         if (r === undefined) {
             try { r = createFlashRenderer(canvas); } catch (e) { console.warn('Flash unavailable:', e); r = null; }
             canvas._flashRenderer = r;
         }
         if (!r) return;
-        try { r.render(strength); } catch (e) { console.warn('Flash failed:', e); }
+        try { r.render(strength, customTuning); } catch (e) { console.warn('Flash failed:', e); }
         // the preview canvas keeps its GPU buffers; one-off export canvases free them right away
         if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._flashRenderer = null; }
     }
@@ -2179,6 +2193,15 @@
         const sh = Math.max(-1, Math.min(1, baseSettings.shadows + settingsToApply.shadows));
         const fd = Math.max(0, Math.min(1, baseSettings.fade + settingsToApply.fade));
         const clar = Math.max(0, Math.min(1, baseSettings.clarity + settingsToApply.clarity));
+        const maxFlash = FLASH_UI_MAX / FLASH_BASE_UNIT;
+        const baseFlash = Math.max(0, Math.min(maxFlash, baseSettings.flashStrength || 0));
+        const userFlash = Math.max(0, Math.min(maxFlash, settingsToApply.flashStrength || 0));
+        if (baseSettings.flashTuning && baseFlash > 0) {
+            applyFlash(targetCanvas, baseFlash, baseSettings.flashTuning);
+            if (userFlash > 0) applyFlash(targetCanvas, userFlash, null);
+        } else if (baseFlash + userFlash > 0) {
+            applyFlash(targetCanvas, Math.min(maxFlash, baseFlash + userFlash), null);
+        }
         
         const colorCurves = baseSettings.curves;
 
