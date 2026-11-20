@@ -3105,6 +3105,7 @@
             pixAmt: 0, htAmt: 0, htSize: 40, vhsAmt: 0, scanAmt: 0, vNoise: 0, glitch: 0,
             flAmt: 0, flRays: 0, flX: 75, flY: 20, flHue: 35, sfAmt: 0, sfSize: 40,
             ptType: 0, ptAmt: 0, ptSize: 50, ptAng: 10, frStyle: 0, frSize: 30, frCol: 0,
+            mbAmt: 0, mbAng: 0, mbX: 50, mbY: 50, mbKeep: 20, mbMode: 0,
             cpAmt: 0, cpHue: 0, cpRange: 30, cpSoft: 40, geAmt: 0, trAmt: 0, geHue: 190, trLen: 50, trAng: 0, trThr: 50, geWid: 30,
             camOn: 0, camMode: 0, camBat: 1, camDate: 1, camFrm: 1, camSize: 50,
             bwOn: 0, bw0: 0, bw1: 0, bw2: 0, bw3: 0, bw4: 0, bw5: 0, bw6: 0, bw7: 0, lkStyle: 0, anaAmt: 0,
@@ -3174,6 +3175,11 @@
         glow:   { name: 'Шлейф', icon: FX_SVG('<path d="M4 17c4 0 4-10 8-10s4 10 8 10"/><path d="M3 21h18" stroke-dasharray="2 3"/>'),
                   keys: ['geAmt','trAmt','geHue','trLen','trAng','trThr','geWid'],
                   rows: () => [['geAmt','Неон по краям',0,100],['trAmt','Шлейф света',0,100],['geHue','Цвет',0,360],['trLen','Длина шлейфа',0,100],['trAng','Угол',0,180],['trThr','Порог яркости',0,95],['geWid','Толщина краёв',0,100]] },
+        motion: { name: 'Движение', icon: FX_SVG('<path d="M3 8h10M3 12h18M3 16h12"/>'),
+                  keys: ['mbAmt','mbAng','mbX','mbY','mbKeep','mbMode'], custom: 'motion',
+                  rows: () => fxs.mbMode === 1
+                      ? [['mbAmt','Сила',0,100],['mbKeep','Чёткий центр',0,100],['mbX','Центр X',0,100],['mbY','Центр Y',0,100]]
+                      : [['mbAmt','Сила',0,100],['mbAng','Угол',0,180],['mbKeep','Чёткий центр',0,100],['mbX','Центр X',0,100],['mbY','Центр Y',0,100]] },
         anaglyph: { name: '3D', icon: FX_SVG('<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>'),
                   keys: ['anaAmt'], rows: () => [['anaAmt','Сдвиг',0,100]] }
     };
@@ -3185,7 +3191,7 @@
         const s = fxs;
         return fxCurvesOn() || s.shS || s.hiS || s.ca || s.dist || s.gAmt || s.lkAmt || s.dust || s.scr ||
             (s.mType > 0 && (s.mExp || s.mSat || s.mTemp)) || s.dsOn || s.frStyle ||
-            s.cpAmt || s.geAmt || s.trAmt || s.camOn || s.anaAmt || s.gdS0 || s.gdS1 || s.gdS2 || s.gdL0 || s.gdL1 || s.gdL2 || s.vhsAmt || s.scanAmt || s.vNoise || s.glitch || s.htAmt || s.pixAmt || s.flAmt || s.flRays || s.sfAmt || s.ptAmt;
+            s.mbAmt || s.cpAmt || s.geAmt || s.trAmt || s.camOn || s.anaAmt || s.gdS0 || s.gdS1 || s.gdS2 || s.gdL0 || s.gdL1 || s.gdL2 || s.vhsAmt || s.scanAmt || s.vNoise || s.glitch || s.htAmt || s.pixAmt || s.flAmt || s.flRays || s.sfAmt || s.ptAmt;
     }
     const _fxUpdateLock = updateLockState;
     updateLockState = function () {
@@ -3239,7 +3245,7 @@
         uniform sampler2D tex; uniform sampler2D lut; uniform sampler2D stamp; uniform sampler2D cam; uniform vec2 res; uniform float useStamp, stR, stG, stB;
         uniform float aspect, seed, ca, dist, useLut, shH, shS, hiH, hiS, bal, gAmt, gSize, gRough, gShadow,
             lkAmt, lkHue, lkPos, dust, scr, mType, mX, mY, mSize, mAng, mFeather, mInv, mExp, mSat, mTemp, mShow;
-        uniform vec4 U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14;
+        uniform vec4 U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16;
         #define pixAmt U1.x
         #define htAmt U1.y
         #define htSize U1.z
@@ -3281,6 +3287,12 @@
         #define trThr U14.y
         #define geWid U14.z
         #define useCam U14.w
+        #define mbAmt U15.x
+        #define mbAng U15.y
+        #define mbX U15.z
+        #define mbY U15.w
+        #define mbKeep U16.x
+        #define mbMode U16.y
         float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
         vec3 hsv(float h, float s, float v){ vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1.0), k, s); }
         float lum(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
@@ -3316,6 +3328,27 @@
                 col = vec3(texture2D(tex, 0.5 + cd * (1.0 + a) + sv + av).r, texture2D(tex, 0.5 + cd - av).g, texture2D(tex, 0.5 + cd * (1.0 - a) - sv - av).b);
             } else col = texture2D(tex, 0.5 + cd).rgb;
 
+            if (mbAmt > 0.0) {
+                vec2 p0 = 0.5 + cd;
+                vec2 cz = vec2(mbX, 1.0 - mbY);
+                float dm = length((p0 - cz) * vec2(aspect, 1.0));
+                float mk = mbKeep > 0.0 ? smoothstep(mbKeep * 0.6, mbKeep * 0.6 + 0.3, dm) : 1.0;
+                float bam = mbAmt * mk;
+                vec3 bacc = col; float bws = 1.0;
+                if (mbMode < 0.5) {
+                    vec2 bst = vec2(cos(mbAng * 3.14159), sin(mbAng * 3.14159)) * vec2(1.0 / aspect, 1.0) * bam * 0.1;
+                    for (int i = 1; i <= 12; i++) {
+                        float f = float(i) / 12.0;
+                        bacc += texture2D(tex, p0 + bst * f).rgb + texture2D(tex, p0 - bst * f).rgb; bws += 2.0;
+                    }
+                } else {
+                    for (int i = 1; i <= 16; i++) {
+                        float f = float(i) / 16.0;
+                        bacc += texture2D(tex, cz + (p0 - cz) * (1.0 - f * bam * 0.3)).rgb; bws += 1.0;
+                    }
+                }
+                col = bacc / bws;
+            }
             if (bwOn > 0.5) {
                 float mx = max(col.r, max(col.g, col.b)), mn = min(col.r, min(col.g, col.b)), dl = mx - mn;
                 float hu = 0.0;
@@ -3581,7 +3614,7 @@
             gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
         }`;
     const FX_UNI = ['tex','lut','res','aspect','seed','ca','dist','useLut','shH','shS','hiH','hiS','bal','gAmt','gSize','gRough','gShadow',
-        'lkAmt','lkHue','lkPos','dust','scr','mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp','mShow','stamp','useStamp','stR','stG','stB','U1','U2','U3','U4','U5','U6','U7','U8','U9','U10','U11','U12','U13','U14','cam'];
+        'lkAmt','lkHue','lkPos','dust','scr','mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp','mShow','stamp','useStamp','stR','stG','stB','U1','U2','U3','U4','U5','U6','U7','U8','U9','U10','U11','U12','U13','U14','U15','U16','cam'];
 
     function createFxRenderer(canvas) {
         const gl = canvas._ && canvas._.gl;
@@ -3663,7 +3696,7 @@
 
     function fxActive() {
         const s = fxs;
-        return s.cpAmt || s.geAmt || s.trAmt || s.camOn || s.bwOn || s.anaAmt || s.gdS0 || s.gdS1 || s.gdS2 || s.gdL0 || s.gdL1 || s.gdL2 || s.dsOn || s.pixAmt || s.htAmt || s.vhsAmt || s.scanAmt || s.vNoise || s.glitch || s.flAmt || s.flRays || s.sfAmt || s.ptAmt || s.frStyle || s.ca || s.dist || s.shS || s.hiS || s.gAmt || s.lkAmt || s.dust || s.scr ||
+        return s.mbAmt || s.cpAmt || s.geAmt || s.trAmt || s.camOn || s.bwOn || s.anaAmt || s.gdS0 || s.gdS1 || s.gdS2 || s.gdL0 || s.gdL1 || s.gdL2 || s.dsOn || s.pixAmt || s.htAmt || s.vhsAmt || s.scanAmt || s.vNoise || s.glitch || s.flAmt || s.flRays || s.sfAmt || s.ptAmt || s.frStyle || s.ca || s.dist || s.shS || s.hiS || s.gAmt || s.lkAmt || s.dust || s.scr ||
             (s.mType > 0 && (s.mExp || s.mSat || s.mTemp || fxMaskShow)) || fxCurvesOn();
     }
     function fxParams(canvas) {
@@ -3679,6 +3712,8 @@
             U12: [s.cpAmt / 100, s.cpHue / 360, s.cpRange / 100, s.cpSoft / 100],
             U13: [s.geAmt / 100, s.trAmt / 100, s.geHue / 360, s.trLen / 100],
             U14: [s.trAng / 180, s.trThr / 100, s.geWid / 100, s.camOn ? 1 : 0],
+            U15: [s.mbAmt / 100, s.mbAng / 180, s.mbX / 100, s.mbY / 100],
+            U16: [s.mbKeep / 100, s.mbMode, 0, 0],
             U10: [s.bw0 / 100, s.bw1 / 100, s.bw2 / 100, s.bw3 / 100], U11: [s.bw4 / 100, s.bw5 / 100, s.bw6 / 100, s.bw7 / 100],
             seed: 1.37, useStamp: s.dsOn ? 1 : 0, stR: DS_COLORS[s.dsCol][0], stG: DS_COLORS[s.dsCol][1], stB: DS_COLORS[s.dsCol][2], ca: s.ca / 100, dist: s.dist / 200, useLut: fxCurvesOn() ? 1 : 0,
             shH: s.shH / 360, shS: s.shS / 100, hiH: s.hiH / 360, hiS: s.hiS / 100, bal: s.bal / 100,
@@ -3756,6 +3791,10 @@
         if (def.custom === 'curves') return fxCurvesUI(fxBody);
         if (def.custom === 'stamp') return fxStampUI(fxBody);
         if (def.custom === 'grade') return fxGradeUI(fxBody);
+        if (def.custom === 'motion') {
+            const bar = document.createElement('div'); bar.className = 'fx-chips'; fxBody.appendChild(bar);
+            [['Движение', 0], ['Зум', 1]].forEach(([t, v]) => fxChip(bar, t, fxs.mbMode === v, () => { fxs.mbMode = v; fxBuild(); updatePhotoFilter(); }));
+        }
         if (def.custom === 'cam') {
             const re = () => { fxBuild(); updatePhotoFilter(); };
             const r1 = document.createElement('div'); r1.className = 'fx-chips'; fxBody.appendChild(r1);
@@ -3862,6 +3901,7 @@
         if (id === 'stamp') fxs.dsOn = 1;
         if (id === 'bw') fxs.bwOn = 1;
         if (id === 'camcorder') fxs.camOn = 1;
+        if (id === 'motion' && !fxs.mbAmt) fxs.mbAmt = 40;
         if (id === 'colorpop' && !fxs.cpAmt) fxs.cpAmt = 100;
         if (id === 'frame' && !fxs.frStyle) fxs.frStyle = 1;
         if (id === 'particles' && !fxs.ptAmt) fxs.ptAmt = 40;
@@ -4078,9 +4118,9 @@
     };
     const DBX_SVG = inner => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
     const DBX_TOOLS = [
-        { id: 'blurbrush', name: 'Обл. разм.', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
+        { id: 'blurbrush', name: 'Кисть размытия', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
         { id: 'heal', name: 'Лечение', icon: DBX_SVG('<rect x="2" y="9" width="20" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M10.5 10.5h.01M13.5 13.5h.01"/>'), isPro: false },
-        { id: 'detail', name: 'Резк./Шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
+        { id: 'detail', name: 'Резкость / шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
     ];
     toolsData.splice(toolsData.findIndex(t => t.id === 'dodgeburn') + 1, 0, ...DBX_TOOLS);
 
