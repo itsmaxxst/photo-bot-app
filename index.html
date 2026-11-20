@@ -3333,7 +3333,7 @@
         glow:   { name: 'Шлейф', icon: FX_SVG('<path d="M4 17c4 0 4-10 8-10s4 10 8 10"/><path d="M3 21h18" stroke-dasharray="2 3"/>'),
                   keys: ['geAmt','trAmt','geHue','trLen','trAng','trThr','geWid'],
                   rows: () => [['geAmt','Неон по краям',0,100],['trAmt','Шлейф света',0,100],['geHue','Цвет',0,360],['trLen','Длина шлейфа',0,100],['trAng','Угол',0,180],['trThr','Порог яркости',0,95],['geWid','Толщина краёв',0,100]] },
-        motion: { name: 'Моушн / зум', icon: FX_SVG('<path d="M3 8h10M3 12h18M3 16h12"/>'),
+        motion: { name: 'Движение', icon: FX_SVG('<path d="M3 8h10M3 12h18M3 16h12"/>'),
                   keys: ['mbAmt','mbAng','mbX','mbY','mbKeep','mbMode'], custom: 'motion',
                   rows: () => fxs.mbMode === 1
                       ? [['mbAmt','Сила',0,100],['mbKeep','Чёткий центр',0,100],['mbX','Центр X',0,100],['mbY','Центр Y',0,100]]
@@ -4276,9 +4276,9 @@
     };
     const DBX_SVG = inner => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
     const DBX_TOOLS = [
-        { id: 'blurbrush', name: 'Кисть размытия', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
+        { id: 'blurbrush', name: 'Обл. разм.', icon: DBX_SVG('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'), isPro: false },
         { id: 'heal', name: 'Лечение', icon: DBX_SVG('<rect x="2" y="9" width="20" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M10.5 10.5h.01M13.5 13.5h.01"/>'), isPro: false },
-        { id: 'detail', name: 'Резкость / шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
+        { id: 'detail', name: 'Резк./Шум', icon: DBX_SVG('<path d="M3 20L12 4l9 16z"/>'), isPro: false }
     ];
     toolsData.splice(toolsData.findIndex(t => t.id === 'dodgeburn') + 1, 0, ...DBX_TOOLS);
 
