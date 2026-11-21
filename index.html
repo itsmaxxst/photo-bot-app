@@ -214,6 +214,9 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .tool-item .edit-dot { position: absolute; top: -3px; left: 10px; width: 9px; height: 9px; border-radius: 50%; background: #4dd0e1; box-shadow: 0 0 0 2px #000; display: none; }
         .tool-item.edited .edit-dot { display: block; }
+        .dn-toggle { margin-left: auto; display: flex; flex: none; gap: 2px; padding: 2px; background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 16px; align-items: center; }
+        .dn-seg { display: flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 13px; font-size: 10px; font-weight: 700; letter-spacing: .4px; color: #8e8e93; cursor: pointer; transition: background .15s, color .15s; }
+        .dn-seg.on { background: #fff; color: #000; }
         .sub-tab.reset-all { margin-left: auto; color: #ff453a; }
         .sub-tab.reset-all.off { opacity: .35; pointer-events: none; }
         #wt { position: fixed; inset: 0; z-index: 500; display: none; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.7); padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
@@ -1188,6 +1191,208 @@
             duotone: { shadow: [0.04, 0.02, 0.35], high: [1.0, 0.35, 0.85] }
         }}
     ];
+
+    // ==================================================================================
+    //  PREMIUM CAMERA LOOKS + ДЕНЬ / НОЧЬ ПОДПРЕСЕТЫ
+    //  Every preset (except ORIG) gets two variants: variants.day and variants.night.
+    //  p.glfx / p.fx are getters that return the active variant, so all existing logic
+    //  (applyPreset, intensity, fx rollback, history, export) keeps working unchanged.
+    //  CANON 7D3 keeps your hand-made look as DAY; NIGHT is a hand-tuned twin of it.
+    // ==================================================================================
+    let presetVariant = (() => { try { return localStorage.getItem('presetVariant') === 'night' ? 'night' : 'day'; } catch (e) { return 'day'; } })();
+
+    (function buildPresetVariants() {
+        const UNI = /^(vignette|unsharp|noise|sepia|blur|denoise|fade|bloom|halation)/;   // 0…1 only; everything else −1…1 (halationHue is bipolar)
+        const clampK = (k, v) => (UNI.test(k) && k !== 'halationHue') ? Math.max(0, Math.min(1, v)) : Math.max(-1, Math.min(1, v));
+        const r4 = v => Math.round(v * 10000) / 10000;
+        const clone = o => JSON.parse(JSON.stringify(o));
+
+        // numeric deltas on top of a glfx object (curves / objects are left alone)
+        function layer(g, add, onlyIfEmpty) {
+            const o = { ...g };
+            for (const k in add) {
+                if (typeof add[k] !== 'number') continue;
+                if (onlyIfEmpty && o[k]) continue;
+                o[k] = r4(clampK(k, (o[k] || 0) + add[k]));
+            }
+            return o;
+        }
+        // colour-science cast: per-channel offset that peaks in the mid-tones and vanishes at black / white
+        function cast(curves, c) {
+            const out = clone(curves || { red: [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]], green: [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]], blue: [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]] });
+            ['red', 'green', 'blue'].forEach((ch, i) => { out[ch] = out[ch].map(([x, y]) => [x, r4(Math.max(0, Math.min(1, y + c[i] * Math.sin(Math.PI * x))))]); });
+            return out;
+        }
+        // night curve: lifted shadows (milky city blacks), protected highlights, cool shadow tint
+        function nightCurve(curves, lift, pull, tint) {
+            const out = clone(curves || { red: [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]], green: [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]], blue: [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]] });
+            ['red', 'green', 'blue'].forEach((ch, i) => { out[ch] = out[ch].map(([x, y]) => [x, r4(Math.max(0, Math.min(1, y + (lift + tint[i]) * Math.pow(1 - x, 2) - pull * Math.pow(x, 3))))]); });
+            return out;
+        }
+        const mono = p => /^(trix|hp5|bwsoft|bwhard|bwmatte|bwred|bwwarm|bwport|noir|delta|leicamono)$/.test(p.id) || p.glfx.saturation <= -0.99;
+        const famOf = p => {
+            const id = p.id;
+            if (mono(p)) return 'bw';
+            if (/^canon/.test(id)) return 'canon';
+            if (/^sony/.test(id)) return 'sony';
+            if (/^nikon/.test(id)) return 'nikon';
+            if (/^fuji(x|$)/.test(id) && id !== 'fuji') return 'fujicam';
+            if (/^leica/.test(id)) return 'leica';
+            if (/^(gfx100|h6d|hbx2d|pentax645|phaseone)$/.test(id)) return 'medium';
+            if (/^lumix/.test(id)) return 'lumix';
+            if (id === 'om1') return 'om';
+            if (id === 'sigmafp') return 'sigma';
+            if (id === 'alexa35' || id === 'arri') return 'alexa';
+            if (/^(portra|portra160|fuji|kgold|ektar|cine800|velvia|pro400h|superia|polaroid|kchrome|agfa)$/.test(id)) return 'film';
+            return 'mood';
+        };
+
+        // ---- DAY signatures: how each brand "draws" colour. HSL slots: 0 red, 1 orange(skin), 2 yellow, 3 green, 4 blue, 5 purple.
+        // hue + moves toward the next colour (red→orange→yellow→green→cyan→blue→purple)
+        const SIG = {
+            // Canon: warm, flattering skin (luminous orange, slightly pink-red), creamy highlights, soft cyan-leaning sky, olive-ish greens
+            canon: { add: { wbTint: 0.01, vibrance: 0.015, hsl0s: 0.05, hsl0l: 0.02, hsl1h: -0.04, hsl1s: 0.04, hsl1l: 0.05, hsl2h: -0.06, hsl2s: -0.03, hsl3h: -0.04, hsl3s: -0.04, hsl4h: -0.05, hsl4s: 0.04, hsl4l: -0.05, bloomStrength: 0.01, bloomSize: 0.5, bloomRange: 0.5 },
+                     cast: [0.008, 0, -0.008], fx: { shH: 205, shS: 4, hiH: 34, hiS: 5 }, nsH: 225, nhH: 32 },
+            // Sony: clean, precise, slightly cool-green; vivid blue sky, neutral skin, razor micro-contrast
+            sony:  { add: { wbTemp: -0.01, wbTint: -0.008, vibrance: 0.01, clarity: 0.03, dehaze: 0.02, hsl0s: -0.02, hsl1s: -0.02, hsl3h: 0.04, hsl3s: 0.03, hsl4h: -0.03, hsl4s: 0.08, hsl4l: -0.04, hsl5s: 0.03 },
+                     cast: [-0.006, 0.002, 0.008], fx: { shH: 195, shS: 5, hiH: 50, hiS: 2 }, nsH: 205, nhH: 38 },
+            // Nikon: rich yellow-warm "golden" rendering, deep tones, strong yellows and earthy greens
+            nikon: { add: { wbTemp: 0.015, clarity: 0.02, whites: 0.03, hsl0s: 0.03, hsl1s: 0.03, hsl1h: 0.02, hsl2s: 0.06, hsl2l: 0.03, hsl3h: -0.03, hsl3s: -0.02, hsl4l: -0.04 },
+                     cast: [0.006, 0.004, -0.008], fx: { shH: 210, shS: 3, hiH: 48, hiS: 6 }, nsH: 220, nhH: 40 },
+            // Fujifilm: film-simulation colour — teal-cooled greens, deep blues, warm skin, gentle fade and fine grain
+            fujicam: { add: { fade: 0.012, hsl0s: 0.05, hsl1s: -0.04, hsl2s: -0.03, hsl3h: 0.05, hsl3s: -0.05, hsl3l: -0.06, hsl4h: -0.04, hsl4s: -0.03, hsl4l: -0.1 },
+                     cast: [0.004, 0, -0.01], fx: { shH: 185, shS: 10, hiH: 42, hiS: 6, gAmt: 8, gSize: 30, gRough: 50, gShadow: 55 }, nsH: 190, nhH: 34 },
+            // Leica: deep, dense, micro-contrast; rich reds, darker blues, restrained olive greens, tight vignette and fine grain
+            leica: { add: { contrast: 0.015, blacks: -0.02, whites: 0.02, clarity: 0.03, vignette: 0.02, hsl0s: 0.07, hsl0l: -0.05, hsl1s: -0.02, hsl2s: -0.04, hsl3h: -0.03, hsl3s: -0.08, hsl3l: -0.05, hsl4s: -0.05, hsl4l: -0.1 },
+                     cast: [0.004, 0, -0.004], fx: { shH: 215, shS: 6, hiH: 40, hiS: 5, gAmt: 7, gSize: 28, gRough: 55, gShadow: 60 }, nsH: 230, nhH: 36 },
+            // Medium format (Hasselblad / Fuji GFX / Pentax / Phase One): natural colour, long smooth tonal roll-off, faint glow
+            medium: { add: { highlights: -0.03, lights: -0.02, darks: 0.02, vibrance: 0.01, texture: 0.01, hsl0s: 0.02, hsl1s: 0.02, hsl1l: 0.04, hsl3s: -0.02, hsl4s: 0.02, bloomStrength: 0.012, bloomSize: 0.5, bloomRange: 0.5 },
+                     cast: [0.003, 0.002, 0], fx: { shH: 200, shS: 2, hiH: 38, hiS: 3 }, nsH: 215, nhH: 34 },
+            // Lumix: cinematic teal-and-amber, soft video-derived roll-off
+            lumix: { add: { fade: 0.008, hsl1s: 0.02, hsl3h: 0.04, hsl3s: 0.02, hsl4h: -0.05, hsl4l: -0.06, hsl0s: 0.02, halationStrength: 0.012, halationSize: 0.09, halationRange: 0.23 },
+                     cast: [0.002, 0.004, 0.006], fx: { shH: 192, shS: 9, hiH: 32, hiS: 7 }, nsH: 195, nhH: 30 },
+            om:    { add: { vibrance: 0.02, hsl2s: 0.03, hsl3h: 0.02, hsl3s: 0.05, hsl4s: 0.04 },
+                     cast: [-0.003, 0.004, 0.003], fx: { shH: 200, shS: 3, hiH: 45, hiS: 3 }, nsH: 210, nhH: 38 },
+            // Sigma fp (Foveon-like): saturated, dense, crunchy detail
+            sigma: { add: { clarity: 0.03, texture: 0.03, hsl0s: 0.06, hsl1s: 0.05, hsl2s: 0.04, hsl4s: 0.05 },
+                     cast: [0.003, 0, -0.003], fx: { shH: 205, shS: 4, hiH: 38, hiS: 4, gAmt: 6, gSize: 30, gRough: 50, gShadow: 55 }, nsH: 215, nhH: 34 },
+            // Ricoh GR: punchy street contrast, hard micro-detail, gritty grain
+            ricoh: { add: { clarity: 0.06, texture: 0.05, blacks: -0.03, whites: 0.02, hsl3s: -0.05, hsl4l: -0.06, hsl0s: 0.05 },
+                     cast: [0.003, 0, -0.004], fx: { shH: 200, shS: 4, hiH: 40, hiS: 4, gAmt: 12, gSize: 25, gRough: 65, gShadow: 60 }, nsH: 215, nhH: 34 },
+            // ARRI Alexa: filmic highlight roll-off, halation, warm skin, restrained greens/blues
+            alexa: { add: { highlights: -0.04, lights: -0.03, darks: 0.02, hsl1s: 0.03, hsl1l: 0.04, hsl2s: -0.03, hsl3s: -0.05, hsl4s: -0.03, hsl4l: -0.04, halationStrength: 0.03, halationSize: 0.09, halationRange: 0.23, bloomStrength: 0.015, bloomSize: 0.5, bloomRange: 0.5 },
+                     cast: [0.004, 0.002, -0.004], fx: { shH: 200, shS: 5, hiH: 34, hiS: 7, gAmt: 6, gSize: 35, gRough: 50, gShadow: 55 }, nsH: 210, nhH: 30 },
+            // Film stocks already have their own colour — only add the missing grain / glow
+            film:  { add: { halationStrength: 0.012, halationSize: 0.09, halationRange: 0.23 }, onlyEmpty: true,
+                     cast: null, fx: { gAmt: 8, gSize: 32, gRough: 55, gShadow: 55 }, nsH: 205, nhH: 34 },
+            // B&W: no colour work — tonal depth, texture, grain
+            bw:    { add: { clarity: 0.03, texture: 0.02 }, cast: null, fx: { gAmt: 10, gSize: 35, gRough: 55, gShadow: 60 } },
+            mood:  { add: {}, cast: null, fx: {}, nsH: 215, nhH: 32 }
+        };
+        const COMMON_CAMERA = { highlights: -0.03, shadows: 0.02, clarity: 0.02, dehaze: 0.015 };   // shared "premium" polish for camera presets
+        const CAMERA = /^(canon|sony|nikon|fujix|leica|lumix|om1|sigmafp|alexa35|ricohgr|gfx100|h6d|hbx2d|pentax645|phaseone)/;
+
+        // presets that are already "night" in character – their original is the NIGHT variant, DAY is a lifted twin
+        const NATIVE_NIGHT = /^(nightcity|bluehour|cneon|cine800|sonya7s3|flash)$/;
+
+        // ---- NIGHT recipe: protect lamps, lift shadows, deep sky, soft glow, cool shadows / warm light split
+        function nightOf(day, dayFx, fam) {
+            const mo = fam === 'bw';
+            let g = layer(day, mo
+                ? { shadows: 0.12, highlights: -0.2, lights: -0.06, whites: -0.03, blacks: -0.08, contrast: 0.03, dehaze: 0.04, denoise: 0.06, vignette: 0.04, bloomStrength: 0.03, halationStrength: 0.015 }
+                : { exposure: 0.06, shadows: 0.16, darks: 0.08, highlights: -0.24, lights: -0.08, whites: -0.04, blacks: -0.05, dehaze: 0.05, denoise: 0.08, saturation: -0.02, vibrance: 0.04, contrast: -0.01, vignette: 0.02, bloomStrength: 0.022, halationStrength: 0.02,
+                    hsl1s: -0.05, hsl1l: 0.06, hsl2s: -0.05, hsl2l: 0.04, hsl3l: -0.04, hsl4s: -0.03, hsl4l: -0.08, hsl5s: 0.04, hsl5l: 0.03 });
+            if (g.bloomStrength > 0) { g.bloomSize = g.bloomSize || 0.55; g.bloomRange = g.bloomRange || 0.5; }
+            if (g.halationStrength > 0) { g.halationSize = g.halationSize || 0.09; g.halationRange = g.halationRange || 0.23; }
+            g.curves = nightCurve(day.curves, mo ? 0.008 : 0.012, 0.02, mo ? [0, 0, 0] : [-0.004, 0, 0.010]);
+            const S = SIG[fam] || SIG.mood;
+            const f = { ...dayFx };
+            if (!mo) {
+                f.shH = S.nsH || 215; f.shS = Math.min(100, (dayFx.shS || 0) + 8);
+                f.hiH = S.nhH || 32;  f.hiS = Math.min(100, (dayFx.hiS || 0) + 6);
+                f.bal = -10;
+            }
+            f.gAmt = Math.min(100, (dayFx.gAmt || 0) + (mo ? 6 : 4));
+            f.gSize = dayFx.gSize || 35; f.gRough = dayFx.gRough || 55; f.gShadow = 65;
+            return { glfx: g, fx: f };
+        }
+        // DAY twin of an already-night preset: same colour grade, more open and less glow
+        function dayOfNight(night, nightFx) {
+            const g = layer(night, { exposure: 0.08, shadows: 0.05, darks: -0.02, blacks: 0.03, vignette: -0.04, saturation: 0.02 });
+            ['bloomStrength', 'halationStrength'].forEach(k => { if (g[k]) g[k] = r4(g[k] * 0.5); });
+            return { glfx: g, fx: { ...nightFx } };
+        }
+
+        presetsData.forEach(p => {
+            if (p.id === 'none') return;
+            const base = p.glfx, baseFx = p.fx || {};
+            let dayG, dayFx, nightG, nightFx;
+
+            if (p.id === 'canon7d3') {
+                // DAY = your original look, untouched. NIGHT = same flash-portrait character, but the exposure pull-down is
+                // relaxed so dark scenes aren't crushed, the flash carries the subject, and the shadows go cool navy.
+                dayG = base; dayFx = baseFx;
+                nightG = {
+                    ...base,
+                    exposure: -0.28, luminance: 0.02, brightness: 0.01, contrast: 0.06,
+                    highlights: -0.3, shadows: 0.3, lights: -0.2, darks: 0.08, blacks: -0.08, whites: 0.12,
+                    saturation: -0.04, vibrance: 0.06, wbTemp: -0.015, wbTint: 0.012,
+                    unsharp: 0.025, noise: 0.02, denoise: 0.1, vignette: 0.07, dehaze: 0.04,
+                    flashStrength: 0.78,
+                    flashTuning: { cast: 0.42, ambient: 0.7, gain: 2.45, centerX: 0.48, centerY: 0.39, falloff: 2.1, shoulder: 0.24, white: 2.5, contrast: 0.26 },
+                    bloomStrength: 0.032, bloomSize: 0.5, bloomRange: 0.4,
+                    halationStrength: 0.02, halationSize: 0.09, halationRange: 0.23,
+                    hsl1s: -0.1, hsl1l: 0.22, hsl2s: -0.12, hsl2l: 0.0, hsl3l: -0.12, hsl4h: -0.12, hsl4s: -0.1, hsl4l: -0.2, hsl5s: 0.04, hsl5l: 0.2,
+                    curves: nightCurve(base.curves, 0.012, 0.02, [-0.004, 0, 0.010])
+                };
+                nightFx = { ...baseFx, mExp: 70, mFeather: 70, shH: 222, shS: 18, hiH: 30, hiS: 6, bal: -30, gAmt: 8, gSize: 30, gRough: 55, gShadow: 65 };
+            } else {
+                const fam = famOf(p), S = SIG[fam] || SIG.mood;
+                let g = { ...base };
+                if (CAMERA.test(p.id) && fam !== 'bw') g = layer(g, COMMON_CAMERA);
+                g = layer(g, S.add, !!S.onlyEmpty);
+                if (S.cast) g.curves = cast(g.curves, S.cast);
+                if ((g.bloomStrength || 0) > 0) { g.bloomSize = g.bloomSize || 0.5; g.bloomRange = g.bloomRange || 0.5; }
+                if ((g.halationStrength || 0) > 0) { g.halationSize = g.halationSize || 0.09; g.halationRange = g.halationRange || 0.23; }
+                // brand fx fill only what the preset doesn't define itself
+                const fx = { ...S.fx, ...baseFx };
+                if (fam === 'bw') { delete fx.shH; delete fx.shS; delete fx.hiH; delete fx.hiS; }
+                if (NATIVE_NIGHT.test(p.id)) {
+                    nightG = g; nightFx = fx;
+                    const d = dayOfNight(nightG, nightFx); dayG = d.glfx; dayFx = d.fx;
+                } else {
+                    dayG = g; dayFx = fx;
+                    const n = nightOf(dayG, dayFx, fam); nightG = n.glfx; nightFx = n.fx;
+                }
+            }
+            p.variants = { day: { glfx: dayG, fx: dayFx }, night: { glfx: nightG, fx: nightFx } };
+            Object.defineProperty(p, 'glfx', { get() { return this.variants[presetVariant].glfx; }, enumerable: true, configurable: true });
+            Object.defineProperty(p, 'fx',   { get() { return this.variants[presetVariant].fx; },   enumerable: true, configurable: true });
+        });
+    })();
+
+    // switch DAY / NIGHT for the active preset: your manual tool values stay, only the preset layer changes
+    window.setPresetVariant = function (v) {
+        v = v === 'night' ? 'night' : 'day';
+        if (v === presetVariant) return;
+        const p = presetsData.find(x => x.id === activePresetId);
+        if (p && p.variants && fxTexture) {
+            const d = fxDefaults();
+            Object.keys({ ...p.variants.day.fx, ...p.variants.night.fx }).forEach(k => { fxs[k] = d[k]; });   // drop the old variant's effects
+            presetVariant = v;
+            presetSettings = { ...p.glfx };
+            presetFxScale();
+            updatePhotoFilter(); updateLockState();
+        } else presetVariant = v;
+        try { localStorage.setItem('presetVariant', v); } catch (e) {}
+        renderPresets(currentTab);
+    };
+    const variantToggleHTML = () => {
+        const sun = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+        const moon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+        const seg = (id, ico, label) => `<div class="dn-seg ${presetVariant === id ? 'on' : ''}" onclick="setPresetVariant('${id}')" aria-label="${label}">${ico}${presetVariant === id ? '<span>' + label + '</span>' : ''}</div>`;
+        return `<div class="dn-toggle">${seg('day', sun, 'ДЕНЬ')}${seg('night', moon, 'НОЧЬ')}</div>`;
+    };
 
     const toolsData = [
         { id: 'crop', name: 'Обрезка', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/></svg>', isPro: false },
@@ -4978,7 +5183,7 @@
     renderPresets = function (tab = 'presets') {
         currentTab = tab;
         const t = (id, label) => `<div class="sub-tab ${tab === id ? 'active' : ''}" onclick="renderPresets('${id}')">${label}</div>`;
-        subTabsContainer.innerHTML = t('presets', 'ПРЕСЕТЫ') + t('mine', 'МОИ') + t('favorites', 'ИЗБРАННОЕ');
+        subTabsContainer.innerHTML = t('presets', 'ПРЕСЕТЫ') + t('mine', 'МОИ') + t('favorites', 'ИЗБРАННОЕ') + (tab === 'mine' ? '' : variantToggleHTML());
         itemsContainer.innerHTML = '';
         let list = presetsData;
         if (tab === 'mine') {
