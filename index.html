@@ -554,70 +554,70 @@
 
         { id: 'canon7d3', name: 'CANON 7D3', color: '#ff8a65', isPro: false, glfx: {
             ...defaultSettings,
-            // Smoothly darken the entire background (sky, clouds, horizon, and sea) with no banding
-            exposure: -0.38,
-            luminance: -0.04,
+            // Pull global exposure & luminance down further so the sky, clouds, and sea darken evenly together
+            exposure: -0.48,
+            luminance: -0.07,
             brightness: 0.01,
             contrast: 0.05,
-            highlights: -0.18,
-            shadows: 0.14,
-            lights: -0.16,
+            highlights: -0.22,
+            shadows: 0.15,
+            lights: -0.18,
             darks: 0.02,
             blacks: -0.12,
-            whites: 0.24,
+            whites: 0.28,
             // Clean flash color balance
             saturation: -0.06,
             vibrance: 0.04,
             wbTemp: 0.01,
             wbTint: 0.01,
-            // Crisp detail, gentle vignette
+            // Crisp detail, very low vignette so background darkening stays even
             unsharp: 0.025,
             texture: 0,
             clarity: 0,
             noise: 0.015,
-            vignette: 0.08,
-            // Subject Mask Part 1: Direct flash hotspot centered on the person & foreground
-            flashStrength: 0.65,
+            vignette: 0.04,
+            // Subject Mask Part 1: Stronger flash gain to lift the person brighter against the darker background
+            flashStrength: 0.70,
             flashTuning: {
                 cast: 0.40,
-                ambient: 0.68,
-                gain: 1.65,
+                ambient: 0.72,
+                gain: 1.92,
                 centerX: 0.48,
-                centerY: 0.38,
-                falloff: 2.30,
-                shoulder: 0.24,
-                white: 2.50,
+                centerY: 0.39,
+                falloff: 2.35,
+                shoulder: 0.22,
+                white: 2.55,
                 contrast: 0.24
             },
             bloomStrength: 0.018,
             bloomSize: 0.25,
             bloomRange: 0.16,
-            // Gentle HSL (uses default chromaKnee: 0.1 -> completely eliminates cloud pixelation)
+            // Very gentle sky/cloud HSL so there is zero seam/line between the blue sky and pale clouds
             hsl0s: -0.05,
-            hsl0l: 0.18,
+            hsl0l: 0.22,
             hsl1h: -0.02,
             hsl1s: -0.12,
-            hsl1l: 0.24,
-            hsl2s: -0.15,
-            hsl2l: -0.12,
-            hsl3s: -0.15,
-            hsl3l: -0.18,
-            hsl4h: -0.18,
-            hsl4s: -0.15,
-            hsl4l: -0.32,
+            hsl1l: 0.28,
+            hsl2s: -0.14,
+            hsl2l: -0.08,
+            hsl3s: -0.12,
+            hsl3l: -0.10,
+            hsl4h: -0.16,
+            hsl4s: -0.14,
+            hsl4l: -0.14,
             hsl5h: 0.05,
             hsl5s: -0.14,
-            hsl5l: 0.20,
+            hsl5l: 0.24,
             // Smooth tone curve: deep dark sea/sky, bright flash skin & shirt
             curves: {
-                red:   [[0, 0], [0.25, 0.215], [0.5, 0.520], [0.75, 0.835], [1, 1]],
-                green: [[0, 0], [0.25, 0.215], [0.5, 0.515], [0.75, 0.825], [1, 1]],
-                blue:  [[0, 0], [0.25, 0.215], [0.5, 0.505], [0.75, 0.810], [1, 0.99]]
+                red:   [[0, 0], [0.25, 0.210], [0.5, 0.525], [0.75, 0.840], [1, 1]],
+                green: [[0, 0], [0.25, 0.210], [0.5, 0.520], [0.75, 0.830], [1, 1]],
+                blue:  [[0, 0], [0.25, 0.210], [0.5, 0.510], [0.75, 0.815], [1, 0.99]]
             }
         }, fx: {
-            // Subject Mask Part 2: Radial mask centered on the person/foreground (mY: 60) so the above stay dark
-            mType: 2, mX: 49, mY: 60, mSize: 38, mFeather: 65, mInv: 0, mExp: 26, mSat: -2, mTemp: 1,
-            // Deep teal-navy shadows, clean neutral highlights
+            // Subject Mask Part 2: Stronger radial lift (mExp: 44) with a softer feather (74) so the person is brighter
+            mType: 2, mX: 49, mY: 57, mSize: 40, mFeather: 74, mInv: 0, mExp: 44, mSat: -2, mTemp: 1,
+            // Deep teal-navy shadows in the sky/sea, clean neutral highlights
             shH: 205, shS: 12, hiH: 30, hiS: 2, bal: -25
         }},
         
