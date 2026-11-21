@@ -1252,44 +1252,50 @@
 
         // ---- SUBJECT DETECTION (first plan = person). Lightweight, on-device: skin-tone + centre-weighted saliency on a 64px thumbnail.
         // Uses the browser FaceDetector too when it exists. Result: hotspot centre (cy measured from the bottom) and ellipse radii in image-height units.
-        const SUBJ_DEFAULT = { cx: 0.5, cy: 0.5, rx: 0.32, ry: 0.46 };
+        const SUBJ_DEFAULT = { cx: 0.5, cy: 0.5, rx: 0.32, ry: 0.46, conf: 0 };      // conf 0 = nobody found → no flash oval
         let _subjKey = '', _subj = SUBJ_DEFAULT;
         function subjectFromPixels(d, gw, gh, aspect) {
-            const N = gw * gh, sc = new Float32Array(N), skinSc = new Float32Array(N);
-            let meanY = 0, skinN = 0;
-            for (let i = 0; i < N; i++) meanY += 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
-            meanY /= N;
-            for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
-                const k = j * gw + i, R = d[k * 4], G = d[k * 4 + 1], B = d[k * 4 + 2];
+            const N = gw * gh, skin = new Uint8Array(N);
+            for (let k = 0; k < N; k++) {
+                const R = d[k * 4], G = d[k * 4 + 1], B = d[k * 4 + 2];
                 const Y = 0.299 * R + 0.587 * G + 0.114 * B, Cb = 128 - 0.168736 * R - 0.331264 * G + 0.5 * B, Cr = 128 + 0.5 * R - 0.418688 * G - 0.081312 * B;
-                const u = (i + 0.5) / gw, v = (j + 0.5) / gh;
-                const cp = Math.exp(-0.5 * (Math.pow((u - 0.5) / 0.42, 2) + Math.pow((v - 0.5) / 0.5, 2)));
-                const skin = (Cb >= 77 && Cb <= 127 && Cr >= 133 && Cr <= 173 && Y > 45 && R > G && R > B * 0.9) ? 1 : 0;
-                const mx = Math.max(R, G, B), mn = Math.min(R, G, B), satu = mx ? (mx - mn) / mx : 0;
-                const sal = (Math.abs(Y - meanY) / 255) * 0.5 + satu * 0.3;
-                skinSc[k] = skin * (0.35 + 0.65 * cp);
-                sc[k] = 0.12 * sal * cp;
-                skinN += skin;
+                skin[k] = (Cb >= 77 && Cb <= 127 && Cr >= 133 && Cr <= 173 && Y > 45 && R > G && R > B * 0.9) ? 1 : 0;
             }
-            const useSkin = skinN / N > 0.004;
-            const base = new Float32Array(N); for (let k = 0; k < N; k++) base[k] = (useSkin ? skinSc[k] : 0) + sc[k];
-            const bl = new Float32Array(N); let mxv = 0;                                    // 3x3 box blur
+            const sk = new Uint8Array(N);                                            // 3x3 majority smoothing kills single-pixel noise
             for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
-                let s = 0, c = 0;
-                for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const x = i + di, y = j + dj; if (x >= 0 && y >= 0 && x < gw && y < gh) { s += base[y * gw + x]; c++; } }
-                bl[j * gw + i] = s / c; if (bl[j * gw + i] > mxv) mxv = bl[j * gw + i];
+                let c = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const x = i + di, y = j + dj; if (x >= 0 && y >= 0 && x < gw && y < gh) c += skin[y * gw + x]; }
+                sk[j * gw + i] = c >= 5 ? 1 : 0;
             }
-            if (mxv <= 0) return SUBJ_DEFAULT;
-            const thr = mxv * 0.55; let W = 0, mu = 0, mv = 0;
-            for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) { const w = bl[j * gw + i]; if (w >= thr) { W += w; mu += w * (i + 0.5) / gw; mv += w * (j + 0.5) / gh; } }
-            mu /= W; mv /= W;
-            let vu = 0, vv = 0;
-            for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) { const w = bl[j * gw + i]; if (w >= thr) { vu += w * Math.pow((i + 0.5) / gw - mu, 2); vv += w * Math.pow((j + 0.5) / gh - mv, 2); } }
-            const sx = Math.sqrt(vu / W) * aspect, sy = Math.sqrt(vv / W);
-            const cl = (x, a, b) => Math.max(a, Math.min(b, x));
-            // skin is mostly face / hands → the person's body sits a little lower than the skin centroid
-            const down = useSkin ? 0.09 : 0;
-            return { cx: cl(mu, 0.12, 0.88), cy: cl(1 - (mv + down), 0.12, 0.88), rx: cl(sx * 2.6 + 0.13, 0.2, 0.6), ry: cl(sy * 2.6 + (useSkin ? 0.28 : 0.2), 0.3, 0.7) };
+            // connected skin blobs (faces / hands / limbs)
+            const lab = new Uint8Array(N), stack = new Int32Array(N), blobs = [];
+            for (let s = 0; s < N; s++) {
+                if (!sk[s] || lab[s]) continue;
+                let sp = 0, cells = [], x0 = gw, x1 = 0, y0 = gh, y1 = 0;
+                stack[sp++] = s; lab[s] = 1;
+                while (sp) {
+                    const k = stack[--sp], i = k % gw, j = (k / gw) | 0; cells.push(k);
+                    if (i < x0) x0 = i; if (i > x1) x1 = i; if (j < y0) y0 = j; if (j > y1) y1 = j;
+                    if (i > 0 && sk[k - 1] && !lab[k - 1]) { lab[k - 1] = 1; stack[sp++] = k - 1; }
+                    if (i < gw - 1 && sk[k + 1] && !lab[k + 1]) { lab[k + 1] = 1; stack[sp++] = k + 1; }
+                    if (j > 0 && sk[k - gw] && !lab[k - gw]) { lab[k - gw] = 1; stack[sp++] = k - gw; }
+                    if (j < gh - 1 && sk[k + gw] && !lab[k + gw]) { lab[k + gw] = 1; stack[sp++] = k + gw; }
+                }
+                const area = cells.length, frac = area / N, fill = area / ((x1 - x0 + 1) * (y1 - y0 + 1));
+                // a person's skin is a compact, moderate blob: reject specks, whole-frame beige walls and rectangular sand / wood strips
+                if (frac < 0.005 || frac > 0.6 || fill < 0.3 || (fill > 0.88 && frac > 0.12)) continue;
+                let mu = 0, mv = 0; cells.forEach(k => { mu += (k % gw + 0.5) / gw; mv += (((k / gw) | 0) + 0.5) / gh; }); mu /= area; mv /= area;
+                const cp = Math.exp(-0.5 * (Math.pow((mu - 0.5) / 0.42, 2) + Math.pow((mv - 0.5) / 0.5, 2)));
+                blobs.push({ cells, area, frac, fill, mu, mv, score: area * (0.5 + 0.5 * cp) });
+            }
+            if (!blobs.length) return SUBJ_DEFAULT;
+            blobs.sort((a, b) => b.score - a.score);
+            const best = blobs[0], grp = blobs.filter(q => q.area >= best.area * 0.35);       // several people → one group
+            let W = 0, mu = 0, mv = 0; grp.forEach(q => { W += q.area; mu += q.mu * q.area; mv += q.mv * q.area; }); mu /= W; mv /= W;
+            let vu = 0, vv = 0; grp.forEach(q => q.cells.forEach(k => { vu += Math.pow((k % gw + 0.5) / gw - mu, 2); vv += Math.pow((((k / gw) | 0) + 0.5) / gh - mv, 2); })); vu /= W; vv /= W;
+            const sx = Math.sqrt(vu) * aspect, sy = Math.sqrt(vv), cl = (x, a, b) => Math.max(a, Math.min(b, x));
+            const conf = cl((best.frac - 0.004) / 0.014, 0, 1) * (best.fill >= 0.5 ? 1 : 0.6);
+            // skin is mostly face / hands → the body sits a little lower than the skin centroid
+            return { cx: cl(mu, 0.12, 0.88), cy: cl(1 - (mv + 0.09), 0.12, 0.88), rx: cl(sx * 2.6 + 0.13, 0.2, 0.6), ry: cl(sy * 2.6 + 0.28, 0.3, 0.7), conf };
         }
         function detectSubject() {
             const img = document.getElementById('photo-preview');
@@ -1308,7 +1314,7 @@
                         if (!faces || !faces.length || myKey !== _subjKey) return;
                         const f = faces.map(q => q.boundingBox).sort((a, b) => b.width * b.height - a.width * a.height)[0];
                         const cl = (v, a, b) => Math.max(a, Math.min(b, v));
-                        _subj = { cx: cl((f.x + f.width / 2) / W, 0.1, 0.9), cy: cl(1 - (f.y + f.height * 1.5) / H, 0.1, 0.9), rx: cl(f.width / H * 2.6, 0.2, 0.6), ry: cl(f.height / H * 3.6, 0.3, 0.7) };
+                        _subj = { cx: cl((f.x + f.width / 2) / W, 0.1, 0.9), cy: cl(1 - (f.y + f.height * 1.5) / H, 0.1, 0.9), rx: cl(f.width / H * 2.6, 0.2, 0.6), ry: cl(f.height / H * 3.6, 0.3, 0.7), conf: 1 };
                         refreshSubjectLook();
                     }).catch(() => {});
                 }
@@ -1334,10 +1340,10 @@
                 }
             } catch (e) {}
         }
-        const autoFlash = g => { const s = detectSubject(); return { ...g, flashTuning: { ...g.flashTuning, centerX: s.cx, centerY: s.cy, subjRX: s.rx, subjRY: s.ry } }; };
-        const autoMask = f => { const s = detectSubject(); return { ...f, mX: Math.round(s.cx * 100), mY: Math.min(95, Math.round((1 - s.cy) * 100) + 4), mSize: Math.max(25, Math.min(70, Math.round(Math.max(s.rx * 1.1, s.ry * 0.9) * 100))) }; };
+        const autoFlash = g => { const s = detectSubject(); return { ...g, flashTuning: { ...g.flashTuning, centerX: s.cx, centerY: s.cy, subjRX: s.rx, subjRY: s.ry, conf: s.conf, noSubj: s.conf < 0.15 } }; };
+        const autoMask = f => { const s = detectSubject(); return { ...f, mNoSubj: s.conf < 0.15 ? 1 : 0, mX: Math.round(s.cx * 100), mY: Math.min(95, Math.round((1 - s.cy) * 100) + 4), mSize: Math.max(25, Math.min(70, Math.round(Math.max(s.rx * 1.1, s.ry * 0.9) * 100))) }; };
         const maskPos = () => { const m = autoMask({}); return { mX: m.mX, mY: m.mY, mSize: m.mSize }; };
-        const aimFx = o => { if (o && o.mAuto && o.mType > 0) Object.assign(o, maskPos()); return o; };
+        const aimFx = o => { if (o && o.mAuto && o.mType > 0) Object.assign(o, maskPos(), { mNoSubj: detectSubject().conf < 0.15 ? 1 : 0 }); return o; };
         window.subjectAim = { flash: autoFlash, maskPos, aimFx };
         // two-mask flash look: subject (first plan) gets the flash, glare and a soft skin glow; the background mask goes darker
         const flashLook = (k, t) => ({ flashStrength: k, flashAuto: true, flashTuning: { cast: 0.2, ambient: 0.3, gain: 2.7, centerX: 0.5, centerY: 0.5, falloff: 1.9, shoulder: 0.26, white: 2.5, contrast: 0.22, bgDark: 0.8, glow: 0.75, subjRX: 0.3, subjRY: 0.45, ...t } });
@@ -1424,7 +1430,7 @@
 
             if (p.id === 'canon7d3') {
                 // NIGHT = your original configuration (it was a night/flash look), now auto-aimed at the detected subject, with a darker background mask and skin glow.
-                nightG = { ...base, flashStrength: 0.8, flashAuto: true, flashTuning: { ...base.flashTuning, gain: 2.75, falloff: 2.0, bgDark: 0.8, glow: 0.7, subjRX: 0.3, subjRY: 0.45 } };
+                nightG = { ...base, flashStrength: 0.8, flashAuto: true, flashTuning: { ...base.flashTuning, gain: 2.75, falloff: 2.0, bgDark: 0.8, glow: 0.7, subjRX: 0.3, subjRY: 0.45, nsExp: 0.5 } };
                 nightFx = { ...baseFx, mExp: 72, mAuto: true };
                 // DAY = same Canon character rewritten for daylight: natural exposure, protected sky, clean skin, a light fill-flash pop on the subject.
                 const hs = {}; HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach(ch => { const k = 'hsl' + i + ch; hs[k] = r4((base[k] || 0) * 0.5); }));
@@ -2453,9 +2459,10 @@
             gl.uniform1i(progMain.u.mean, 1);
             gl.uniform1f(progMain.u.k, strength);
             gl.uniform1f(progMain.u.aspect, dw / dh);
-            gl.uniform4f(progMain.u.uTune1, T.cast, T.ambient, T.gain, T.falloff * T.falloff);
+            const cf = T.conf == null ? 1 : Math.max(0, Math.min(1, T.conf));      // subject confidence fades the whole flash look in
+            gl.uniform4f(progMain.u.uTune1, T.cast, T.ambient * cf, T.gain * cf, T.falloff * T.falloff);
             gl.uniform4f(progMain.u.uTune2, T.centerX, T.centerY, T.shoulder, T.white * T.white);
-            gl.uniform4f(progMain.u.uTune3, T.bgDark || 0, T.glow || 0, Math.max(T.subjRX || 0.3, 0.05), Math.max(T.subjRY || 0.45, 0.05));
+            gl.uniform4f(progMain.u.uTune3, (T.bgDark || 0) * cf, (T.glow || 0) * cf, Math.max(T.subjRX || 0.3, 0.05), Math.max(T.subjRY || 0.45, 0.05));
             gl.uniform1f(progMain.u.uContrast, T.contrast);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
@@ -2521,6 +2528,8 @@
     }
 
     function applyFiltersToCanvas(targetCanvas, texture, settingsToApply, baseSettings) {
+        { const ft = baseSettings.flashTuning;      // flash looks that pull exposure down: ease it where no subject carries the flash (render-side only)
+          if (ft && ft.nsExp) baseSettings = { ...baseSettings, exposure: (baseSettings.exposure || 0) + ft.nsExp * (1 - (ft.conf == null ? 1 : ft.conf)) }; }
         // Базовые настройки
         const b = Math.max(-1, Math.min(1, baseSettings.brightness + settingsToApply.brightness));
         const c = Math.max(-1, Math.min(1, baseSettings.contrast + settingsToApply.contrast));
@@ -2544,7 +2553,7 @@
         const maxFlash = FLASH_UI_MAX / FLASH_BASE_UNIT;
         const baseFlash = Math.max(0, Math.min(maxFlash, baseSettings.flashStrength || 0));
         const userFlash = Math.max(0, Math.min(maxFlash, settingsToApply.flashStrength || 0));
-        if (baseSettings.flashTuning && baseFlash > 0) {
+        if (baseSettings.flashTuning && baseFlash > 0 && !baseSettings.flashTuning.noSubj) {
             applyFlash(targetCanvas, baseFlash, baseSettings.flashTuning);
             if (userFlash > 0) applyFlash(targetCanvas, userFlash, null);
         } else if (baseFlash + userFlash > 0) {
@@ -4399,7 +4408,7 @@
             gAmt: s.gAmt / 100, gSize: s.gSize / 100, gRough: s.gRough / 100, gShadow: s.gShadow / 100,
             lkAmt: s.lkAmt / 100, lkHue: s.lkHue / 360, lkPos: s.lkPos / 100, dust: s.dust / 100, scr: s.scr / 100,
             mType: s.mType, mX: s.mX / 100, mY: 1 - s.mY / 100, mSize: s.mSize / 100, mAng: s.mAng * Math.PI / 180,
-            mFeather: s.mFeather / 100, mInv: s.mInv, mExp: s.mExp / 100, mSat: s.mSat / 100, mTemp: s.mTemp / 100,
+            mFeather: s.mFeather / 100, mInv: s.mInv, mExp: s.mNoSubj ? 0 : s.mExp / 100, mSat: s.mNoSubj ? 0 : s.mSat / 100, mTemp: s.mNoSubj ? 0 : s.mTemp / 100,
             mShow: (fxMaskShow && canvas === glCanvas) ? 1 : 0
         };
     }
