@@ -1305,10 +1305,12 @@
             wasm: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm',
             model: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
             invert: false,        // flip to true if the person/background ever come out swapped
+            lo: 0.45, hi: 0.75,   // person probability → matte ramp (higher = tighter silhouette)
+            erode: 1, feather: 1, // px at 512: pull the edge in, then soften only slightly → the light stops at the silhouette (no glowing padding)
             maxSide: 512,         // the photo is downscaled to this before segmentation
             timeoutMs: 25000      // still loading after this → fall back to the skin detector for this photo
         };
-        let _seg = { key: '', status: 'idle', subj: null }, _segmenter = null, _segLoad = null, _maskId = 0;
+        let _seg = { key: '', status: 'idle', subj: null, depth: 'idle', pm: null }, _segmenter = null, _segLoad = null, _maskId = 0;
         function loadSegmenter() {
             if (_segmenter) return Promise.resolve(_segmenter);
             if (_segLoad) return _segLoad;
@@ -1342,23 +1344,96 @@
         // probability map → soft subject matte (bottom-up bytes for GL) + where the person is
         function subjectFromMask(prob, w, h, aspect) {
             const N = w * h, m = new Float32Array(N), cl = (x, a, b) => Math.max(a, Math.min(b, x));
-            for (let i = 0; i < N; i++) { const t = cl((prob[i] - 0.35) / 0.3, 0, 1); m[i] = t * t * (3 - 2 * t); }
+            for (let i = 0; i < N; i++) { const t = cl((prob[i] - SEG.lo) / (SEG.hi - SEG.lo), 0, 1); m[i] = t * t * (3 - 2 * t); }
             let cnt = 0, su = 0, sv = 0;
             for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (m[j * w + i] > 0.5) { cnt++; su += (i + 0.5) / w; sv += (j + 0.5) / h; }
             if (cnt / N < 0.004) return null;                                         // nobody in the frame
             const mu = su / cnt, mv = sv / cnt; let vu = 0, vv = 0;
             for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (m[j * w + i] > 0.5) { vu += Math.pow((i + 0.5) / w - mu, 2); vv += Math.pow((j + 0.5) / h - mv, 2); }
             const sx = Math.sqrt(vu / cnt) * aspect, sy = Math.sqrt(vv / cnt), frac = cnt / N;
-            const r = Math.max(2, Math.round(w * 0.012)); boxBlur(m, w, h, r); boxBlur(m, w, h, r);   // soft, natural flash edge
-            const data = new Uint8Array(N);
-            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) data[(h - 1 - j) * w + i] = Math.round(255 * cl(m[j * w + i], 0, 1));
+            for (let n = 0; n < SEG.erode; n++) morph3(m, w, h, false);                // tight silhouette
+            if (SEG.feather > 0) boxBlur(m, w, h, SEG.feather);
             return {
                 subj: { cx: cl(mu, 0.1, 0.9), cy: cl(1 - mv + 0.05, 0.1, 0.9), rx: cl(sx * 2.2 + 0.1, 0.2, 0.6), ry: cl(sy * 2.2 + 0.1, 0.3, 0.7), conf: cl((frac - 0.003) / 0.012, 0, 1), seg: true },
-                mask: { w, h, data }
+                pm: m, w, h
             };
         }
+        // ---- 3rd MASK: FIRST PLAN (objects about as near the camera as the person), from an on-device monocular depth model ----
+        const DEPTH = {
+            enabled: true,
+            lib: 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2',      // transformers.js (ONNX runtime in WASM)
+            model: 'Xenova/depth-anything-small-hf',                              // quantised, ~27 MB, downloaded once and cached
+            timeoutMs: 120000
+        };
+        let _depthPipe = null, _depthLoad = null;
+        function loadDepth() {
+            if (_depthPipe) return Promise.resolve(_depthPipe);
+            if (_depthLoad) return _depthLoad;
+            _depthLoad = (async () => {
+                const tf = await (new Function('u', 'return import(u)'))(DEPTH.lib);
+                tf.env.allowLocalModels = false;
+                _depthPipe = await tf.pipeline('depth-estimation', DEPTH.model);
+                return _depthPipe;
+            })().catch(err => { _depthLoad = null; throw err; });
+            return _depthLoad;
+        }
+        // 3x3 min / max filter (separable), in place
+        function morph3(a, w, h, max) {
+            const t = new Float32Array(a.length), pick = (v, p, q) => max ? Math.max(v, p, q) : Math.min(v, p, q);
+            for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const k = y * w + x, v = a[k]; t[k] = pick(v, x > 0 ? a[k - 1] : v, x < w - 1 ? a[k + 1] : v); }
+            for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const k = y * w + x, v = t[k]; a[k] = pick(v, y > 0 ? t[k - w] : v, y < h - 1 ? t[k + w] : v); }
+        }
+        // depth map + person matte → soft "first plan" matte: things about as near as (or nearer than) the person, but not the person
+        function firstPlanFromDepth(data, dw, dh, ch, pm, w, h, subj) {
+            const N = w * h, d = new Float32Array(N), cl = (x, a, b) => Math.max(a, Math.min(b, x));
+            for (let y = 0; y < h; y++) { const sy = Math.min(dh - 1, (y * dh / h) | 0); for (let x = 0; x < w; x++) d[y * w + x] = data[(sy * dw + Math.min(dw - 1, (x * dw / w) | 0)) * ch]; }
+            const smp = []; for (let i = 0; i < N; i += 7) smp.push(d[i]); smp.sort((a, b) => a - b);
+            const lo = smp[Math.floor(smp.length * 0.02)], hi = smp[Math.floor(smp.length * 0.98)];
+            if (!(hi - lo > 4)) return null;
+            for (let i = 0; i < N; i++) d[i] = cl((d[i] - lo) / (hi - lo), 0, 1);
+            const med = arr => { arr.sort((a, b) => a - b); return arr.length ? arr[arr.length >> 1] : NaN; };
+            const inn = [], out = [];
+            for (let i = 0; i < N; i += 3) { if (pm[i] > 0.6) inn.push(d[i]); else if (pm[i] < 0.05) out.push(d[i]); }
+            if (inn.length < 30 || out.length < 30) return null;
+            let mi = med(inn), mo = med(out);
+            if (mi < mo) { for (let i = 0; i < N; i++) d[i] = 1 - d[i]; mi = 1 - mi; mo = 1 - mo; }   // auto polarity: the person is nearer than the rest of the frame
+            if (mi - mo < 0.08) return null;                                                          // flat depth map: nothing to separate
+            const F = new Float32Array(N);
+            for (let i = 0; i < N; i++) { const t = cl((d[i] - (mi - 0.2)) / 0.15, 0, 1); F[i] = t * t * (3 - 2 * t); }   // as near as the person (or nearer)
+            const pd = Float32Array.from(pm); for (let n = 0; n < 3; n++) morph3(pd, w, h, true);      // not the person, nor the blurry depth band around the silhouette
+            for (let i = 0; i < N; i++) F[i] *= 1 - cl(pd[i] * 2, 0, 1);
+            for (let n = 0; n < 4; n++) morph3(F, w, h, false);                                       // opening: thin slivers disappear, real objects stay
+            for (let n = 0; n < 4; n++) morph3(F, w, h, true);
+            const cx = subj.cx * w, cy = (1 - subj.cy) * h;                                           // the flash cone: far-off things at the same depth aren't lit
+            for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const t = cl((Math.hypot((x - cx) / h, (y - cy) / h) - 0.5) / 0.6, 0, 1); F[y * w + x] *= 1 - t * t * (3 - 2 * t); }
+            boxBlur(F, w, h, 3); boxBlur(F, w, h, 3);
+            let sum = 0; for (let i = 0; i < N; i++) sum += F[i];
+            return sum / N < 0.004 ? null : F;
+        }
+        // person (R) + first plan (A) as one two-channel matte, stored bottom-up for GL
+        function buildMatte(pm, fp, w, h) {
+            const data = new Uint8Array(w * h * 2);
+            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const o = ((h - 1 - j) * w + i) * 2; data[o] = Math.round(255 * pm[j * w + i]); data[o + 1] = fp ? Math.round(255 * fp[j * w + i]) : 0; }
+            return { w, h, data };
+        }
+        function startDepth(key, img) {
+            const S = _seg; S.depth = 'pending';
+            const slow = setTimeout(() => { if (!_depthPipe && typeof toast === 'function') { const m = 'Определяем первый план…'; toast(typeof T === 'function' ? T(m) : m); } }, 2000);
+            const finish = st => { clearTimeout(slow); if (_seg.key === key) { _seg.depth = st; refreshSubjectLook(); } };
+            (async () => {
+                const w = S.w, h = S.h, c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+                const pipe = await Promise.race([loadDepth(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), DEPTH.timeoutMs))]);
+                if (_seg.key !== key) return;
+                const res = await pipe(c.toDataURL('image/jpeg', 0.92));
+                if (_seg.key !== key) return;
+                const dm = res.depth, fp = firstPlanFromDepth(dm.data, dm.width, dm.height, dm.channels || 1, S.pm, w, h, S.subj);
+                if (fp) window.subjMask = { id: ++_maskId, ...buildMatte(S.pm, fp, w, h) };
+                finish('ready');
+            })().catch(err => { console.warn('first-plan depth unavailable (person-only flash):', err); finish('failed'); });
+        }
+
         function startSegmentation(key, img) {
-            _seg = { key, status: 'pending', subj: null };
+            _seg = { key, status: 'pending', subj: null, depth: 'idle', pm: null };
             const slow = setTimeout(() => { if (!_segmenter && typeof toast === 'function') { const m = 'Загружаем распознавание людей…'; toast(typeof T === 'function' ? T(m) : m); } }, 1500);
             const finish = status => { clearTimeout(slow); if (_seg.key === key) { _seg.status = status; refreshSubjectLook(); } };
             (async () => {
@@ -1373,17 +1448,17 @@
                     const pm = personProb(res, labels, SEG.invert); if (pm) out = subjectFromMask(pm.prob, pm.w, pm.h, W / H);
                 } finally { try { (res.confidenceMasks || []).forEach(m => m.close && m.close()); res.close && res.close(); } catch (e) {} }
                 if (_seg.key !== key) return;
-                if (out) { _seg.subj = out.subj; window.subjMask = { id: ++_maskId, ...out.mask }; }
+                if (out) { _seg.subj = out.subj; _seg.pm = out.pm; _seg.w = out.w; _seg.h = out.h; window.subjMask = { id: ++_maskId, ...buildMatte(out.pm, null, out.w, out.h) }; }
                 else { _seg.subj = SUBJ_DEFAULT; window.subjMask = null; }               // the model says nobody → no flash oval at all
                 finish('ready');
             })().catch(err => { console.warn('person segmentation unavailable, using the skin detector:', err); finish('failed'); });
         }
-        function detectSubject() {
+        function detectSubject(needDepth) {
             const img = document.getElementById('photo-preview');
             if (!img || !(img.naturalWidth || img.width)) return SUBJ_DEFAULT;
             const key = (img.src || '').length + ':' + (img.src || '').slice(-48) + ':' + (img.naturalWidth || img.width);
             if (key !== _subjKey) {
-                _subjKey = key; _subj = SUBJ_DEFAULT; _seg = { key, status: 'idle', subj: null }; window.subjMask = null;
+                _subjKey = key; _subj = SUBJ_DEFAULT; _seg = { key, status: 'idle', subj: null, depth: 'idle', pm: null }; window.subjMask = null;
                 try {                                                                      // 1) instant skin-tone estimate (fallback)
                     const W = img.naturalWidth || img.width, H = img.naturalHeight || img.height, gw = 64, gh = Math.max(16, Math.round(64 * H / W));
                     const c = document.createElement('canvas'); c.width = gw; c.height = gh;
@@ -1404,7 +1479,10 @@
             if (SEG.enabled) {                                                             // 2) real segmentation takes over when ready
                 if (_seg.status === 'idle') startSegmentation(key, img);
                 if (_seg.status === 'pending') return { ..._subj, conf: 0 };               // wait for the mask instead of flashing a wrong oval
-                if (_seg.status === 'ready') return _seg.subj;
+                if (_seg.status === 'ready') {
+                    if (needDepth && DEPTH.enabled && _seg.pm && _seg.depth === 'idle' && _seg.subj.conf >= 0.15) startDepth(key, img);   // 3rd mask, only when a flash look is in use
+                    return _seg.subj;
+                }
             }
             return _subj;                                                                  // segmentation failed / disabled → skin detector
         }
@@ -1415,7 +1493,7 @@
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, M.w, M.h, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, M.data);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE_ALPHA, M.w, M.h, 0, gl.LUMINANCE_ALPHA, gl.UNSIGNED_BYTE, M.data);      // R = person, A = first plan
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, pf); gl.pixelStorei(gl.UNPACK_ALIGNMENT, pa);
         };
 
@@ -1439,13 +1517,13 @@
                 }
             } catch (e) {}
         }
-        const autoFlash = g => { const s = detectSubject(); return { ...g, flashTuning: { ...g.flashTuning, centerX: s.cx, centerY: s.cy, subjRX: s.rx, subjRY: s.ry, conf: s.conf, noSubj: s.conf < 0.15, seg: !!s.seg } }; };
-        const autoMask = f => { const s = detectSubject(); return { ...f, mNoSubj: s.conf < 0.15 ? 1 : 0, mSegOn: s.seg ? 1 : 0, mX: Math.round(s.cx * 100), mY: Math.min(95, Math.round((1 - s.cy) * 100) + 4), mSize: Math.max(25, Math.min(70, Math.round(Math.max(s.rx * 1.1, s.ry * 0.9) * 100))) }; };
+        const autoFlash = g => { const s = detectSubject(true); return { ...g, flashTuning: { ...g.flashTuning, centerX: s.cx, centerY: s.cy, subjRX: s.rx, subjRY: s.ry, conf: s.conf, noSubj: s.conf < 0.15, seg: !!s.seg } }; };
+        const autoMask = f => { const s = detectSubject(true); return { ...f, mNoSubj: s.conf < 0.15 ? 1 : 0, mSegOn: s.seg ? 1 : 0, mX: Math.round(s.cx * 100), mY: Math.min(95, Math.round((1 - s.cy) * 100) + 4), mSize: Math.max(25, Math.min(70, Math.round(Math.max(s.rx * 1.1, s.ry * 0.9) * 100))) }; };
         const maskPos = () => { const m = autoMask({}); return { mX: m.mX, mY: m.mY, mSize: m.mSize }; };
-        const aimFx = o => { if (o && o.mAuto && o.mType > 0) { const s = detectSubject(); Object.assign(o, maskPos(), { mNoSubj: s.conf < 0.15 ? 1 : 0, mSegOn: s.seg ? 1 : 0 }); } return o; };
+        const aimFx = o => { if (o && o.mAuto && o.mType > 0) { const s = detectSubject(true); Object.assign(o, maskPos(), { mNoSubj: s.conf < 0.15 ? 1 : 0, mSegOn: s.seg ? 1 : 0 }); } return o; };
         // tuning for the Flash edit tool: hotspot on the person with the real matte, darker background; no person → soft, wide, flat fill (never an oval)
         const toolTuning = () => {
-            const s0 = detectSubject(), s = _seg.status === 'pending' ? _subj : s0;       // while the model loads, use the quick estimate so the slider reacts
+            const s0 = detectSubject(true), s = _seg.status === 'pending' ? _subj : s0;       // while the model loads, use the quick estimate so the slider reacts
             if (s.conf >= 0.15) return { cast: 0.5, ambient: 0.4, gain: 1.6, falloff: 1.9, shoulder: 0.4, white: 2.2, contrast: 0.34, bgDark: 0.5, glow: 0.4, centerX: s.cx, centerY: s.cy, subjRX: s.rx, subjRY: s.ry, conf: s.conf, noSubj: false, seg: !!s.seg && _seg.status === 'ready' };
             return { cast: 0.5, ambient: 0.3, gain: 1.1, falloff: 0.45, shoulder: 0.4, white: 2.2, contrast: 0.3, bgDark: 0, glow: 0, centerX: 0.5, centerY: 0.5, conf: 1, noSubj: false, seg: false };
         };
@@ -2483,11 +2561,16 @@
             float hot = 1.0 / (1.0 + dot(d2, d2) * uTune1.w);
             // Smoothly cap ambient darkening so dragging past 12->25 boosts flash glare instead of just blacking out the photo
             float amb = min(uTune1.y * min(k, 1.25), 0.72);
-            c *= (1.0 - amb) + uTune1.z * k * hot;
-            // two masks: first plan (subject ellipse) vs background
-            float subj = uSegOn > 0.5 ? texture2D(uSeg, uv).r : 1.0 - smoothstep(0.35, 1.05, length(d2 / uTune3.zw));
+            // three planes: PERSON (R of the matte) · FIRST PLAN (A: objects as near as the person) · BACKGROUND (the rest)
+            vec4 sg = uSegOn > 0.5 ? texture2D(uSeg, uv) : vec4(vec3(1.0 - smoothstep(0.35, 1.05, length(d2 / uTune3.zw))), 0.0);
+            float subj = sg.r;
+            float fp = sg.a;
+            float lit = subj + fp * 0.55 * (1.0 - subj);              // the first plan gets ~55% of the person's light
+            float hotE = uSegOn > 0.5 ? mix(0.4, 1.0, hot) : hot;      // with a real matte the flash lights the silhouette itself, not a halo around it
+            float wgt = uSegOn > 0.5 ? lit : 1.0;
+            c *= (1.0 - amb) + uTune1.z * k * hotE * wgt;
             float kk = min(k, 1.25);
-            c *= 1.0 - uTune3.x * kk * (1.0 - subj);
+            c *= 1.0 - uTune3.x * kk * (1.0 - max(subj, fp * 0.6));   // background darkens; the first plan only a little
             c *= 1.0 + uTune3.y * kk * subj * 0.6;   // first plan: direct flash lift
             float lm = dot(c, vec3(0.2126, 0.7152, 0.0722));
             c += uTune3.y * kk * subj * (c * (1.0 - c) * 0.9 + vec3(0.06, 0.035, 0.02) * lm);
@@ -4225,7 +4308,7 @@
                 p = vec2(p.x * cs + p.y * sn, -p.x * sn + p.y * cs);
                 float f = max(mFeather, 0.02);
                 float m;
-                if (mSeg > 0.5) m = texture2D(seg, uv).r;                       // person matte
+                if (mSeg > 0.5) { vec4 sg = texture2D(seg, uv); m = sg.r + sg.a * 0.4 * (1.0 - sg.r); }   // person + a little of the first plan
                 else if (mType < 1.5) m = smoothstep(-f * 0.5, f * 0.5, p.y);
                 else m = 1.0 - smoothstep(max(1.0 - f, 0.0), 1.0, length(p) / max(mSize, 0.02));
                 if (mInv > 0.5) m = 1.0 - m;
@@ -6188,6 +6271,7 @@ WebGL не поддерживается вашим браузером|WebGL isn'
 ДЕНЬ|DAY|ДЕНЬ
 НОЧЬ|NIGHT|НІЧ
 Загружаем распознавание людей…|Loading person detection…|Завантажуємо розпізнавання людей…
+Определяем первый план…|Detecting the foreground…|Визначаємо перший план…
 Инструменты|Tools|Інструменти
 Экспозиция, цвет, детали и кисти. Кнопка «?» внутри инструмента объясняет, как им пользоваться. Точка на иконке значит, что инструмент изменён, а «СБРОСИТЬ ВСЕ» обнуляет все настройки.|Exposure, color, detail and brushes. The “?” button inside a tool explains how to use it. A dot on an icon means the tool has been changed, and “RESET ALL” zeroes every setting.|Експозиція, колір, деталі та пензлі. Кнопка «?» всередині інструмента пояснює, як ним користуватися. Крапка на іконці означає, що інструмент змінено, а «СКИНУТИ ВСЕ» обнуляє всі налаштування.
 Эффекты|Effects|Ефекти
