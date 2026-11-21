@@ -217,6 +217,8 @@
         .dn-toggle { margin-left: auto; display: flex; flex: none; gap: 2px; padding: 2px; background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 16px; align-items: center; }
         .dn-seg { display: flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 13px; font-size: 10px; font-weight: 700; letter-spacing: .4px; color: #8e8e93; cursor: pointer; transition: background .15s, color .15s; }
         .dn-seg.on { background: #fff; color: #000; }
+        .dn-seg { position: relative; }
+        .dn-dot { position: absolute; top: 2px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: #30d158; }
         .sub-tab.reset-all { margin-left: auto; color: #ff453a; }
         .sub-tab.reset-all.off { opacity: .35; pointer-events: none; }
         #wt { position: fixed; inset: 0; z-index: 500; display: none; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.7); padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
@@ -1314,18 +1316,29 @@
             return _subj;
         }
         window.refreshSubjectLook = refreshSubjectLook;
-        function refreshSubjectLook() {      // re-aim the active night look after a new photo / crop / face result
+        function refreshSubjectLook() {      // re-aim the active auto-aimed look after a new photo / crop / face result
             try {
+                if (!fxTexture) return;
                 const p = presetsData.find(x => x.id === activePresetId);
-                if (!p || !p.variants || !fxTexture || presetVariant !== 'night') return;
-                if (!p.variants.night.glfx.flashAuto) return;
-                presetSettings = { ...p.glfx };
-                if (p.variants.night.fx.mAuto) presetFxScale();
-                updatePhotoFilter();
+                if (p && p.variants) {
+                    if (!p.variants[presetVariant].glfx.flashAuto) return;
+                    presetSettings = { ...p.glfx };
+                    if (p.variants[presetVariant].fx.mAuto) presetFxScale();
+                    updatePhotoFilter(); return;
+                }
+                const u = userPresets.find(x => x.id === activePresetId);      // saved МОИ preset carrying the "auto" flag
+                if (u) {
+                    if (presetSettings.flashAuto && presetSettings.flashTuning) presetSettings = autoFlash(presetSettings);
+                    aimFx(fxs);
+                    updatePhotoFilter();
+                }
             } catch (e) {}
         }
         const autoFlash = g => { const s = detectSubject(); return { ...g, flashTuning: { ...g.flashTuning, centerX: s.cx, centerY: s.cy, subjRX: s.rx, subjRY: s.ry } }; };
         const autoMask = f => { const s = detectSubject(); return { ...f, mX: Math.round(s.cx * 100), mY: Math.min(95, Math.round((1 - s.cy) * 100) + 4), mSize: Math.max(25, Math.min(70, Math.round(Math.max(s.rx * 1.1, s.ry * 0.9) * 100))) }; };
+        const maskPos = () => { const m = autoMask({}); return { mX: m.mX, mY: m.mY, mSize: m.mSize }; };
+        const aimFx = o => { if (o && o.mAuto && o.mType > 0) Object.assign(o, maskPos()); return o; };
+        window.subjectAim = { flash: autoFlash, maskPos, aimFx };
         // two-mask flash look: subject (first plan) gets the flash, glare and a soft skin glow; the background mask goes darker
         const flashLook = (k, t) => ({ flashStrength: k, flashAuto: true, flashTuning: { cast: 0.2, ambient: 0.3, gain: 2.7, centerX: 0.5, centerY: 0.5, falloff: 1.9, shoulder: 0.26, white: 2.5, contrast: 0.22, bgDark: 0.8, glow: 0.75, subjRX: 0.3, subjRY: 0.45, ...t } });
 
@@ -1452,12 +1465,14 @@
         });
     })();
     // new photo / crop → re-aim the night flash after the app has rebuilt its texture
-    document.getElementById('photo-preview').addEventListener('load', () => setTimeout(() => window.refreshSubjectLook && window.refreshSubjectLook(), 80));
+    document.getElementById('photo-preview').addEventListener('load', () => setTimeout(() => { window.refreshSubjectLook && window.refreshSubjectLook(); window.refreshVariantSuggestion && window.refreshVariantSuggestion(); }, 80));
 
     // switch DAY / NIGHT for the active preset: your manual tool values stay, only the preset layer changes
-    window.setPresetVariant = function (v) {
+    let variantManual = false, variantSuggest = null;     // variantManual: the user picked a version themselves for this photo
+    window.setPresetVariant = function (v, auto) {
         v = v === 'night' ? 'night' : 'day';
-        if (v === presetVariant) return;
+        if (!auto) variantManual = true;
+        if (v === presetVariant) { if (!auto) refreshVariantToggle(); return; }
         const p = presetsData.find(x => x.id === activePresetId);
         if (p && p.variants && fxTexture) {
             const d = fxDefaults();
@@ -1467,13 +1482,36 @@
             presetFxScale();
             updatePhotoFilter(); updateLockState();
         } else presetVariant = v;
-        try { localStorage.setItem('presetVariant', v); } catch (e) {}
+        if (!auto) { try { localStorage.setItem('presetVariant', v); } catch (e) {} }
         renderPresets(currentTab);
     };
+    // ---- automatic suggestion: median / mean brightness of the photo decides which version fits ----
+    function suggestVariantForPhoto() {
+        const img = document.getElementById('photo-preview');
+        if (!img || !(img.naturalWidth || img.width)) return null;
+        try {
+            const W = img.naturalWidth || img.width, H = img.naturalHeight || img.height, gw = 48, gh = Math.max(12, Math.round(48 * H / W));
+            const c = document.createElement('canvas'); c.width = gw; c.height = gh;
+            const x = c.getContext('2d'); x.drawImage(img, 0, 0, gw, gh);
+            const d = x.getImageData(0, 0, gw, gh).data, hist = new Uint16Array(256), n = d.length / 4; let sum = 0;
+            for (let i = 0; i < d.length; i += 4) { const y = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]); hist[y]++; sum += y; }
+            let acc = 0, med = 0; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= n / 2) { med = v; break; } }
+            return (med / 255 < 0.3 || sum / n / 255 < 0.25) ? 'night' : 'day';     // lamps in a dark frame don't fool the median
+        } catch (e) { return null; }
+    }
+    function refreshVariantToggle() { const el = subTabsContainer.querySelector('.dn-toggle'); if (el) el.outerHTML = variantToggleHTML(); }
+    window.refreshVariantSuggestion = function () {
+        variantSuggest = suggestVariantForPhoto();
+        // fresh photo + no preset yet + user hasn't chosen → follow the suggestion; otherwise only the green dot hints
+        if (variantSuggest && !variantManual && activePresetId === 'none' && variantSuggest !== presetVariant) presetVariant = variantSuggest;
+        refreshVariantToggle();
+    };
+    const _dnReset = resetEditor;
+    resetEditor = function () { _dnReset(); variantManual = false; variantSuggest = null; refreshVariantToggle(); };
     const variantToggleHTML = () => {
         const sun = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
         const moon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
-        const seg = (id, ico, label) => `<div class="dn-seg ${presetVariant === id ? 'on' : ''}" onclick="setPresetVariant('${id}')" aria-label="${label}">${ico}${presetVariant === id ? '<span>' + label + '</span>' : ''}</div>`;
+        const seg = (id, ico, label) => `<div class="dn-seg ${presetVariant === id ? 'on' : ''}" onclick="setPresetVariant('${id}')" aria-label="${label}">${ico}${presetVariant === id ? '<span>' + label + '</span>' : ''}${variantSuggest === id ? '<i class="dn-dot"></i>' : ''}</div>`;
         return `<div class="dn-toggle">${seg('day', sun, 'ДЕНЬ')}${seg('night', moon, 'НОЧЬ')}</div>`;
     };
 
@@ -5151,7 +5189,13 @@
         if (fxN) parts.push(fxN + ' FX');
         return parts.length ? 'Сохранится: ' + parts.join(' · ') : '';
     }
-    function upSnapshot() { return { ps: upClone(fxScalePreset(presetSettings)), cs: upCS(), fx: upFxSnap(), isPro: upLookIsPro() }; }
+    function upSnapshot() {
+        const fx = upFxSnap();
+        // subject-aware looks are saved with an "auto" flag (re-aimed on every photo) instead of a position tied to this photo;
+        // if the user moved the mask by hand, the flag is dropped and their position is kept
+        if (fx.mAuto) { const m = window.subjectAim && window.subjectAim.maskPos(); if (!m || fx.mX !== m.mX || fx.mY !== m.mY || fx.mSize !== m.mSize) delete fx.mAuto; }
+        return { ps: upClone(fxScalePreset(presetSettings)), cs: upCS(), fx, isPro: upLookIsPro() };
+    }
     // ---------- окно создания / редактирования ----------
     const upSheet = document.createElement('div');
     upSheet.style.cssText = 'position:fixed;inset:0;z-index:400;display:none;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
@@ -5259,6 +5303,10 @@
         activePresetId = id; presetK = 1;
         presetSettings = upClone(p.ps); currentSettings = upClone(p.cs);
         fxs = { ...fxDefaults(), ...upClone(p.fx), dsDate: fxs.dsDate };
+        if (window.subjectAim) {      // re-aim the flash / mask at the subject of THIS photo
+            if (presetSettings.flashAuto && presetSettings.flashTuning) presetSettings = window.subjectAim.flash(presetSettings);
+            window.subjectAim.aimFx(fxs);
+        }
         document.querySelectorAll('.preset-item').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
         updatePhotoFilter(); updateLockState(); kIconSync();
     };
@@ -5400,7 +5448,7 @@
     }
 
     // ---------- встроенные пресеты с эффектами (поле fx): применение, откат при смене, интенсивность ----------
-    const FX_NOSCALE = /(H|Hue|H\d|Pos|Fmt|Col|Mode|Style|Type|On)$/;   // оттенки и дискретные значения интенсивностью не масштабируются
+    const FX_NOSCALE = /(H|Hue|H\d|Pos|Fmt|Col|Mode|Style|Type|On)$|^m(X|Y|Size|Feather|Ang|Inv)$/;   // оттенки и дискретные значения интенсивностью не масштабируются
     function presetFxScale() {
         const p = presetsData.find(x => x.id === activePresetId);
         if (!p || !p.fx) return;
@@ -5663,7 +5711,7 @@
             const d = fxDefaults(), o = { ...d };
             const p = presetsData.find(x => x.id === activePresetId), u = userPresets.find(x => x.id === activePresetId);
             if (p && p.fx) for (const k in p.fx) { const v = p.fx[k]; o[k] = (typeof v === 'number' && !FX_NOSCALE.test(k)) ? d[k] + (v - d[k]) * presetK : v; }
-            if (u) Object.assign(o, u.fx);
+            if (u) { Object.assign(o, u.fx); if (window.subjectAim) window.subjectAim.aimFx(o); }
             return o;
         }
         const fxOn = (id, b) => FXT[id].custom === 'curves' ? !same(fxs.curves, b.curves) : FXT[id].keys.some(k => !same(fxs[k], b[k]));
@@ -5701,7 +5749,7 @@
                 } else {
                     const ds = fxs.dsDate, u = userPresets.find(x => x.id === activePresetId);
                     fxs = { ...fxDefaults(), dsDate: ds };
-                    if (u) Object.assign(fxs, upClone(u.fx), { dsDate: ds }); else presetFxScale();
+                    if (u) { Object.assign(fxs, upClone(u.fx), { dsDate: ds }); if (window.subjectAim) window.subjectAim.aimFx(fxs); } else presetFxScale();
                 }
                 updatePhotoFilter(); updateLockState(); histCommit(); markDots(); toast('Сброшено');
             });
@@ -5712,7 +5760,7 @@
         const STEPS = [
             ['Загрузите фото', 'Нажмите на область фото, перетащите файл или вставьте картинку из буфера обмена. Корзина сверху удаляет фото, чтобы выбрать другое.', '.placeholder-text svg'],
             ['Пресеты', 'Первая вкладка — готовые стили. Нажмите на пресет, чтобы применить его. ☆ добавляет в избранное, во вкладке МОИ можно сохранить свой стиль. Значок с ползунками на выбранной карточке меняет силу пресета.', '.nav-item[data-tab="presets"] svg'],
-            ['День и ночь', 'Справа от вкладок пресетов — переключатель ☀ ДЕНЬ / ☾ НОЧЬ. Выберите пресет, а затем его версию под ваше фото: дневную для снимков при свете дня или ночную для тёмных сцен. В ночной версии человек на первом плане подсвечивается, как вспышкой, а фон темнеет. Ваши ручные правки при переключении сохраняются.', '.dn-toggle svg, .nav-item[data-tab="presets"] svg'],
+            ['День и ночь', 'Справа от вкладок пресетов — переключатель ☀ ДЕНЬ / ☾ НОЧЬ. Выберите пресет, а затем его версию под ваше фото: дневную для снимков при свете дня или ночную для тёмных сцен. В ночной версии человек на первом плане подсвечивается, как вспышкой, а фон темнеет. Ваши ручные правки при переключении сохраняются. Зелёная точка на переключателе показывает версию, которая подходит вашему фото; при загрузке фото она выбирается автоматически.', '.dn-toggle svg, .nav-item[data-tab="presets"] svg'],
             ['Инструменты', 'Экспозиция, цвет, детали и кисти. Кнопка «?» внутри инструмента объясняет, как им пользоваться. Точка на иконке значит, что инструмент изменён, а «СБРОСИТЬ ВСЕ» обнуляет все настройки.', '.nav-item[data-tab="tools"] svg'],
             ['Эффекты', 'Кривые, зерно, засветы, рамки, VHS и другое. Работают так же, как инструменты, и тоже отмечаются точкой.', '.nav-item[data-tab="fx"] svg'],
             ['Сравнение и сохранение', 'Удерживайте фото, чтобы увидеть оригинал. Стрелки сверху отменяют и повторяют действия, значок буфера копирует настройки. Кнопка со стрелкой вверх сохраняет фото; формат и размер выбираются слева. Значок 🔒 — Premium, с ним на фото будет водяной знак.', '#btn-save svg']
@@ -5989,7 +6037,7 @@ WebGL не поддерживается вашим браузером|WebGL isn'
 Пресеты|Presets|Пресети
 Первая вкладка — готовые стили. Нажмите на пресет, чтобы применить его. ☆ добавляет в избранное, во вкладке МОИ можно сохранить свой стиль. Значок с ползунками на выбранной карточке меняет силу пресета.|The first tab has ready-made styles. Tap a preset to apply it. ☆ adds it to favorites, and the MINE tab lets you save your own style. The sliders icon on the selected card changes the preset strength.|Перша вкладка — готові стилі. Натисніть на пресет, щоб застосувати його. ☆ додає в обране, у вкладці МОЇ можна зберегти свій стиль. Значок із повзунками на вибраній картці змінює силу пресета.
 День и ночь|Day and night|День і ніч
-Справа от вкладок пресетов — переключатель ☀ ДЕНЬ / ☾ НОЧЬ. Выберите пресет, а затем его версию под ваше фото: дневную для снимков при свете дня или ночную для тёмных сцен. В ночной версии человек на первом плане подсвечивается, как вспышкой, а фон темнеет. Ваши ручные правки при переключении сохраняются.|To the right of the preset tabs is the ☀ DAY / ☾ NIGHT switch. Pick a preset, then choose its version for your photo: day for daylight shots or night for dark scenes. In the night version the person in the foreground is lit as if by a flash while the background gets darker. Your manual edits are kept when you switch.|Праворуч від вкладок пресетів — перемикач ☀ ДЕНЬ / ☾ НІЧ. Оберіть пресет, а потім його версію під ваше фото: денну для знімків при денному світлі або нічну для темних сцен. У нічній версії людина на першому плані підсвічується, як спалахом, а тло темніє. Ваші ручні правки під час перемикання зберігаються.
+Справа от вкладок пресетов — переключатель ☀ ДЕНЬ / ☾ НОЧЬ. Выберите пресет, а затем его версию под ваше фото: дневную для снимков при свете дня или ночную для тёмных сцен. В ночной версии человек на первом плане подсвечивается, как вспышкой, а фон темнеет. Ваши ручные правки при переключении сохраняются. Зелёная точка на переключателе показывает версию, которая подходит вашему фото; при загрузке фото она выбирается автоматически.|To the right of the preset tabs is the ☀ DAY / ☾ NIGHT switch. Pick a preset, then choose its version for your photo: day for daylight shots or night for dark scenes. In the night version the person in the foreground is lit as if by a flash while the background gets darker. Your manual edits are kept when you switch. A green dot on the switch shows the version that suits your photo; it is selected automatically when you load a photo.|Праворуч від вкладок пресетів — перемикач ☀ ДЕНЬ / ☾ НІЧ. Оберіть пресет, а потім його версію під ваше фото: денну для знімків при денному світлі або нічну для темних сцен. У нічній версії людина на першому плані підсвічується, як спалахом, а тло темніє. Ваші ручні правки під час перемикання зберігаються. Зелена точка на перемикачі показує версію, яка підходить вашому фото; під час завантаження фото вона обирається автоматично.
 ДЕНЬ|DAY|ДЕНЬ
 НОЧЬ|NIGHT|НІЧ
 Инструменты|Tools|Інструменти
