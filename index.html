@@ -577,8 +577,8 @@
             clarity: 0,
             noise: 0.015,
             vignette: 0.24,
-            // Stronger direct flash + soft specular skin sheen
-            flashStrength: 0.90,
+            // Direct flash scaled down to 35% of 0.90 (0.315) + soft specular skin sheen
+            flashStrength: 0.315,
             flashTuning: {
                 cast: 0.45, ambient: 0.60, gain: 1.32,
                 centerX: 0.48, centerY: 0.45, falloff: 2.85,
@@ -596,7 +596,6 @@
             hsl1l: 0.52,
             hsl2s: -0.20,
             hsl2l: 0.18,
-            // - Push Blue (hsl4) even deeper so the sky & water stay dark despite lifting highlights
             hsl4h: -0.22,
             hsl4s: -0.22,
             hsl4l: -0.68,
@@ -607,11 +606,10 @@
                 blue:  [[0, 0], [0.25, 0.225], [0.5, 0.512], [0.75, 0.810], [1, 0.99]]
             }
         }, fx: {
-            // Center the radial flash mask higher (mY: 53) so the face, forehead, and raised arm get maximum flash brightness (mExp: 44)
-            mType: 2, mX: 48, mY: 53, mSize: 38, mFeather: 72, mInv: 0, mExp: 44, mSat: -2, mTemp: 2,
-            // Deep teal-navy shadows in the sky/sea, clean bright highlights
+            // Radial flash mask exposure also scaled to 35% (44 * 0.35 ≈ 15)
+            mType: 2, mX: 48, mY: 53, mSize: 38, mFeather: 72, mInv: 0, mExp: 15, mSat: -2, mTemp: 2,
             shH: 205, shS: 12, hiH: 32, hiS: 3, bal: -25
-        }},  
+        }},
 
         { id: 'canonr5', name: 'CANON R5', color: '#e57373', isPro: false, glfx: {
             ...defaultSettings,
