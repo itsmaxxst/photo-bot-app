@@ -554,61 +554,69 @@
 
         { id: 'canon7d3', name: 'CANON 7D3', color: '#ff8a65', isPro: false, glfx: {
             ...defaultSettings,
-            // Keep the dark ambient base for the sky and water
-            exposure: -0.20,
-            luminance: -0.03,
+            exposure: -0.32,
+            luminance: -0.06,
             brightness: 0.01,
-            contrast: 0.03,
-            // Stop pulling down highlights/lights so the flash glare on skin can shine through
-            highlights: 0.06,
-            shadows: 0.16,
-            lights: -0.02,
-            darks: 0.04,
-            blacks: -0.12,
-            whites: 0.28,
-            // Clean, pale-warm flash color balance
-            saturation: -0.06,
-            vibrance: 0.05,
-            wbTemp: 0.015,
-            wbTint: 0.015,
-            // Clean sharpness & vignette
-            unsharp: 0.02,
+            contrast: 0.05,
+            highlights: -0.18,
+            shadows: 0.18,
+            lights: -0.16,
+            darks: 0.06,
+            blacks: -0.14,
+            whites: 0.26,
+            saturation: -0.10,
+            vibrance: 0.04,
+            wbTemp: 0.01,
+            wbTint: 0.01,
+            unsharp: 0.025,
             texture: 0,
             clarity: 0,
             noise: 0.015,
-            vignette: 0.24,
-            // Direct flash scaled down to 35% of 0.90 (0.315) + soft specular skin sheen
-            flashStrength: 0.315,
+            vignette: 0.06,
+            flashStrength: 0.52,
             flashTuning: {
-                cast: 0.45, ambient: 0.60, gain: 1.32,
-                centerX: 0.48, centerY: 0.45, falloff: 2.85,
-                shoulder: 0.30, white: 2.35, contrast: 0.26
+                cast: 0.40,
+                ambient: 0.72,
+                gain: 1.38,
+                centerX: 0.48,
+                centerY: 0.34,
+                falloff: 2.15,
+                shoulder: 0.28,
+                white: 2.40,
+                contrast: 0.22
             },
-            bloomStrength: 0.028,
-            bloomSize: 0.28,
-            bloomRange: 0.18,
+            bloomStrength: 0.020,
+            bloomSize: 0.25,
+            bloomRange: 0.16,
             // HSL:
-            // - Boost Red (hsl0), Orange (hsl1), and Yellow (hsl2) lightness together so all skin tones & skin highlights pop bright
-            hsl0s: -0.05,
-            hsl0l: 0.28,
+            // - Red (hsl0) & Orange (hsl1): bright, glowing skin tone without yellow/orange mud
+            hsl0s: -0.08,
+            hsl0l: 0.32,
             hsl1h: -0.04,
-            hsl1s: -0.16,
-            hsl1l: 0.52,
-            hsl2s: -0.20,
-            hsl2l: 0.18,
-            hsl4h: -0.22,
-            hsl4s: -0.22,
-            hsl4l: -0.68,
-            // Lift the 0.50 and 0.75 curve points to brighten skin midtones and flash highlights
+            hsl1s: -0.18,
+            hsl1l: 0.46,
+            // - Yellow (hsl2): darken & calm the pale yellow horizon band so it stays a dim sunset glow
+            hsl2h: -0.10,
+            hsl2s: -0.25,
+            hsl2l: -0.28,
+            // - Green/Cyan (hsl3) & Blue (hsl4): kill the bright cyan band above the horizon and drop the sky deep navy-teal
+            hsl3s: -0.35,
+            hsl3l: -0.45,
+            hsl4h: -0.24,
+            hsl4s: -0.25,
+            hsl4l: -0.78,
+            hsl5h: 0.05,
+            hsl5s: -0.18,
+            hsl5l: 0.26,
             curves: {
-                red:   [[0, 0], [0.25, 0.230], [0.5, 0.530], [0.75, 0.835], [1, 1]],
-                green: [[0, 0], [0.25, 0.228], [0.5, 0.522], [0.75, 0.825], [1, 1]],
-                blue:  [[0, 0], [0.25, 0.225], [0.5, 0.512], [0.75, 0.810], [1, 0.99]]
+                red:   [[0, 0], [0.25, 0.215], [0.5, 0.525], [0.75, 0.830], [1, 1]],
+                green: [[0, 0], [0.25, 0.215], [0.5, 0.518], [0.75, 0.820], [1, 1]],
+                blue:  [[0, 0], [0.25, 0.215], [0.5, 0.508], [0.75, 0.805], [1, 0.99]]
             }
         }, fx: {
-            // Radial flash mask exposure also scaled to 35% (44 * 0.35 ≈ 15)
-            mType: 2, mX: 48, mY: 53, mSize: 38, mFeather: 72, mInv: 0, mExp: 15, mSat: -2, mTemp: 2,
-            shH: 205, shS: 12, hiH: 32, hiS: 3, bal: -25
+            // Linear mask (mType: 1) instead of radial: keeps the foreground bright (+26 exp)
+            mType: 1, mX: 50, mY: 44, mSize: 40, mAng: 0, mFeather: 55, mInv: 1, mExp: 26, mSat: -3, mTemp: 2,
+            shH: 204, shS: 14, hiH: 32, hiS: 2, bal: -28
         }},
 
         { id: 'canonr5', name: 'CANON R5', color: '#e57373', isPro: false, glfx: {
