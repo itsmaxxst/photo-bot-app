@@ -1297,30 +1297,128 @@
             // skin is mostly face / hands → the body sits a little lower than the skin centroid
             return { cx: cl(mu, 0.12, 0.88), cy: cl(1 - (mv + 0.09), 0.12, 0.88), rx: cl(sx * 2.6 + 0.13, 0.2, 0.6), ry: cl(sy * 2.6 + 0.28, 0.3, 0.7), conf };
         }
+        // ---- REAL PERSON SEGMENTATION: MediaPipe Image Segmenter, runs on the phone (WASM) — photos never leave the device ----
+        const SEG = {
+            enabled: true,
+            // ► for stability you can self-host these on GitHub Pages: copy the files into your repo and point the URLs at them
+            bundle: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs',
+            wasm: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm',
+            model: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
+            invert: false,        // flip to true if the person/background ever come out swapped
+            maxSide: 512,         // the photo is downscaled to this before segmentation
+            timeoutMs: 25000      // still loading after this → fall back to the skin detector for this photo
+        };
+        let _seg = { key: '', status: 'idle', subj: null }, _segmenter = null, _segLoad = null, _maskId = 0;
+        function loadSegmenter() {
+            if (_segmenter) return Promise.resolve(_segmenter);
+            if (_segLoad) return _segLoad;
+            _segLoad = (async () => {
+                const mod = await (new Function('u', 'return import(u)'))(SEG.bundle);      // created at run time: an old webview can't break the app's parsing
+                const fileset = await mod.FilesetResolver.forVisionTasks(SEG.wasm);
+                _segmenter = await mod.ImageSegmenter.createFromOptions(fileset, {
+                    baseOptions: { modelAssetPath: SEG.model, delegate: 'CPU' },      // CPU/WASM: works in every Telegram webview
+                    runningMode: 'IMAGE', outputCategoryMask: false, outputConfidenceMasks: true
+                });
+                return _segmenter;
+            })().catch(err => { _segLoad = null; throw err; });                      // a later photo may retry
+            return _segLoad;
+        }
+        // person probability 0…1 whatever the model's mask layout is (single person mask, background+person, or multiclass)
+        function personProb(res, labels, invert) {
+            const ms = res.confidenceMasks || []; if (!ms.length) return null;
+            const w = ms[0].width, h = ms[0].height, idx = labels.findIndex(l => /person|foreground/i.test(l));
+            let prob;
+            if (idx >= 0 && ms[idx]) prob = Float32Array.from(ms[idx].getAsFloat32Array());
+            else if (ms.length >= 2) { const bg = ms[0].getAsFloat32Array(); prob = new Float32Array(bg.length); for (let i = 0; i < bg.length; i++) prob[i] = 1 - bg[i]; }
+            else { const m = ms[0].getAsFloat32Array(), isBg = labels.length && /background/i.test(labels[0]); prob = new Float32Array(m.length); for (let i = 0; i < m.length; i++) prob[i] = isBg ? 1 - m[i] : m[i]; }
+            if (invert) for (let i = 0; i < prob.length; i++) prob[i] = 1 - prob[i];
+            return { prob, w, h };
+        }
+        function boxBlur(a, w, h, r) {                                                // separable box blur, in place
+            const t = new Float32Array(a.length), n = 2 * r + 1, cl = (v, hi) => v < 0 ? 0 : v > hi ? hi : v;
+            for (let y = 0; y < h; y++) { let s = 0; for (let x = -r; x <= r; x++) s += a[y * w + cl(x, w - 1)]; for (let x = 0; x < w; x++) { t[y * w + x] = s / n; s += a[y * w + cl(x + r + 1, w - 1)] - a[y * w + cl(x - r, w - 1)]; } }
+            for (let x = 0; x < w; x++) { let s = 0; for (let y = -r; y <= r; y++) s += t[cl(y, h - 1) * w + x]; for (let y = 0; y < h; y++) { a[y * w + x] = s / n; s += t[cl(y + r + 1, h - 1) * w + x] - t[cl(y - r, h - 1) * w + x]; } }
+        }
+        // probability map → soft subject matte (bottom-up bytes for GL) + where the person is
+        function subjectFromMask(prob, w, h, aspect) {
+            const N = w * h, m = new Float32Array(N), cl = (x, a, b) => Math.max(a, Math.min(b, x));
+            for (let i = 0; i < N; i++) { const t = cl((prob[i] - 0.35) / 0.3, 0, 1); m[i] = t * t * (3 - 2 * t); }
+            let cnt = 0, su = 0, sv = 0;
+            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (m[j * w + i] > 0.5) { cnt++; su += (i + 0.5) / w; sv += (j + 0.5) / h; }
+            if (cnt / N < 0.004) return null;                                         // nobody in the frame
+            const mu = su / cnt, mv = sv / cnt; let vu = 0, vv = 0;
+            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (m[j * w + i] > 0.5) { vu += Math.pow((i + 0.5) / w - mu, 2); vv += Math.pow((j + 0.5) / h - mv, 2); }
+            const sx = Math.sqrt(vu / cnt) * aspect, sy = Math.sqrt(vv / cnt), frac = cnt / N;
+            const r = Math.max(2, Math.round(w * 0.012)); boxBlur(m, w, h, r); boxBlur(m, w, h, r);   // soft, natural flash edge
+            const data = new Uint8Array(N);
+            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) data[(h - 1 - j) * w + i] = Math.round(255 * cl(m[j * w + i], 0, 1));
+            return {
+                subj: { cx: cl(mu, 0.1, 0.9), cy: cl(1 - mv + 0.05, 0.1, 0.9), rx: cl(sx * 2.2 + 0.1, 0.2, 0.6), ry: cl(sy * 2.2 + 0.1, 0.3, 0.7), conf: cl((frac - 0.003) / 0.012, 0, 1), seg: true },
+                mask: { w, h, data }
+            };
+        }
+        function startSegmentation(key, img) {
+            _seg = { key, status: 'pending', subj: null };
+            const slow = setTimeout(() => { if (!_segmenter && typeof toast === 'function') { const m = 'Загружаем распознавание людей…'; toast(typeof T === 'function' ? T(m) : m); } }, 1500);
+            const finish = status => { clearTimeout(slow); if (_seg.key === key) { _seg.status = status; refreshSubjectLook(); } };
+            (async () => {
+                const W = img.naturalWidth || img.width, H = img.naturalHeight || img.height, sc = Math.min(1, SEG.maxSide / Math.max(W, H));
+                const w = Math.max(16, Math.round(W * sc)), h = Math.max(16, Math.round(H * sc));
+                const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+                const seg = await Promise.race([loadSegmenter(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), SEG.timeoutMs))]);
+                if (_seg.key !== key) return;
+                const res = seg.segment(c); let out = null;
+                try {
+                    let labels = []; try { labels = seg.getLabels() || []; } catch (e) {}
+                    const pm = personProb(res, labels, SEG.invert); if (pm) out = subjectFromMask(pm.prob, pm.w, pm.h, W / H);
+                } finally { try { (res.confidenceMasks || []).forEach(m => m.close && m.close()); res.close && res.close(); } catch (e) {} }
+                if (_seg.key !== key) return;
+                if (out) { _seg.subj = out.subj; window.subjMask = { id: ++_maskId, ...out.mask }; }
+                else { _seg.subj = SUBJ_DEFAULT; window.subjMask = null; }               // the model says nobody → no flash oval at all
+                finish('ready');
+            })().catch(err => { console.warn('person segmentation unavailable, using the skin detector:', err); finish('failed'); });
+        }
         function detectSubject() {
             const img = document.getElementById('photo-preview');
             if (!img || !(img.naturalWidth || img.width)) return SUBJ_DEFAULT;
             const key = (img.src || '').length + ':' + (img.src || '').slice(-48) + ':' + (img.naturalWidth || img.width);
-            if (key === _subjKey) return _subj;
-            _subjKey = key; _subj = SUBJ_DEFAULT;
-            try {
-                const W = img.naturalWidth || img.width, H = img.naturalHeight || img.height, gw = 64, gh = Math.max(16, Math.round(64 * H / W));
-                const c = document.createElement('canvas'); c.width = gw; c.height = gh;
-                const x = c.getContext('2d'); x.drawImage(img, 0, 0, gw, gh);
-                _subj = subjectFromPixels(x.getImageData(0, 0, gw, gh).data, gw, gh, W / H);
-                if (typeof window.FaceDetector === 'function') {
-                    const myKey = key;
-                    new window.FaceDetector({ fastMode: true, maxDetectedFaces: 5 }).detect(img).then(faces => {
-                        if (!faces || !faces.length || myKey !== _subjKey) return;
-                        const f = faces.map(q => q.boundingBox).sort((a, b) => b.width * b.height - a.width * a.height)[0];
-                        const cl = (v, a, b) => Math.max(a, Math.min(b, v));
-                        _subj = { cx: cl((f.x + f.width / 2) / W, 0.1, 0.9), cy: cl(1 - (f.y + f.height * 1.5) / H, 0.1, 0.9), rx: cl(f.width / H * 2.6, 0.2, 0.6), ry: cl(f.height / H * 3.6, 0.3, 0.7), conf: 1 };
-                        refreshSubjectLook();
-                    }).catch(() => {});
-                }
-            } catch (e) {}
-            return _subj;
+            if (key !== _subjKey) {
+                _subjKey = key; _subj = SUBJ_DEFAULT; _seg = { key, status: 'idle', subj: null }; window.subjMask = null;
+                try {                                                                      // 1) instant skin-tone estimate (fallback)
+                    const W = img.naturalWidth || img.width, H = img.naturalHeight || img.height, gw = 64, gh = Math.max(16, Math.round(64 * H / W));
+                    const c = document.createElement('canvas'); c.width = gw; c.height = gh;
+                    const x = c.getContext('2d'); x.drawImage(img, 0, 0, gw, gh);
+                    _subj = subjectFromPixels(x.getImageData(0, 0, gw, gh).data, gw, gh, W / H);
+                    if (typeof window.FaceDetector === 'function') {
+                        const myKey = key;
+                        new window.FaceDetector({ fastMode: true, maxDetectedFaces: 5 }).detect(img).then(faces => {
+                            if (!faces || !faces.length || myKey !== _subjKey) return;
+                            const f = faces.map(q => q.boundingBox).sort((a, b) => b.width * b.height - a.width * a.height)[0];
+                            const cl = (v, a, b) => Math.max(a, Math.min(b, v));
+                            _subj = { cx: cl((f.x + f.width / 2) / W, 0.1, 0.9), cy: cl(1 - (f.y + f.height * 1.5) / H, 0.1, 0.9), rx: cl(f.width / H * 2.6, 0.2, 0.6), ry: cl(f.height / H * 3.6, 0.3, 0.7), conf: 1 };
+                            refreshSubjectLook();
+                        }).catch(() => {});
+                    }
+                } catch (e) {}
+            }
+            if (SEG.enabled) {                                                             // 2) real segmentation takes over when ready
+                if (_seg.status === 'idle') startSegmentation(key, img);
+                if (_seg.status === 'pending') return { ..._subj, conf: 0 };               // wait for the mask instead of flashing a wrong oval
+                if (_seg.status === 'ready') return _seg.subj;
+            }
+            return _subj;                                                                  // segmentation failed / disabled → skin detector
         }
+        // GL helper shared by the flash and effects renderers: uploads the matte (stored bottom-up) as a single-channel texture
+        window.uploadSubjMask = function (gl, tex, M) {
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            const pf = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL), pa = gl.getParameter(gl.UNPACK_ALIGNMENT);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, M.w, M.h, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, M.data);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, pf); gl.pixelStorei(gl.UNPACK_ALIGNMENT, pa);
+        };
+
         window.refreshSubjectLook = refreshSubjectLook;
         function refreshSubjectLook() {      // re-aim the active auto-aimed look after a new photo / crop / face result
             try {
@@ -1340,11 +1438,11 @@
                 }
             } catch (e) {}
         }
-        const autoFlash = g => { const s = detectSubject(); return { ...g, flashTuning: { ...g.flashTuning, centerX: s.cx, centerY: s.cy, subjRX: s.rx, subjRY: s.ry, conf: s.conf, noSubj: s.conf < 0.15 } }; };
-        const autoMask = f => { const s = detectSubject(); return { ...f, mNoSubj: s.conf < 0.15 ? 1 : 0, mX: Math.round(s.cx * 100), mY: Math.min(95, Math.round((1 - s.cy) * 100) + 4), mSize: Math.max(25, Math.min(70, Math.round(Math.max(s.rx * 1.1, s.ry * 0.9) * 100))) }; };
+        const autoFlash = g => { const s = detectSubject(); return { ...g, flashTuning: { ...g.flashTuning, centerX: s.cx, centerY: s.cy, subjRX: s.rx, subjRY: s.ry, conf: s.conf, noSubj: s.conf < 0.15, seg: !!s.seg } }; };
+        const autoMask = f => { const s = detectSubject(); return { ...f, mNoSubj: s.conf < 0.15 ? 1 : 0, mSegOn: s.seg ? 1 : 0, mX: Math.round(s.cx * 100), mY: Math.min(95, Math.round((1 - s.cy) * 100) + 4), mSize: Math.max(25, Math.min(70, Math.round(Math.max(s.rx * 1.1, s.ry * 0.9) * 100))) }; };
         const maskPos = () => { const m = autoMask({}); return { mX: m.mX, mY: m.mY, mSize: m.mSize }; };
-        const aimFx = o => { if (o && o.mAuto && o.mType > 0) Object.assign(o, maskPos(), { mNoSubj: detectSubject().conf < 0.15 ? 1 : 0 }); return o; };
-        window.subjectAim = { flash: autoFlash, maskPos, aimFx };
+        const aimFx = o => { if (o && o.mAuto && o.mType > 0) { const s = detectSubject(); Object.assign(o, maskPos(), { mNoSubj: s.conf < 0.15 ? 1 : 0, mSegOn: s.seg ? 1 : 0 }); } return o; };
+        window.subjectAim = { flash: autoFlash, maskPos, aimFx, warm: () => { detectSubject(); } };
         // two-mask flash look: subject (first plan) gets the flash, glare and a soft skin glow; the background mask goes darker
         const flashLook = (k, t) => ({ flashStrength: k, flashAuto: true, flashTuning: { cast: 0.2, ambient: 0.3, gain: 2.7, centerX: 0.5, centerY: 0.5, falloff: 1.9, shoulder: 0.26, white: 2.5, contrast: 0.22, bgDark: 0.8, glow: 0.75, subjRX: 0.3, subjRY: 0.45, ...t } });
 
@@ -1489,6 +1587,7 @@
             updatePhotoFilter(); updateLockState();
         } else presetVariant = v;
         if (!auto) { try { localStorage.setItem('presetVariant', v); } catch (e) {} }
+        if (v === 'night' && window.subjectAim) window.subjectAim.warm();       // start loading person segmentation early
         renderPresets(currentTab);
     };
     // ---- automatic suggestion: median / mean brightness of the photo decides which version fits ----
@@ -1510,6 +1609,7 @@
         variantSuggest = suggestVariantForPhoto();
         // fresh photo + no preset yet + user hasn't chosen → follow the suggestion; otherwise only the green dot hints
         if (variantSuggest && !variantManual && activePresetId === 'none' && variantSuggest !== presetVariant) presetVariant = variantSuggest;
+        if ((variantSuggest === 'night' || presetVariant === 'night') && window.subjectAim) window.subjectAim.warm();
         refreshVariantToggle();
     };
     const _dnReset = resetEditor;
@@ -2336,6 +2436,7 @@
         uniform vec4 uTune2; // x: centerX, y: centerY, z: shoulder, w: white^2
         uniform float uContrast;
         uniform vec4 uTune3; // x: background darkening, y: subject glow, z/w: subject radii
+        uniform sampler2D uSeg; uniform float uSegOn; // person matte (uSegOn = 0 → ellipse)
         void main(){
             vec3 c = texture2D(tex, uv).rgb;
             vec3 m = max(texture2D(mean, vec2(0.5)).rgb, vec3(0.02));
@@ -2354,7 +2455,7 @@
             float amb = min(uTune1.y * min(k, 1.25), 0.72);
             c *= (1.0 - amb) + uTune1.z * k * hot;
             // two masks: first plan (subject ellipse) vs background
-            float subj = 1.0 - smoothstep(0.35, 1.05, length(d2 / uTune3.zw));
+            float subj = uSegOn > 0.5 ? texture2D(uSeg, uv).r : 1.0 - smoothstep(0.35, 1.05, length(d2 / uTune3.zw));
             float kk = min(k, 1.25);
             c *= 1.0 - uTune3.x * kk * (1.0 - subj);
             c *= 1.0 + uTune3.y * kk * subj * 0.6;   // first plan: direct flash lift
@@ -2396,7 +2497,7 @@
             return { p, u };
         }
         const progMean = makeProgram(FLASH_FS_MEAN, ['tex']);
-        const progMain = makeProgram(FLASH_FS_MAIN, ['tex', 'mean', 'k', 'aspect', 'uTune1', 'uTune2', 'uTune3', 'uContrast']);
+        const progMain = makeProgram(FLASH_FS_MAIN, ['tex', 'mean', 'k', 'aspect', 'uTune1', 'uTune2', 'uTune3', 'uContrast', 'uSeg', 'uSegOn']);
 
         const quad = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -2464,9 +2565,13 @@
             gl.uniform4f(progMain.u.uTune2, T.centerX, T.centerY, T.shoulder, T.white * T.white);
             gl.uniform4f(progMain.u.uTune3, (T.bgDark || 0) * cf, (T.glow || 0) * cf, Math.max(T.subjRX || 0.3, 0.05), Math.max(T.subjRY || 0.45, 0.05));
             gl.uniform1f(progMain.u.uContrast, T.contrast);
+            { const M = window.subjMask, on = !!(T.seg && M && !T.noSubj);      // real person matte instead of the ellipse
+              if (on) { if (!R.segTex) R.segTex = gl.createTexture(); bindTex(2, R.segTex); if (R.segId !== M.id) { window.uploadSubjMask(gl, R.segTex, M); R.segId = M.id; } gl.uniform1i(progMain.u.uSeg, 2); }
+              gl.uniform1f(progMain.u.uSegOn, on ? 1 : 0); }
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
             // leave GL the way glfx expects it
+            bindTex(2, null);
             bindTex(1, null);
             bindTex(0, null);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -2474,6 +2579,7 @@
         };
         R.dispose = function () {
             release();
+            if (R.segTex) gl.deleteTexture(R.segTex);
             gl.deleteTexture(meanTex); gl.deleteFramebuffer(meanFbo);
             gl.deleteProgram(progMean.p); gl.deleteProgram(progMain.p); gl.deleteBuffer(quad);
         };
@@ -3924,9 +4030,9 @@
 
     // ---------- шейдер ----------
     const FX_FS = `
-        uniform sampler2D tex; uniform sampler2D lut; uniform sampler2D stamp; uniform sampler2D cam; uniform vec2 res; uniform float useStamp, stR, stG, stB;
+        uniform sampler2D tex; uniform sampler2D lut; uniform sampler2D stamp; uniform sampler2D cam; uniform sampler2D seg; uniform vec2 res; uniform float useStamp, stR, stG, stB;
         uniform float aspect, seed, ca, dist, useLut, shH, shS, hiH, hiS, bal, gAmt, gSize, gRough, gShadow,
-            lkAmt, lkHue, lkPos, dust, scr, mType, mX, mY, mSize, mAng, mFeather, mInv, mExp, mSat, mTemp, mShow;
+            lkAmt, lkHue, lkPos, dust, scr, mType, mX, mY, mSize, mAng, mFeather, mInv, mExp, mSat, mTemp, mShow, mSeg;
         uniform vec4 U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16;
         #define pixAmt U1.x
         #define htAmt U1.y
@@ -4089,7 +4195,8 @@
                 p = vec2(p.x * cs + p.y * sn, -p.x * sn + p.y * cs);
                 float f = max(mFeather, 0.02);
                 float m;
-                if (mType < 1.5) m = smoothstep(-f * 0.5, f * 0.5, p.y);
+                if (mSeg > 0.5) m = texture2D(seg, uv).r;                       // person matte
+                else if (mType < 1.5) m = smoothstep(-f * 0.5, f * 0.5, p.y);
                 else m = 1.0 - smoothstep(max(1.0 - f, 0.0), 1.0, length(p) / max(mSize, 0.02));
                 if (mInv > 0.5) m = 1.0 - m;
                 col *= exp2(mExp * 1.5 * m);
@@ -4296,7 +4403,7 @@
             gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
         }`;
     const FX_UNI = ['tex','lut','res','aspect','seed','ca','dist','useLut','shH','shS','hiH','hiS','bal','gAmt','gSize','gRough','gShadow',
-        'lkAmt','lkHue','lkPos','dust','scr','mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp','mShow','stamp','useStamp','stR','stG','stB','U1','U2','U3','U4','U5','U6','U7','U8','U9','U10','U11','U12','U13','U14','U15','U16','cam'];
+        'lkAmt','lkHue','lkPos','dust','scr','mType','mX','mY','mSize','mAng','mFeather','mInv','mExp','mSat','mTemp','mShow','mSeg','seg','stamp','useStamp','stR','stG','stB','U1','U2','U3','U4','U5','U6','U7','U8','U9','U10','U11','U12','U13','U14','U15','U16','cam'];
 
     function createFxRenderer(canvas) {
         const gl = canvas._ && canvas._.gl;
@@ -4368,17 +4475,18 @@
                     R.camKey = camCv._k;
                 }
             }
+            if (P.mSeg > 0.5 && window.subjMask) { const M = window.subjMask; if (!R.segTex) R.segTex = gl.createTexture(); bindTex(4, R.segTex); if (R.segId !== M.id) { window.uploadSubjMask(gl, R.segTex, M); R.segId = M.id; } }
             gl.useProgram(prog);
             gl.viewport(0, 0, dw, dh);
-            gl.uniform1i(u.tex, 0); gl.uniform1i(u.lut, 1); gl.uniform1i(u.stamp, 2); gl.uniform1i(u.cam, 3);
+            gl.uniform1i(u.tex, 0); gl.uniform1i(u.lut, 1); gl.uniform1i(u.stamp, 2); gl.uniform1i(u.cam, 3); gl.uniform1i(u.seg, 4);
             gl.uniform2f(u.res, dw, dh); gl.uniform1f(u.aspect, dw / dh);
             for (const k in P) if (u[k] !== undefined && u[k] !== null && k !== 'tex' && k !== 'lut') { const v = P[k]; if (Array.isArray(v)) gl.uniform4f(u[k], v[0], v[1], v[2], v[3]); else gl.uniform1f(u[k], v); }
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            bindTex(3, null); bindTex(2, null); bindTex(1, null); bindTex(0, null);
+            bindTex(4, null); bindTex(3, null); bindTex(2, null); bindTex(1, null); bindTex(0, null);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.viewport(0, 0, dw, dh);
         };
-        R.dispose = function () { release(); gl.deleteTexture(lutTex); gl.deleteTexture(stampTex); gl.deleteTexture(camTex); gl.deleteProgram(prog); gl.deleteBuffer(quad); };
+        R.dispose = function () { release(); gl.deleteTexture(lutTex); gl.deleteTexture(stampTex); gl.deleteTexture(camTex); if (R.segTex) gl.deleteTexture(R.segTex); gl.deleteProgram(prog); gl.deleteBuffer(quad); };
         return R;
     }
 
@@ -4408,7 +4516,7 @@
             gAmt: s.gAmt / 100, gSize: s.gSize / 100, gRough: s.gRough / 100, gShadow: s.gShadow / 100,
             lkAmt: s.lkAmt / 100, lkHue: s.lkHue / 360, lkPos: s.lkPos / 100, dust: s.dust / 100, scr: s.scr / 100,
             mType: s.mType, mX: s.mX / 100, mY: 1 - s.mY / 100, mSize: s.mSize / 100, mAng: s.mAng * Math.PI / 180,
-            mFeather: s.mFeather / 100, mInv: s.mInv, mExp: s.mNoSubj ? 0 : s.mExp / 100, mSat: s.mNoSubj ? 0 : s.mSat / 100, mTemp: s.mNoSubj ? 0 : s.mTemp / 100,
+            mFeather: s.mFeather / 100, mInv: s.mInv, mExp: s.mNoSubj ? 0 : s.mExp / 100, mSat: s.mNoSubj ? 0 : s.mSat / 100, mTemp: s.mNoSubj ? 0 : s.mTemp / 100, mSeg: (s.mSegOn && s.mType > 0 && !s.mNoSubj && window.subjMask) ? 1 : 0,
             mShow: (fxMaskShow && canvas === glCanvas) ? 1 : 0
         };
     }
@@ -6049,6 +6157,7 @@ WebGL не поддерживается вашим браузером|WebGL isn'
 Справа от вкладок пресетов — переключатель ☀ ДЕНЬ / ☾ НОЧЬ. Выберите пресет, а затем его версию под ваше фото: дневную для снимков при свете дня или ночную для тёмных сцен. В ночной версии человек на первом плане подсвечивается, как вспышкой, а фон темнеет. Ваши ручные правки при переключении сохраняются. Зелёная точка на переключателе показывает версию, которая подходит вашему фото; при загрузке фото она выбирается автоматически.|To the right of the preset tabs is the ☀ DAY / ☾ NIGHT switch. Pick a preset, then choose its version for your photo: day for daylight shots or night for dark scenes. In the night version the person in the foreground is lit as if by a flash while the background gets darker. Your manual edits are kept when you switch. A green dot on the switch shows the version that suits your photo; it is selected automatically when you load a photo.|Праворуч від вкладок пресетів — перемикач ☀ ДЕНЬ / ☾ НІЧ. Оберіть пресет, а потім його версію під ваше фото: денну для знімків при денному світлі або нічну для темних сцен. У нічній версії людина на першому плані підсвічується, як спалахом, а тло темніє. Ваші ручні правки під час перемикання зберігаються. Зелена точка на перемикачі показує версію, яка підходить вашому фото; під час завантаження фото вона обирається автоматично.
 ДЕНЬ|DAY|ДЕНЬ
 НОЧЬ|NIGHT|НІЧ
+Загружаем распознавание людей…|Loading person detection…|Завантажуємо розпізнавання людей…
 Инструменты|Tools|Інструменти
 Экспозиция, цвет, детали и кисти. Кнопка «?» внутри инструмента объясняет, как им пользоваться. Точка на иконке значит, что инструмент изменён, а «СБРОСИТЬ ВСЕ» обнуляет все настройки.|Exposure, color, detail and brushes. The “?” button inside a tool explains how to use it. A dot on an icon means the tool has been changed, and “RESET ALL” zeroes every setting.|Експозиція, колір, деталі та пензлі. Кнопка «?» всередині інструмента пояснює, як ним користуватися. Крапка на іконці означає, що інструмент змінено, а «СКИНУТИ ВСЕ» обнуляє всі налаштування.
 Эффекты|Effects|Ефекти
