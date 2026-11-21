@@ -610,6 +610,7 @@
             hsl5h: 0.06,
             hsl5s: -0.20,
             hsl5l: 0.34,
+            hslTuning: { chromaKnee: 0.03 },
             curves: {
                 red:   [[0, 0], [0.25, 0.200], [0.5, 0.525], [0.75, 0.855], [1, 1]],
                 green: [[0, 0], [0.25, 0.200], [0.5, 0.518], [0.75, 0.845], [1, 1]],
@@ -1795,10 +1796,10 @@
     };
     const HSL_UI_MAX = 12;   // sliders show -12.0 … +12.0; settings store -1 … 1
 
-    function hslFragmentSource() {
-        const n = HSL_COLORS.length, T = HSL_TUNING;
+   function hslFragmentSource() {
+        const n = HSL_COLORS.length;
         const f = v => v.toFixed(6);
-        let s = 'uniform sampler2D tex;\n';
+        let s = 'uniform sampler2D tex;\nuniform vec4 uTune;\n';
         for (let i = 0; i < n; i++) s += 'uniform vec3 a' + i + ';\n';
         s += `
         vec3 rgb2hsl(vec3 c){
@@ -1831,7 +1832,7 @@
             vec3 hsl = rgb2hsl(src);
             float h = hsl.x;
             vec3 adj = a0;
-`;
+        `;
         // piecewise blend between neighbouring colour centres (the last segment wraps back to red)
         for (let i = 0; i < n; i++) {
             const lo = HSL_COLORS[i].h / 360;
@@ -1841,12 +1842,12 @@
         s += `
             if (adj.x == 0.0 && adj.y == 0.0 && adj.z == 0.0) { gl_FragColor = vec4(src, 1.0); return; }
             float chroma = hsl.y * (1.0 - abs(2.0 * hsl.z - 1.0));
-            float cw = smoothstep(0.0, ${f(T.chromaKnee)}, chroma);
-            float nh = fract(h + adj.x * ${f(T.hueRange / 360)} * cw + 1.0);
-            float ns = adj.y >= 0.0 ? hsl.y * (1.0 + adj.y * ${f(T.satBoost)}) : hsl.y * (1.0 + adj.y);
+            float cw = smoothstep(0.0, uTune.w, chroma);
+            float nh = fract(h + adj.x * uTune.x * cw + 1.0);
+            float ns = adj.y >= 0.0 ? hsl.y * (1.0 + adj.y * uTune.y) : hsl.y * (1.0 + adj.y);
             ns = clamp(ns, 0.0, 1.0);
             float dl = adj.z * cw;
-            float nl = dl >= 0.0 ? hsl.z + (1.0 - hsl.z) * dl * ${f(T.lightAmt)} : hsl.z * (1.0 + dl * ${f(T.lightAmt)});
+            float nl = dl >= 0.0 ? hsl.z + (1.0 - hsl.z) * dl * uTune.z : hsl.z * (1.0 + dl * uTune.z);
             gl_FragColor = vec4(hsl2rgb(vec3(nh, ns, clamp(nl, 0.0, 1.0))), 1.0);
         }`;
         return s;
@@ -1896,6 +1897,7 @@
         gl.linkProgram(prog);
         if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('hsl link: ' + gl.getProgramInfoLog(prog));
         const uTex = gl.getUniformLocation(prog, 'tex');
+        const uTune = gl.getUniformLocation(prog, 'uTune');
         const uA = [];
         for (let i = 0; i < n; i++) uA.push(gl.getUniformLocation(prog, 'a' + i));
 
@@ -1919,10 +1921,11 @@
             R.frameTex = tex;
         }
 
-        R.render = function (vals) {
+        R.render = function (vals, customTuning) {
             const dw = gl.drawingBufferWidth, dh = gl.drawingBufferHeight;
             if (!dw || !dh) return;
             ensure(dw, dh);
+            const T = customTuning ? { ...HSL_TUNING, ...customTuning } : HSL_TUNING;
 
             gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.disable(gl.SCISSOR_TEST);
             gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -1938,6 +1941,7 @@
             gl.useProgram(prog);
             gl.viewport(0, 0, dw, dh);
             gl.uniform1i(uTex, 0);
+            gl.uniform4f(uTune, T.hueRange / 360, T.satBoost, T.lightAmt, T.chromaKnee);
             for (let i = 0; i < n; i++) gl.uniform3f(uA[i], vals[i * 3], vals[i * 3 + 1], vals[i * 3 + 2]);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
@@ -1950,18 +1954,18 @@
         return R;
     }
 
-    function applyHsl(canvas, vals) {
+    function applyHsl(canvas, vals, customTuning) {
         let r = canvas._hslRenderer;
         if (r === undefined) {
             try { r = createHslRenderer(canvas); } catch (e) { console.warn('HSL unavailable:', e); r = null; }
             canvas._hslRenderer = r;
         }
         if (!r) return;
-        try { r.render(vals); } catch (e) { console.warn('HSL failed:', e); }
+        try { r.render(vals, customTuning); } catch (e) { console.warn('HSL failed:', e); }
         // the preview canvas keeps its GPU buffers; one-off export canvases free them right away
         if (canvas !== glCanvas) { try { r.dispose(); } catch (e) {} canvas._hslRenderer = null; }
     }
-
+    
     // ===================== Вспышка (Flash) — GPU post-pass =====================
     // Imitates a direct on-camera flash on a photo taken without one. Same trick as HSL / Bloom (runs on glfx's own
     // WebGL context right after update()):
@@ -2310,7 +2314,7 @@
 
         targetCanvas.update();
         const hslVals = hslCollect(baseSettings, settingsToApply);
-        if (hslVals) applyHsl(targetCanvas, hslVals);
+        if (hslVals) applyHsl(targetCanvas, hslVals, baseSettings.hslTuning);
         const flashStrength = Math.max(0, Math.min(FLASH_UI_MAX / FLASH_BASE_UNIT, (baseSettings.flashStrength || 0) + (settingsToApply.flashStrength || 0)));
         if (flashStrength > 0) applyFlash(targetCanvas, flashStrength);
         const halStrength = Math.max(0, Math.min(1, (baseSettings.halationStrength || 0) + (settingsToApply.halationStrength || 0)));
