@@ -1305,8 +1305,9 @@
             wasm: 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm',
             model: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
             invert: false,        // flip to true if the person/background ever come out swapped
-            lo: 0.45, hi: 0.75,   // person probability → matte ramp (higher = tighter silhouette)
-            erode: 1, feather: 1, // px at 512: pull the edge in, then soften only slightly → the light stops at the silhouette (no glowing padding)
+            lo: 0.4, hi: 0.8,     // person probability → matte ramp
+            soft: 5, passes: 3,   // px at 512: Gaussian-like blur of the matte (edge gradient ≈ 14 px wide)
+            remapLo: 0.3, remapHi: 0.95,   // then re-cut so the gradient sits mostly INSIDE the person: smooth, even, and no glow outside the silhouette
             maxSide: 512,         // the photo is downscaled to this before segmentation
             timeoutMs: 25000      // still loading after this → fall back to the skin detector for this photo
         };
@@ -1351,8 +1352,8 @@
             const mu = su / cnt, mv = sv / cnt; let vu = 0, vv = 0;
             for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (m[j * w + i] > 0.5) { vu += Math.pow((i + 0.5) / w - mu, 2); vv += Math.pow((j + 0.5) / h - mv, 2); }
             const sx = Math.sqrt(vu / cnt) * aspect, sy = Math.sqrt(vv / cnt), frac = cnt / N;
-            for (let n = 0; n < SEG.erode; n++) morph3(m, w, h, false);                // tight silhouette
-            if (SEG.feather > 0) boxBlur(m, w, h, SEG.feather);
+            for (let n = 0; n < SEG.passes; n++) boxBlur(m, w, h, SEG.soft);            // smooth, even gradient at the edge
+            for (let i = 0; i < N; i++) { const t = cl((m[i] - SEG.remapLo) / (SEG.remapHi - SEG.remapLo), 0, 1); m[i] = t * t * (3 - 2 * t); }
             return {
                 subj: { cx: cl(mu, 0.1, 0.9), cy: cl(1 - mv + 0.05, 0.1, 0.9), rx: cl(sx * 2.2 + 0.1, 0.2, 0.6), ry: cl(sy * 2.2 + 0.1, 0.3, 0.7), conf: cl((frac - 0.003) / 0.012, 0, 1), seg: true },
                 pm: m, w, h
@@ -1395,18 +1396,20 @@
             const inn = [], out = [];
             for (let i = 0; i < N; i += 3) { if (pm[i] > 0.6) inn.push(d[i]); else if (pm[i] < 0.05) out.push(d[i]); }
             if (inn.length < 30 || out.length < 30) return null;
-            let mi = med(inn), mo = med(out);
-            if (mi < mo) { for (let i = 0; i < N; i++) d[i] = 1 - d[i]; mi = 1 - mi; mo = 1 - mo; }   // auto polarity: the person is nearer than the rest of the frame
+            const qLo = inn[Math.floor(inn.length * 0.25)], qHi = inn[Math.floor(inn.length * 0.75)];
+            let mi = med(inn), mo = med(out), inv = false;
+            if (mi < mo) { inv = true; for (let i = 0; i < N; i++) d[i] = 1 - d[i]; mi = 1 - mi; mo = 1 - mo; }   // auto polarity: the person is nearer than the rest of the frame
+            const dref = 0.5 * mi + 0.5 * (inv ? 1 - qHi : qLo);                                       // the person's depth (robust to an outstretched arm)
             if (mi - mo < 0.08) return null;                                                          // flat depth map: nothing to separate
             const F = new Float32Array(N);
-            for (let i = 0; i < N; i++) { const t = cl((d[i] - (mi - 0.2)) / 0.15, 0, 1); F[i] = t * t * (3 - 2 * t); }   // as near as the person (or nearer)
+            for (let i = 0; i < N; i++) { const t = cl((d[i] - (dref - 0.45)) / 0.25, 0, 1); F[i] = t * t * (3 - 2 * t); }   // about as near as the person (a ledge beside them is never at EXACTLY their depth), or nearer
             const pd = Float32Array.from(pm); for (let n = 0; n < 3; n++) morph3(pd, w, h, true);      // not the person, nor the blurry depth band around the silhouette
             for (let i = 0; i < N; i++) F[i] *= 1 - cl(pd[i] * 2, 0, 1);
             for (let n = 0; n < 4; n++) morph3(F, w, h, false);                                       // opening: thin slivers disappear, real objects stay
             for (let n = 0; n < 4; n++) morph3(F, w, h, true);
             const cx = subj.cx * w, cy = (1 - subj.cy) * h;                                           // the flash cone: far-off things at the same depth aren't lit
-            for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const t = cl((Math.hypot((x - cx) / h, (y - cy) / h) - 0.5) / 0.6, 0, 1); F[y * w + x] *= 1 - t * t * (3 - 2 * t); }
-            boxBlur(F, w, h, 3); boxBlur(F, w, h, 3);
+            for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const t = cl((Math.hypot((x - cx) / h, (y - cy) / h) - 0.6) / 0.7, 0, 1); F[y * w + x] *= 1 - t * t * (3 - 2 * t); }
+            for (let n = 0; n < 3; n++) boxBlur(F, w, h, 6);                                          // soft, even edges
             let sum = 0; for (let i = 0; i < N; i++) sum += F[i];
             return sum / N < 0.004 ? null : F;
         }
@@ -1429,7 +1432,11 @@
                 const dm = res.depth, fp = firstPlanFromDepth(dm.data, dm.width, dm.height, dm.channels || 1, S.pm, w, h, S.subj);
                 if (fp) window.subjMask = { id: ++_maskId, ...buildMatte(S.pm, fp, w, h) };
                 finish('ready');
-            })().catch(err => { console.warn('first-plan depth unavailable (person-only flash):', err); finish('failed'); });
+            })().catch(err => {
+                console.warn('first-plan depth unavailable (person-only flash):', err);
+                if (!window.__fpWarned && typeof toast === 'function') { window.__fpWarned = true; const m = 'Первый план определить не удалось'; toast(typeof T === 'function' ? T(m) : m); }
+                finish('failed');
+            });
         }
 
         function startSegmentation(key, img) {
@@ -2567,15 +2574,17 @@
             vec4 sg = uSegOn > 0.5 ? texture2D(uSeg, uv) : vec4(vec3(1.0 - smoothstep(0.35, 1.05, length(d2 / uTune3.zw))), 0.0);
             float subj = sg.r;
             float fp = sg.a;
-            float lit = subj + fp * 0.55 * (1.0 - subj);              // the first plan gets ~55% of the person's light
+            // light per plane: person = full flash · first plan = ~40% of it, mostly spared from the ambient drop · background = darkened
+            float fpOnly = fp * (1.0 - subj);
             float hotE = uSegOn > 0.5 ? mix(0.4, 1.0, hot) : hot;      // with a real matte the flash lights the silhouette itself, not a halo around it
-            float wgt = uSegOn > 0.5 ? lit : 1.0;
-            c *= (1.0 - amb) + uTune1.z * k * hotE * wgt;
+            float light = uSegOn > 0.5 ? (subj * hotE + fpOnly * 0.4) : hot;
+            c *= (1.0 - amb * (1.0 - fpOnly * 0.7)) + uTune1.z * k * light;
             float kk = min(k, 1.25);
-            c *= 1.0 - uTune3.x * kk * (1.0 - max(subj, fp * 0.6));   // background darkens; the first plan only a little
+            c *= 1.0 - uTune3.x * kk * (1.0 - max(subj, fp * 0.85));  // background darkens; the first plan hardly
             c *= 1.0 + uTune3.y * kk * subj * 0.6;   // first plan: direct flash lift
             float lm = dot(c, vec3(0.2126, 0.7152, 0.0722));
-            c += uTune3.y * kk * subj * (c * (1.0 - c) * 0.9 + vec3(0.06, 0.035, 0.02) * lm);
+            vec3 cc = clamp(c, 0.0, 1.0);                               // (unclamped, c > 1 made this term negative → the bright shirt flipped to cyan)
+            c += uTune3.y * kk * subj * (cc * (1.0 - cc) * 0.9 + vec3(0.06, 0.035, 0.02) * lm);
 
             // soft shoulder so bright surfaces stay glossy without flat clipping
             vec3 shd = c * (1.0 + c / uTune2.w) / (1.0 + c) * 1.08;
@@ -6274,6 +6283,7 @@ WebGL не поддерживается вашим браузером|WebGL isn'
 НОЧЬ|NIGHT|НІЧ
 Загружаем распознавание людей…|Loading person detection…|Завантажуємо розпізнавання людей…
 Определяем первый план…|Detecting the foreground…|Визначаємо перший план…
+Первый план определить не удалось|Could not detect the foreground|Не вдалося визначити перший план
 Инструменты|Tools|Інструменти
 Экспозиция, цвет, детали и кисти. Кнопка «?» внутри инструмента объясняет, как им пользоваться. Точка на иконке значит, что инструмент изменён, а «СБРОСИТЬ ВСЕ» обнуляет все настройки.|Exposure, color, detail and brushes. The “?” button inside a tool explains how to use it. A dot on an icon means the tool has been changed, and “RESET ALL” zeroes every setting.|Експозиція, колір, деталі та пензлі. Кнопка «?» всередині інструмента пояснює, як ним користуватися. Крапка на іконці означає, що інструмент змінено, а «СКИНУТИ ВСЕ» обнуляє всі налаштування.
 Эффекты|Effects|Ефекти
