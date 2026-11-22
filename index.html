@@ -4854,7 +4854,7 @@
     document.getElementById('fx-apply').onclick = () => fxClose(false);
     document.getElementById('fx-reset').onclick = () => {
         if (!fxId) return;
-        if (fxId === 'k') { presetK = 1; presetFlashOv = null; presetFxScale(); kBuild(); updatePhotoFilter(); return; }
+        if (fxId === 'k') { presetK = 1; presetFlashOv = null; presetFxScale(); kBuild(); updatePhotoFilter(); kIconLive(); return; }
         const d = fxDefaults(), def = FXT[fxId];
         if (def.custom === 'curves') fxs.curves = d.curves;
         else def.keys.forEach(k => { fxs[k] = d[k]; });
@@ -4873,13 +4873,15 @@
     closeSlider = function () { _fxCloseSlider(); fxMaskShow = false; fxPanel.classList.remove('active'); };
 
     // ---------- интенсивность пресета: иконка на выбранной карточке → панель со слайдером ----------
+    const kModified = () => presetK < 1 || !!(presetFlashOv && presetFlashOv.id === activePresetId && presetFlashOv.v === presetVariant);   // intensity or flash changed by hand
+    function kIconLive() { const ic = document.querySelector('.k-icon'); if (ic) ic.classList.toggle('mod', kModified()); }
     function kIconSync() {
         document.querySelectorAll('.k-icon').forEach(el => el.remove());
         if (!activePresetId || activePresetId === 'none') return;
         const card = document.querySelector('.preset-item.selected');
         if (!card) return;
         const ic = document.createElement('div');
-        ic.className = 'k-icon' + (presetK < 1 ? ' mod' : '');
+        ic.className = 'k-icon' + (kModified() ? ' mod' : '');
         ic.title = 'Интенсивность';
         ic.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.5"/><circle cx="8" cy="16" r="2.5"/></svg>';
         ic.addEventListener('click', e => { e.stopPropagation(); kOpen(); });
@@ -4899,13 +4901,13 @@
             <div class="fx-lab"><span>Вспышка</span><span id="kf-val">${flTxt(flUi)}</span></div>
             <input type="range" id="kf-input" min="0" max="${Math.round(FLASH_UI_MAX * 10)}" step="1" value="${flUi}"></div>` : '') + `</div>`;
         const inp = document.getElementById('k-input'), val = document.getElementById('k-val');
-        inp.addEventListener('input', () => { presetK = parseFloat(inp.value) / 100; val.textContent = inp.value + '%'; presetFxScale(); updatePhotoFilter(); });
+        inp.addEventListener('input', () => { presetK = parseFloat(inp.value) / 100; val.textContent = inp.value + '%'; presetFxScale(); updatePhotoFilter(); kIconLive(); });
         const fi = document.getElementById('kf-input'), fv = document.getElementById('kf-val');
         if (fi) fi.addEventListener('input', () => {
             const n = parseFloat(fi.value);
             fv.textContent = flTxt(n);
             presetFlashOv = Math.abs(n - Math.round(baseFl * FLASH_BASE_UNIT * 10)) <= 0 ? null : { id: activePresetId, v: presetVariant, val: (n / 10) / FLASH_BASE_UNIT };
-            updatePhotoFilter();
+            updatePhotoFilter(); kIconLive();
         });
     }
     function kOpen() {
@@ -5859,7 +5861,7 @@
         };
         const H = {
             _: ['hold', 'Тяните ползунок, чтобы изменить значение. ✕ — отмена, СБРОС — обнулить, ✓ — применить. Удерживайте фото, чтобы увидеть оригинал.'],
-            _k: ['slider', 'Регулирует силу пресета: 0% — оригинал, 100% — полный эффект.'],
+            _k: ['slider', 'Регулирует силу пресета: 0% — оригинал, 100% — полный эффект. У пресетов со вспышкой есть ещё ползунок «Вспышка»: он стоит на значении вспышки самого пресета — потяните вправо, чтобы вспышка стала сильнее, влево — слабее. Если значение изменено, иконка на пресете становится белой.'],
             crop: ['crop', 'Тяните рамку за углы и края, внизу выберите пропорции. ⟲ поворачивает, ⇋ ⇵ отражают, ползунок выравнивает горизонт (УГОЛ) или меняет перспективу (ВЕРТ / ГОР).'],
             curves: ['curve', 'Тап по линии добавляет точку, перетаскивание меняет тон. Двойной тап по точке удаляет её. Каналы RGB, R, G, B настраиваются отдельно.'],
             hsl: ['slider', 'Выберите цвет внизу и меняйте его оттенок, насыщенность и яркость. Двойной тап по названию ползунка сбрасывает только его.'],
@@ -6282,7 +6284,7 @@ WebGL не поддерживается вашим браузером|WebGL isn'
 Далее|Next|Далі
 Начать|Start|Почати
 Тяните ползунок, чтобы изменить значение. ✕ — отмена, СБРОС — обнулить, ✓ — применить. Удерживайте фото, чтобы увидеть оригинал.|Drag the slider to change the value. ✕ cancels, RESET zeroes it, ✓ applies. Press and hold the photo to see the original.|Тягніть повзунок, щоб змінити значення. ✕ — скасувати, СКИНУТИ — обнулити, ✓ — застосувати. Утримуйте фото, щоб побачити оригінал.
-Регулирует силу пресета: 0% — оригинал, 100% — полный эффект.|Sets the preset strength: 0% is the original, 100% is the full effect.|Регулює силу пресета: 0% — оригінал, 100% — повний ефект.
+Регулирует силу пресета: 0% — оригинал, 100% — полный эффект. У пресетов со вспышкой есть ещё ползунок «Вспышка»: он стоит на значении вспышки самого пресета — потяните вправо, чтобы вспышка стала сильнее, влево — слабее. Если значение изменено, иконка на пресете становится белой.|Sets the preset strength: 0% is the original, 100% is the full effect. Presets that include a flash also get a "Flash" slider: it starts at the preset's own flash value — drag right for a stronger flash, left for a weaker one. When a value is changed, the icon on the preset turns white.|Регулює силу пресета: 0% — оригінал, 100% — повний ефект. У пресетів зі спалахом є ще повзунок «Спалах»: він стоїть на значенні спалаху самого пресета — потягніть праворуч, щоб спалах став сильнішим, ліворуч — слабшим. Якщо значення змінено, іконка на пресеті стає білою.
 Тяните рамку за углы и края, внизу выберите пропорции. ⟲ поворачивает, ⇋ ⇵ отражают, ползунок выравнивает горизонт (УГОЛ) или меняет перспективу (ВЕРТ / ГОР).|Drag the frame by its corners and edges and pick a ratio below. ⟲ rotates, ⇋ ⇵ flip, the slider straightens the horizon (ANGLE) or changes perspective (VERT / HORIZ).|Тягніть рамку за кути й краї, внизу оберіть пропорції. ⟲ повертає, ⇋ ⇵ віддзеркалюють, повзунок вирівнює горизонт (КУТ) або змінює перспективу (ВЕРТ / ГОР).
 Тап по линии добавляет точку, перетаскивание меняет тон. Двойной тап по точке удаляет её. Каналы RGB, R, G, B настраиваются отдельно.|Tap the line to add a point and drag it to change the tone. Double-tap a point to delete it. The RGB, R, G and B channels are adjusted separately.|Тап по лінії додає точку, перетягування змінює тон. Подвійний тап по точці видаляє її. Канали RGB, R, G, B налаштовуються окремо.
 Выберите цвет внизу и меняйте его оттенок, насыщенность и яркость. Двойной тап по названию ползунка сбрасывает только его.|Pick a color below and change its hue, saturation and lightness. Double-tap a slider's name to reset only that slider.|Оберіть колір внизу та змінюйте його відтінок, насиченість і яскравість. Подвійний тап по назві повзунка скидає лише його.
