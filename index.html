@@ -1535,10 +1535,12 @@
         // sep       = no flash culture (rangefinders, medium format, cine, B&W): only a light subject separation
         const FLASH_BASE = { cast: 0.2, ambient: 0.3, gain: 1.5, centerX: 0.5, centerY: 0.5, falloff: 1.9, shoulder: 0.26, white: 2.5, contrast: 0.2, bgDark: 0.6, glow: 0.3, subjRX: 0.3, subjRY: 0.45 };
         const flashLook = (k, t) => ({ flashStrength: k, flashAuto: true, flashTuning: { ...FLASH_BASE, ...t } });
+        // speedlite / sep are switched off (null): hot-shoe pro bodies and cine / rangefinder / medium-format / B&W presets have no flash of their own.
+        // To give a group a flash again, replace its null with e.g. [0.55, { cast: 0.2, ambient: 0.35, gain: 1.2, falloff: 1.6, bgDark: 0.6, glow: 0.3 }].
         const FLASH_PROFILES = {
             direct:    { night: [0.62, { cast: 0.35, ambient: 0.6, gain: 1.6, falloff: 2.2, shoulder: 0.24, contrast: 0.22, bgDark: 0.8, glow: 0.35 }], day: [0.28, { cast: 0.12, ambient: 0.08, gain: 1.0, falloff: 2.0, contrast: 0.14, bgDark: 0.1, glow: 0.2 }] },
-            speedlite: { night: [0.55, { cast: 0.2, ambient: 0.35, gain: 1.2, falloff: 1.6, bgDark: 0.6, glow: 0.3 }], day: null },
-            sep:       { night: [0.3, { cast: 0.1, ambient: 0.1, gain: 0.5, falloff: 1.2, contrast: 0.15, bgDark: 0.4, glow: 0.2 }], day: null }
+            speedlite: { night: null, day: null },
+            sep:       { night: null, day: null }
         };
         // real built-in flashes: Canon 7D / R10 / R7 pop-up, Fuji X100 leaf-shutter flash, Ricoh GR snapshot flash; flash-culture presets: compact / disposable / instant cameras, digicam Y2K, flashbulb 70s
         const DIRECT = /^(canon7d|canonr10|canonr7|fujix100|ricohgr|flash|y2k|polaroid|kgold|fuji|superia|agfa|vintage70)$/;
@@ -1608,7 +1610,7 @@
             if (g.bloomStrength > 0) { g.bloomSize = g.bloomSize || 0.5; g.bloomRange = g.bloomRange || 0.4; }
             if (g.halationStrength > 0) { g.halationSize = g.halationSize || 0.09; g.halationRange = g.halationRange || 0.23; }
             g.curves = nightCurve(day.curves, mo ? 0.008 : 0.012, 0.02, mo ? [0, 0, 0] : [-0.006, -0.001, 0.014]);
-            { const [fk, ft] = FLASH_PROFILES[prof || 'speedlite'].night; Object.assign(g, flashLook(native ? fk * 0.8 : fk, native ? { ...ft, bgDark: (ft.bgDark || 0) * 0.7 } : ft)); }
+            { const fl = FLASH_PROFILES[prof || 'speedlite'].night; if (fl) { const [fk, ft] = fl; Object.assign(g, flashLook(native ? fk * 0.8 : fk, native ? { ...ft, bgDark: (ft.bgDark || 0) * 0.7 } : ft)); } }
             const S = SIG[fam] || SIG.mood;
             const f = { ...dayFx };
             if (useFx) {      // split-tone / grain only on PRO presets (effects are Premium-locked)
@@ -1632,7 +1634,7 @@
 
             if (p.id === 'canon7d3') {
                 // NIGHT = your original configuration (it was a night/flash look), now auto-aimed at the detected subject, with a darker background mask and skin glow.
-                nightG = { ...base, flashAuto: true, flashTuning: { ...base.flashTuning, gain: 1.75, falloff: 2.0, bgDark: 0.8, glow: 0.38, subjRX: 0.3, subjRY: 0.45, nsExp: 0.5 } };
+                nightG = { ...base, flashAuto: true, flashTuning: { ...base.flashTuning, gain: 1.1, falloff: 2.0, bgDark: 0.8, glow: 0.25, subjRX: 0.3, subjRY: 0.45, nsExp: 0.5 } };
                 nightFx = { ...baseFx, mExp: 34, mAuto: true };
                 // DAY = same Canon character rewritten for daylight: natural exposure, protected sky, clean skin, a light fill-flash pop on the subject.
                 const hs = {}; HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach(ch => { const k = 'hsl' + i + ch; hs[k] = r4((base[k] || 0) * 0.5); }));
@@ -2773,12 +2775,6 @@
         const baseFlash = Math.max(0, Math.min(maxFlash, baseSettings.flashStrength || 0));
         const userFlash = Math.max(0, Math.min(maxFlash, settingsToApply.flashStrength || 0));
         const toolTune = window.subjectAim ? window.subjectAim.toolTuning() : null;      // Flash tool: person matte + darker background
-        if (baseSettings.flashTuning && baseFlash > 0) {
-            if (!baseSettings.flashTuning.noSubj) applyFlash(targetCanvas, baseFlash, baseSettings.flashTuning);     // nobody found → the preset flash stays off (no oval)
-            if (userFlash > 0) applyFlash(targetCanvas, userFlash, toolTune);
-        } else if (baseFlash + userFlash > 0) {
-            applyFlash(targetCanvas, Math.min(maxFlash, baseFlash + userFlash), toolTune);
-        }
         
         const colorCurves = baseSettings.curves;
 
@@ -2881,7 +2877,13 @@
         targetCanvas.update();
         const hslVals = hslCollect(baseSettings, settingsToApply);
         if (hslVals) applyHsl(targetCanvas, hslVals, baseSettings.hslTuning);
-        // (the flash is applied once, above — a second default-tuned pass here used to add an unrelated oval in the middle of the frame)
+        // flash: person (full light) · first plan (part of it) · background (darker). Preset flash and the Flash tool share one subject-aware look.
+        if (baseSettings.flashTuning && baseFlash > 0) {
+            if (!baseSettings.flashTuning.noSubj) applyFlash(targetCanvas, baseFlash, baseSettings.flashTuning);     // nobody found → the preset flash stays off (no oval)
+            if (userFlash > 0) applyFlash(targetCanvas, userFlash, toolTune);
+        } else if (baseFlash + userFlash > 0) {
+            applyFlash(targetCanvas, Math.min(maxFlash, baseFlash + userFlash), toolTune);
+        }
         const halStrength = Math.max(0, Math.min(1, (baseSettings.halationStrength || 0) + (settingsToApply.halationStrength || 0)));
         if (halStrength > 0) {
             const halSize = Math.max(0, Math.min(1, (baseSettings.halationSize || 0) + (settingsToApply.halationSize || 0)));
