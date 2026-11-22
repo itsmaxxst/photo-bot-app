@@ -1384,39 +1384,50 @@
             for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const k = y * w + x, v = a[k]; t[k] = pick(v, x > 0 ? a[k - 1] : v, x < w - 1 ? a[k + 1] : v); }
             for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const k = y * w + x, v = t[k]; a[k] = pick(v, y > 0 ? t[k - w] : v, y < h - 1 ? t[k + w] : v); }
         }
-        // depth map + person matte → soft "first plan" matte: things about as near as (or nearer than) the person, but not the person
+        // depth map + person matte → (rel) depth relative to the person, used for the inverse-square flash falloff,
+        // and (F) a soft "first plan" matte kept for the effects mask. Returns { rel, F } or null when depth is unusable.
         function firstPlanFromDepth(data, dw, dh, ch, pm, w, h, subj) {
             const N = w * h, d = new Float32Array(N), cl = (x, a, b) => Math.max(a, Math.min(b, x));
             for (let y = 0; y < h; y++) { const sy = Math.min(dh - 1, (y * dh / h) | 0); for (let x = 0; x < w; x++) d[y * w + x] = data[(sy * dw + Math.min(dw - 1, (x * dw / w) | 0)) * ch]; }
             const smp = []; for (let i = 0; i < N; i += 7) smp.push(d[i]); smp.sort((a, b) => a - b);
             const lo = smp[Math.floor(smp.length * 0.02)], hi = smp[Math.floor(smp.length * 0.98)];
-            if (!(hi - lo > 4)) return null;
-            for (let i = 0; i < N; i++) d[i] = cl((d[i] - lo) / (hi - lo), 0, 1);
-            const med = arr => { arr.sort((a, b) => a - b); return arr.length ? arr[arr.length >> 1] : NaN; };
+            if (!(hi - lo > 1e-6)) return null;
+            for (let i = 0; i < N; i++) d[i] = cl((d[i] - lo) / (hi - lo), 0, 1);       // 0 = far … 1 = nearest (Depth Anything: near = large)
             const inn = [], out = [];
             for (let i = 0; i < N; i += 3) { if (pm[i] > 0.6) inn.push(d[i]); else if (pm[i] < 0.05) out.push(d[i]); }
             if (inn.length < 30 || out.length < 30) return null;
-            const qLo = inn[Math.floor(inn.length * 0.25)], qHi = inn[Math.floor(inn.length * 0.75)];
-            let mi = med(inn), mo = med(out), inv = false;
-            if (mi < mo) { inv = true; for (let i = 0; i < N; i++) d[i] = 1 - d[i]; mi = 1 - mi; mo = 1 - mo; }   // auto polarity: the person is nearer than the rest of the frame
-            const dref = 0.5 * mi + 0.5 * (inv ? 1 - qHi : qLo);                                       // the person's depth (robust to an outstretched arm)
-            if (mi - mo < 0.08) return null;                                                          // flat depth map: nothing to separate
+            inn.sort((a, b) => a - b); out.sort((a, b) => a - b);
+            const mi = inn[inn.length >> 1], mo = out[out.length >> 1], qLo = inn[Math.floor(inn.length * 0.25)];
+            if (mi - mo < 0.08) return null;                                           // flat map, or the person is not nearer than the rest: person-only flash
+            const dref = Math.max(0.15, 0.5 * mi + 0.5 * qLo);                          // the person's depth (robust to an outstretched arm)
+            // depth relative to the person (1 = same depth, > 1 nearer). Inside the silhouette it never drops below 85% of the person's depth,
+            // so a few pixels of depth/matte misalignment can't leave a dark fringe around the person. Stored as rel / 1.5.
+            const rel = new Float32Array(N);
+            for (let i = 0; i < N; i++) rel[i] = cl(Math.max(d[i], pm[i] * 0.85 * dref) / dref, 0, 1.5) / 1.5;
+            for (let n = 0; n < 2; n++) boxBlur(rel, w, h, 3);                          // calm depth-model noise
+            // soft first-plan matte (effects mask): things about as near as the person, but not the person
             const F = new Float32Array(N);
-            for (let i = 0; i < N; i++) { const t = cl((d[i] - (dref - 0.45)) / 0.25, 0, 1); F[i] = t * t * (3 - 2 * t); }   // about as near as the person (a ledge beside them is never at EXACTLY their depth), or nearer
+            for (let i = 0; i < N; i++) { const t = cl((d[i] / dref - 0.5) / 0.3, 0, 1); F[i] = t * t * (3 - 2 * t); }
             const pd = Float32Array.from(pm); for (let n = 0; n < 3; n++) morph3(pd, w, h, true);      // not the person, nor the blurry depth band around the silhouette
             for (let i = 0; i < N; i++) F[i] *= 1 - cl(pd[i] * 2, 0, 1);
             for (let n = 0; n < 4; n++) morph3(F, w, h, false);                                       // opening: thin slivers disappear, real objects stay
             for (let n = 0; n < 4; n++) morph3(F, w, h, true);
-            const cx = subj.cx * w, cy = (1 - subj.cy) * h;                                           // the flash cone: far-off things at the same depth aren't lit
+            const cx = subj.cx * w, cy = (1 - subj.cy) * h;
             for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const t = cl((Math.hypot((x - cx) / h, (y - cy) / h) - 0.6) / 0.7, 0, 1); F[y * w + x] *= 1 - t * t * (3 - 2 * t); }
-            for (let n = 0; n < 3; n++) boxBlur(F, w, h, 6);                                          // soft, even edges
+            for (let n = 0; n < 3; n++) boxBlur(F, w, h, 6);
             let sum = 0; for (let i = 0; i < N; i++) sum += F[i];
-            return sum / N < 0.004 ? null : F;
+            return { rel, F: sum / N < 0.004 ? null : F };
         }
-        // person (R) + first plan (A) as one two-channel matte, stored bottom-up for GL
-        function buildMatte(pm, fp, w, h) {
-            const data = new Uint8Array(w * h * 2);
-            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const o = ((h - 1 - j) * w + i) * 2; data[o] = Math.round(255 * pm[j * w + i]); data[o + 1] = fp ? Math.round(255 * fp[j * w + i]) : 0; }
+        // matte as one RGBA texture, stored bottom-up for GL:  R = person · G = depth relative to the person (÷1.5) · B = spare · A = first plan
+        // no depth yet → G = person × (1 / 1.5), i.e. "person at its own depth, everything else far", the old person-only flash
+        function buildMatte(pm, fp, w, h, rel) {
+            const data = new Uint8Array(w * h * 4);
+            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+                const k = j * w + i, o = ((h - 1 - j) * w + i) * 4;
+                data[o] = Math.round(255 * pm[k]);
+                data[o + 1] = Math.round(255 * (rel ? rel[k] : pm[k] * (1 / 1.5)));
+                data[o + 3] = fp ? Math.round(255 * fp[k]) : 0;
+            }
             return { w, h, data };
         }
         function startDepth(key, img) {
@@ -1429,8 +1440,10 @@
                 if (_seg.key !== key) return;
                 const res = await pipe(c.toDataURL('image/jpeg', 0.92));
                 if (_seg.key !== key) return;
-                const dm = res.depth, fp = firstPlanFromDepth(dm.data, dm.width, dm.height, dm.channels || 1, S.pm, w, h, S.subj);
-                if (fp) window.subjMask = { id: ++_maskId, ...buildMatte(S.pm, fp, w, h) };
+                const pt = res.predicted_depth, useF = !!(pt && pt.data && pt.dims && pt.dims.length >= 2), dm = res.depth;      // raw float depth when available (no 8-bit banding)
+                const r = useF ? firstPlanFromDepth(pt.data, pt.dims[pt.dims.length - 1], pt.dims[pt.dims.length - 2], 1, S.pm, w, h, S.subj)
+                               : firstPlanFromDepth(dm.data, dm.width, dm.height, dm.channels || 1, S.pm, w, h, S.subj);
+                if (r) window.subjMask = { id: ++_maskId, ...buildMatte(S.pm, r.F, w, h, r.rel) };
                 finish('ready');
             })().catch(err => {
                 console.warn('first-plan depth unavailable (person-only flash):', err);
@@ -1500,7 +1513,7 @@
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE_ALPHA, M.w, M.h, 0, gl.LUMINANCE_ALPHA, gl.UNSIGNED_BYTE, M.data);      // R = person, A = first plan
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, M.w, M.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, M.data);      // R = person, G = depth rel. to the person, A = first plan
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, pf); gl.pixelStorei(gl.UNPACK_ALIGNMENT, pa);
         };
 
@@ -2540,7 +2553,10 @@
         shoulder: 0.42, white: 2.12,       // highlight roll-off amount / white point
         contrast: 0.38,                  // S-curve amount
         bgDark: 0, glow: 0,              // two-mask flash: background darkening / skin glow on the subject (0 = old behaviour)
-        subjRX: 0.3, subjRY: 0.45        // subject ellipse radii (image-height units)
+        subjRX: 0.3, subjRY: 0.45,       // subject ellipse radii (image-height units)
+        depthB: 0.22,                    // inverse-square falloff: "room depth" (smaller = steeper falloff, 0.1 … 0.5)
+        shadow: 0.4,                     // flash shadow cast on surfaces behind the subject (0 = off)
+        axis: 0.7                        // 0 = flash cone follows the subject, 1 = sits on the lens axis (frame centre)
     };
     const FLASH_UI_MAX = 25;   // slider shows 0.0 … 12.0; settings store 0…1
     const FLASH_BASE_UNIT = 12; // 12.0 = 1.0x baseline (keeps existing presets identical; 25.0 = 2.08x stronger)
@@ -2562,46 +2578,59 @@
         uniform vec4 uTune2; // x: centerX, y: centerY, z: shoulder, w: white^2
         uniform float uContrast;
         uniform vec4 uTune3; // x: background darkening, y: subject glow, z/w: subject radii
-        uniform sampler2D uSeg; uniform float uSegOn; // person matte (uSegOn = 0 → ellipse)
+        uniform vec4 uDepth; // x: room depth B, y: flash-shadow strength, z: lens-axis mix
+        uniform sampler2D uSeg; uniform float uSegOn; // matte: R person · G depth rel. to the person (/1.5) · A first plan (uSegOn = 0 → ellipse)
         void main(){
             vec3 c = texture2D(tex, uv).rgb;
             vec3 m = max(texture2D(mean, vec2(0.5)).rgb, vec3(0.02));
             float gray = (m.r + m.g + m.b) / 3.0;
+            float kk = min(k, 1.25);
+            float segF = uSegOn > 0.5 ? 1.0 : 0.0;
 
-            // 1) take the room-light colour cast out
+            // ---- where does the flash land? (worked out first, so the colour correction can follow it) ----
+            // 3) the flash cone sits on the lens axis (frame centre), not on the subject; with the ellipse fallback it stays on the subject
+            vec2 axisC = mix(uTune2.xy, vec2(0.5), uDepth.z * segF);
+            vec2 d2 = (uv - axisC) * vec2(aspect, 1.0);
+            float hot = 1.0 / (1.0 + dot(d2, d2) * uTune1.w);
+            vec4 sg = segF > 0.5 ? texture2D(uSeg, uv) : vec4(vec3(1.0 - smoothstep(0.35, 1.05, length(d2 / uTune3.zw))), 0.0);
+            float subj = sg.r;
+            // 1) real inverse-square falloff from the depth map: light ~ 1 / z^2, z relative to the person (s = 1 -> same depth as the person)
+            float s = clamp(sg.g * 1.5, 0.0, 1.5);
+            float zr = (1.0 + uDepth.x) / (s + uDepth.x);
+            float lightD = clamp(1.0 / (zr * zr), 0.0, 1.3);
+            float cover = mix(0.4, 1.0, hot);                           // lens coverage: gentle falloff toward the corners
+            // 4) flash shadow: the silhouette shifted down-right, further for surfaces further behind the subject; those pixels get no flash
+            float gap = clamp(1.0 - s, 0.0, 1.0);
+            vec2 sOff = vec2(0.02 / aspect, -0.045) * gap;
+            float shd = texture2D(uSeg, uv - sOff).r * (1.0 - subj) * segF;
+            float light = segF > 0.5 ? lightD * mix(0.7, 1.0, subj) * cover * (1.0 - uDepth.y * shd) : hot;
+            float fpOnly = segF > 0.5 ? min(lightD, 1.0) * (1.0 - subj) : 0.0;   // lit surfaces that are not the person: spared from the ambient drop
+            float fpv = segF > 0.5 ? smoothstep(0.0, 0.6, lightD) : 0.0;         // "near the flash": the background darkens by distance, not by mask
+
+            // 2) take the room-light colour cast out, mostly where the flash lands (the subject turns neutral, the far background keeps its ambient colour)
             vec3 sc = clamp(vec3(gray) / m, vec3(${FLASH_TUNING.castMin.toFixed(3)}), vec3(${FLASH_TUNING.castMax.toFixed(3)}));
             float castK = min(k, 1.35);
-            c = clamp(c * (1.0 + (sc - 1.0) * uTune1.x * castK), 0.0, 1.0);
+            float fl = segF > 0.5 ? mix(0.3, 1.0, clamp(light, 0.0, 1.0)) : 1.0;
+            c = clamp(c * (1.0 + (sc - 1.0) * uTune1.x * castK * fl), 0.0, 1.0);
 
-            // 2) flash lighting in linear light
+            // 3) flash lighting in linear light
             c = pow(c, vec3(2.2));
-            vec2 d2 = (uv - uTune2.xy) * vec2(aspect, 1.0);
-            float hot = 1.0 / (1.0 + dot(d2, d2) * uTune1.w);
             // Smoothly cap ambient darkening so dragging past 12->25 boosts flash glare instead of just blacking out the photo
             float amb = min(uTune1.y * min(k, 1.25), 0.72);
-            // three planes: PERSON (R of the matte) · FIRST PLAN (A: objects as near as the person) · BACKGROUND (the rest)
-            vec4 sg = uSegOn > 0.5 ? texture2D(uSeg, uv) : vec4(vec3(1.0 - smoothstep(0.35, 1.05, length(d2 / uTune3.zw))), 0.0);
-            float subj = sg.r;
-            float fp = sg.a;
-            // light per plane: person = full flash · first plan = ~40% of it, mostly spared from the ambient drop · background = darkened
-            float fpOnly = fp * (1.0 - subj);
-            float hotE = uSegOn > 0.5 ? mix(0.4, 1.0, hot) : hot;      // with a real matte the flash lights the silhouette itself, not a halo around it
-            float light = uSegOn > 0.5 ? (subj * hotE + fpOnly * 0.4) : hot;
             c *= (1.0 - amb * (1.0 - fpOnly * 0.7)) + uTune1.z * k * light;
-            float kk = min(k, 1.25);
-            c *= 1.0 - uTune3.x * kk * (1.0 - max(subj, fp * 0.85));  // background darkens; the first plan hardly
-            c *= 1.0 + 0.15 * fpOnly * min(k, 1.0);                    // first plan: +15% brighter (scales with the flash strength)
-            c *= 1.0 + uTune3.y * kk * subj * 0.6;   // first plan: direct flash lift
+            c *= 1.0 - uTune3.x * kk * (1.0 - max(subj, fpv * 0.85));  // background darkens; what is near the flash hardly
+            c *= 1.0 + 0.15 * fpOnly * min(k, 1.0);                    // lit surfaces next to the person: +15% brighter (scales with the flash strength)
+            c *= 1.0 + uTune3.y * kk * subj * 0.6;   // subject: direct flash lift
             float lm = dot(c, vec3(0.2126, 0.7152, 0.0722));
             vec3 cc = clamp(c, 0.0, 1.0);                               // (unclamped, c > 1 made this term negative → the bright shirt flipped to cyan)
             c += uTune3.y * kk * subj * (cc * (1.0 - cc) * 0.9 + vec3(0.06, 0.035, 0.02) * lm);
 
             // soft shoulder so bright surfaces stay glossy without flat clipping
-            vec3 shd = c * (1.0 + c / uTune2.w) / (1.0 + c) * 1.08;
-            c = mix(c, shd, min(uTune2.z * k, 0.75));
+            vec3 shd2 = c * (1.0 + c / uTune2.w) / (1.0 + c) * 1.08;
+            c = mix(c, shd2, min(uTune2.z * k, 0.75));
             c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2));
 
-            // 3) hard-light contrast
+            // 4) hard-light contrast
             c = mix(c, c * c * (3.0 - 2.0 * c), min(uContrast * k, 0.75));
             gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
         }`;
@@ -2631,7 +2660,7 @@
             return { p, u };
         }
         const progMean = makeProgram(FLASH_FS_MEAN, ['tex']);
-        const progMain = makeProgram(FLASH_FS_MAIN, ['tex', 'mean', 'k', 'aspect', 'uTune1', 'uTune2', 'uTune3', 'uContrast', 'uSeg', 'uSegOn']);
+        const progMain = makeProgram(FLASH_FS_MAIN, ['tex', 'mean', 'k', 'aspect', 'uTune1', 'uTune2', 'uTune3', 'uDepth', 'uContrast', 'uSeg', 'uSegOn']);
 
         const quad = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -2698,6 +2727,7 @@
             gl.uniform4f(progMain.u.uTune1, T.cast, T.ambient * cf, T.gain * cf, T.falloff * T.falloff);
             gl.uniform4f(progMain.u.uTune2, T.centerX, T.centerY, T.shoulder, T.white * T.white);
             gl.uniform4f(progMain.u.uTune3, (T.bgDark || 0) * cf, (T.glow || 0) * cf, Math.max(T.subjRX || 0.3, 0.05), Math.max(T.subjRY || 0.45, 0.05));
+            gl.uniform4f(progMain.u.uDepth, T.depthB, T.shadow, T.axis, 0);
             gl.uniform1f(progMain.u.uContrast, T.contrast);
             { const M = window.subjMask, on = !!(T.seg && M && !T.noSubj);      // real person matte instead of the ellipse
               if (on) { if (!R.segTex) R.segTex = gl.createTexture(); bindTex(2, R.segTex); if (R.segId !== M.id) { window.uploadSubjMask(gl, R.segTex, M); R.segId = M.id; } gl.uniform1i(progMain.u.uSeg, 2); }
