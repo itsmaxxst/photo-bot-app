@@ -580,7 +580,6 @@
             texture: 0,
             clarity: 0,
             noise: 0.015,
-            vignette: 0.04,
             // Subject Mask Part 1: Stronger flash gain to lift the person brighter against the darker background
             flashStrength: 0.70,
             flashTuning: {
@@ -628,19 +627,19 @@
         
         { id: 'canonr5', name: 'CANON R5', color: '#e57373', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.012, contrast: 0.044, saturation: 0.048, vibrance: 0.06, unsharp: 0.06, noise: 0.021, vignette: 0.035, darks: 0.08,
+            brightness: 0.012, contrast: 0.044, saturation: 0.048, vibrance: 0.06, unsharp: 0.06, noise: 0.021, darks: 0.08,
             curves: { red: [[0, 0.008], [0.5, 0.524], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 0.992]], blue: [[0, 0.016], [0.5, 0.476], [1, 0.968]] }
         }},
 
         { id: 'canon5d', name: 'CANON 5D', color: '#ffab91', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.012, contrast: 0.055, saturation: 0.036, vibrance: 0.072, unsharp: 0.072, noise: 0.021, vignette: 0.056, wbTemp: 0.056, darks: 0.064,
+            brightness: 0.012, contrast: 0.055, saturation: 0.036, vibrance: 0.072, unsharp: 0.072, noise: 0.021, wbTemp: 0.056, darks: 0.064,
             curves: { red: [[0, 0.016], [0.5, 0.532], [1, 1]], green: [[0, 0.008], [0.5, 0.5], [1, 0.992]], blue: [[0, 0.024], [0.5, 0.468], [1, 0.96]] }
         }},
 
         { id: 'canonr6', name: 'CANON R6', color: '#ffcc80', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.024, contrast: 0.033, saturation: 0.03, vibrance: 0.06, noise: 0.035, vignette: 0.084, wbTemp: 0.154, darks: 0.12, lights: -0.04, bloomStrength: 0.035, bloomSize: 0.55, bloomRange: 0.45,
+            brightness: 0.024, contrast: 0.033, saturation: 0.03, vibrance: 0.06, noise: 0.035, wbTemp: 0.154, darks: 0.12, lights: -0.04, bloomStrength: 0.035, bloomSize: 0.55, bloomRange: 0.45,
             curves: { red: [[0, 0.024], [0.5, 0.54], [1, 1]], green: [[0, 0.016], [0.5, 0.5], [1, 0.976]], blue: [[0, 0.032], [0.5, 0.436], [1, 0.904]] }
         }},
 
@@ -652,7 +651,7 @@
 
         { id: 'canonr10', name: 'CANON R10', color: '#a5d6a7', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.088, saturation: 0.084, vibrance: 0.072, unsharp: 0.15, texture: 0.06, vignette: 0.07, wbTemp: 0.035, darks: 0.04, blacks: -0.04,
+            contrast: 0.088, saturation: 0.084, vibrance: 0.072, unsharp: 0.15, texture: 0.06, wbTemp: 0.035, darks: 0.04, blacks: -0.04,
             curves: { red: [[0, 0], [0.5, 0.516], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.008], [0.5, 0.476], [1, 0.976]] }
         }},
 
@@ -676,13 +675,13 @@
 
         { id: 'fujixt5', name: 'FUJI XT5', color: '#81c784', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.066, saturation: -0.108, noise: 0.084, vignette: 0.084, unsharp: 0.06,
+            contrast: 0.066, saturation: -0.108, noise: 0.084, unsharp: 0.06,
             curves: { red: [[0, 0.024], [0.5, 0.5], [1, 0.976]], green: [[0, 0.024], [0.5, 0.5], [1, 0.976]], blue: [[0, 0.048], [0.5, 0.5], [1, 0.936]] }
         }},
 
         { id: 'leicam11', name: 'LEICA M11', color: '#ef5350', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: -0.012, contrast: 0.121, saturation: -0.03, vignette: 0.175, noise: 0.084, unsharp: 0.18, blacks: -0.08,
+            brightness: -0.012, contrast: 0.121, saturation: -0.03, noise: 0.084, unsharp: 0.18, blacks: -0.08,
             curves: { red: [[0, 0], [0.25, 0.21], [0.75, 0.79], [1, 1]], green: [[0, 0], [0.25, 0.21], [0.75, 0.79], [1, 1]], blue: [[0, 0], [0.25, 0.218], [0.75, 0.766], [1, 0.984]] }
         }},
 
@@ -694,25 +693,24 @@
 
         { id: 'lumixs5', name: 'LUMIX S5', color: '#26a69a', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.083, saturation: 0.03, unsharp: 0.09, vignette: 0.07,
-            curves: { red: [[0, 0.016], [0.5, 0.5], [1, 1]], green: [[0, 0.016], [0.5, 0.5], [1, 0.984]], blue: [[0, 0.064], [0.5, 0.484], [1, 0.944]] }
+            contrast: 0.083, saturation: 0.03, unsharp: 0.09, curves: { red: [[0, 0.016], [0.5, 0.5], [1, 1]], green: [[0, 0.016], [0.5, 0.5], [1, 0.984]], blue: [[0, 0.064], [0.5, 0.484], [1, 0.944]] }
         }},
 
         { id: 'ricohgr', name: 'RICOH GR', color: '#9e9e9e', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.165, saturation: -0.06, noise: 0.21, vignette: 0.14, unsharp: 0.24, blacks: -0.12,
+            contrast: 0.165, saturation: -0.06, noise: 0.21, unsharp: 0.24, blacks: -0.12,
             curves: { red: [[0, 0], [0.25, 0.21], [0.75, 0.79], [1, 1]], green: [[0, 0], [0.25, 0.21], [0.75, 0.79], [1, 1]], blue: [[0, 0], [0.25, 0.21], [0.75, 0.79], [1, 1]] }
         }},
 
         { id: 'leicaq3', name: 'LEICA Q3', color: '#e53935', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: -0.01, contrast: 0.09, saturation: 0.01, vibrance: 0.05, unsharp: 0.12, noise: 0.05, vignette: 0.12, wbTemp: 0.03, blacks: -0.05, lights: -0.05, darks: 0.04,
+            brightness: -0.01, contrast: 0.09, saturation: 0.01, vibrance: 0.05, unsharp: 0.12, noise: 0.05, wbTemp: 0.03, blacks: -0.05, lights: -0.05, darks: 0.04,
             curves: { red: [[0, 0], [0.25, 0.23], [0.75, 0.775], [1, 1]], green: [[0, 0], [0.25, 0.235], [0.75, 0.77], [1, 0.995]], blue: [[0, 0.01], [0.25, 0.235], [0.75, 0.755], [1, 0.975]] }
         }},
 
         { id: 'leicasl3', name: 'LEICA SL3', color: '#c62828', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.08, saturation: -0.02, unsharp: 0.1, noise: 0.03, vignette: 0.08, blacks: -0.04, darks: 0.03,
+            contrast: 0.08, saturation: -0.02, unsharp: 0.1, noise: 0.03, blacks: -0.04, darks: 0.03,
             curves: { red: [[0, 0], [0.5, 0.495], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.008], [0.5, 0.508], [1, 1]] }
         }},
 
@@ -736,7 +734,7 @@
 
         { id: 'nikond850', name: 'NIKON D850', color: '#fbc02d', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.08, saturation: 0.05, vibrance: 0.06, unsharp: 0.12, noise: 0.025, vignette: 0.05, wbTemp: 0.04, blacks: -0.03,
+            contrast: 0.08, saturation: 0.05, vibrance: 0.06, unsharp: 0.12, noise: 0.025, wbTemp: 0.04, blacks: -0.03,
             curves: { red: [[0, 0], [0.25, 0.24], [0.75, 0.77], [1, 1]], green: [[0, 0], [0.25, 0.24], [0.75, 0.77], [1, 1]], blue: [[0, 0.004], [0.25, 0.24], [0.75, 0.755], [1, 0.99]] }
         }},
 
@@ -754,13 +752,13 @@
 
         { id: 'canon1dx', name: 'CANON 1DX', color: '#ef9a9a', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.08, saturation: 0.07, vibrance: 0.06, unsharp: 0.12, wbTemp: 0.04, vignette: 0.04, darks: 0.04,
+            contrast: 0.08, saturation: 0.07, vibrance: 0.06, unsharp: 0.12, wbTemp: 0.04, darks: 0.04,
             curves: { red: [[0, 0], [0.5, 0.516], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.004], [0.5, 0.478], [1, 0.98]] }
         }},
 
         { id: 'pentax645', name: 'PENTAX 645', color: '#ffb74d', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.01, contrast: 0.06, saturation: 0.07, vibrance: 0.05, noise: 0.04, vignette: 0.07, wbTemp: 0.08, darks: 0.05, lights: -0.04,
+            brightness: 0.01, contrast: 0.06, saturation: 0.07, vibrance: 0.05, noise: 0.04, wbTemp: 0.08, darks: 0.05, lights: -0.04,
             curves: { red: [[0, 0.008], [0.5, 0.526], [1, 1]], green: [[0, 0.004], [0.5, 0.504], [1, 0.992]], blue: [[0, 0.01], [0.5, 0.466], [1, 0.956]] }
         }},
 
@@ -772,7 +770,7 @@
 
         { id: 'leicamono', name: 'LEICA MONO', color: '#616161', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.13, saturation: -1.0, noise: 0.18, unsharp: 0.15, vignette: 0.12, blacks: -0.1, texture: 0.06,
+            contrast: 0.13, saturation: -1.0, noise: 0.18, unsharp: 0.15, blacks: -0.1, texture: 0.06,
             curves: { red: [[0, 0], [0.25, 0.215], [0.75, 0.81], [1, 1]], green: [[0, 0], [0.25, 0.205], [0.75, 0.8], [1, 1]], blue: [[0, 0], [0.25, 0.195], [0.75, 0.78], [1, 1]] }
         }},
 
@@ -784,8 +782,7 @@
 
         { id: 'canonr7', name: 'CANON R7', color: '#e57373', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.07, saturation: 0.07, vibrance: 0.07, unsharp: 0.12, wbTemp: 0.03, vignette: 0.04,
-            curves: { red: [[0, 0], [0.5, 0.514], [1, 1]], green: [[0, 0], [0.5, 0.504], [1, 1]], blue: [[0, 0.004], [0.5, 0.482], [1, 0.984]] }
+            contrast: 0.07, saturation: 0.07, vibrance: 0.07, unsharp: 0.12, wbTemp: 0.03, curves: { red: [[0, 0], [0.5, 0.514], [1, 1]], green: [[0, 0], [0.5, 0.504], [1, 1]], blue: [[0, 0.004], [0.5, 0.482], [1, 0.984]] }
         }},
 
         { id: 'canon5ds', name: 'CANON 5DS', color: '#ffab91', isPro: false, glfx: {
@@ -796,7 +793,7 @@
 
         { id: 'canon7d', name: 'CANON 7D', color: '#d7a086', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.09, saturation: 0.05, vibrance: 0.05, noise: 0.07, vignette: 0.07, wbTemp: 0.05, unsharp: 0.08, blacks: -0.03,
+            contrast: 0.09, saturation: 0.05, vibrance: 0.05, noise: 0.07, wbTemp: 0.05, unsharp: 0.08, blacks: -0.03,
             curves: { red: [[0, 0], [0.25, 0.235], [0.75, 0.78], [1, 1]], green: [[0, 0], [0.25, 0.24], [0.75, 0.775], [1, 0.996]], blue: [[0, 0.006], [0.25, 0.24], [0.75, 0.755], [1, 0.97]] }
         }},
 
@@ -832,37 +829,37 @@
 
         { id: 'sonya7s3', name: 'SONY A7S3', color: '#4dd0e1', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.03, saturation: -0.02, vibrance: 0.04, noise: 0.05, vignette: 0.06, darks: 0.12, lights: -0.08, fade: 0.05,
+            contrast: 0.03, saturation: -0.02, vibrance: 0.04, noise: 0.05, darks: 0.12, lights: -0.08, fade: 0.05,
             curves: { red: [[0, 0.012], [0.5, 0.502], [1, 0.99]], green: [[0, 0.012], [0.5, 0.504], [1, 0.992]], blue: [[0, 0.03], [0.5, 0.5], [1, 0.99]] }
         }},
 
         { id: 'fujix100', name: 'FUJI X100', color: '#a5d6a7', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.075, saturation: 0.08, vibrance: 0.08, unsharp: 0.09, noise: 0.04, vignette: 0.06, wbTemp: 0.03,
+            contrast: 0.075, saturation: 0.08, vibrance: 0.08, unsharp: 0.09, noise: 0.04, wbTemp: 0.03,
             curves: { red: [[0, 0], [0.5, 0.51], [1, 1]], green: [[0, 0.004], [0.5, 0.508], [1, 1]], blue: [[0, 0.004], [0.5, 0.486], [1, 0.98]] }
         }},
 
         { id: 'fujixh2', name: 'FUJI XH2', color: '#80cbc4', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.02, saturation: -0.07, vibrance: 0.02, noise: 0.04, vignette: 0.05, darks: 0.1, lights: -0.08, fade: 0.07,
+            contrast: 0.02, saturation: -0.07, vibrance: 0.02, noise: 0.04, darks: 0.1, lights: -0.08, fade: 0.07,
             curves: { red: [[0, 0.012], [0.5, 0.5], [1, 0.97]], green: [[0, 0.016], [0.5, 0.502], [1, 0.972]], blue: [[0, 0.024], [0.5, 0.506], [1, 0.97]] }
         }},
 
         { id: 'fujixpro', name: 'FUJI XPRO', color: '#66bb6a', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.07, saturation: -0.06, noise: 0.07, vignette: 0.09, unsharp: 0.06, fade: 0.04,
+            contrast: 0.07, saturation: -0.06, noise: 0.07, unsharp: 0.06, fade: 0.04,
             curves: { red: [[0, 0], [0.5, 0.484], [1, 1]], green: [[0, 0.012], [0.5, 0.504], [1, 0.98]], blue: [[0, 0.036], [0.5, 0.508], [1, 0.944]] }
         }},
 
         { id: 'leicam10', name: 'LEICA M10', color: '#e53935', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.07, saturation: -0.04, vibrance: 0.03, noise: 0.07, vignette: 0.1, unsharp: 0.1, blacks: -0.04, darks: 0.03,
+            contrast: 0.07, saturation: -0.04, vibrance: 0.03, noise: 0.07, unsharp: 0.1, blacks: -0.04, darks: 0.03,
             curves: { red: [[0, 0], [0.25, 0.23], [0.75, 0.78], [1, 1]], green: [[0, 0], [0.25, 0.235], [0.75, 0.775], [1, 0.996]], blue: [[0, 0.006], [0.25, 0.24], [0.75, 0.76], [1, 0.98]] }
         }},
 
         { id: 'leicam6', name: 'LEICA M6', color: '#d84315', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.01, contrast: 0.05, saturation: -0.03, vibrance: 0.03, noise: 0.14, vignette: 0.12, wbTemp: 0.06, fade: 0.06,
+            brightness: 0.01, contrast: 0.05, saturation: -0.03, vibrance: 0.03, noise: 0.14, wbTemp: 0.06, fade: 0.06,
             curves: { red: [[0, 0.012], [0.5, 0.524], [1, 0.984]], green: [[0, 0.008], [0.5, 0.502], [1, 0.972]], blue: [[0, 0.024], [0.5, 0.466], [1, 0.93]] }
         }},
 
@@ -874,7 +871,7 @@
 
         { id: 'lumixgh6', name: 'LUMIX GH6', color: '#26a69a', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.06, saturation: 0.04, unsharp: 0.07, vignette: 0.07, darks: 0.06,
+            contrast: 0.06, saturation: 0.04, unsharp: 0.07, darks: 0.06,
             curves: { red: [[0, 0.008], [0.5, 0.508], [1, 1]], green: [[0, 0.008], [0.5, 0.5], [1, 0.99]], blue: [[0, 0.04], [0.5, 0.49], [1, 0.95]] }
         }},
 
@@ -886,123 +883,116 @@
 
         { id: 'sigmafp', name: 'SIGMA FP', color: '#ba68c8', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: -0.01, contrast: 0.08, saturation: 0.07, vibrance: 0.05, unsharp: 0.1, noise: 0.05, vignette: 0.07, blacks: -0.04,
+            brightness: -0.01, contrast: 0.08, saturation: 0.07, vibrance: 0.05, unsharp: 0.1, noise: 0.05, blacks: -0.04,
             curves: { red: [[0, 0], [0.25, 0.235], [0.75, 0.79], [1, 1]], green: [[0, 0], [0.25, 0.24], [0.75, 0.78], [1, 1]], blue: [[0, 0.004], [0.25, 0.24], [0.75, 0.76], [1, 0.99]] }
         }},
 
         { id: 'alexa35', name: 'ALEXA 35', color: '#ffcc80', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.025, saturation: 0.01, vibrance: 0.05, noise: 0.04, vignette: 0.07, wbTemp: 0.04, darks: 0.12, lights: -0.1, fade: 0.03, bloomStrength: 0.025, bloomSize: 0.5, bloomRange: 0.5,
+            contrast: 0.025, saturation: 0.01, vibrance: 0.05, noise: 0.04, wbTemp: 0.04, darks: 0.12, lights: -0.1, fade: 0.03, bloomStrength: 0.025, bloomSize: 0.5, bloomRange: 0.5,
             curves: { red: [[0, 0.01], [0.5, 0.514], [1, 0.99]], green: [[0, 0.008], [0.5, 0.5], [1, 0.986]], blue: [[0, 0.016], [0.5, 0.484], [1, 0.964]] }
         }},
 
         { id: 'trix', name: 'TRI-X 400', color: '#757575', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.154, saturation: -1.0, noise: 0.245, unsharp: 0.15, vignette: 0.105,
-            curves: { red: [[0, 0.016], [0.25, 0.21], [0.75, 0.806], [1, 0.992]], green: [[0, 0.016], [0.25, 0.21], [0.75, 0.806], [1, 0.992]], blue: [[0, 0.016], [0.25, 0.21], [0.75, 0.806], [1, 0.992]] }
+            contrast: 0.154, saturation: -1.0, noise: 0.245, unsharp: 0.15, curves: { red: [[0, 0.016], [0.25, 0.21], [0.75, 0.806], [1, 0.992]], green: [[0, 0.016], [0.25, 0.21], [0.75, 0.806], [1, 0.992]], blue: [[0, 0.016], [0.25, 0.21], [0.75, 0.806], [1, 0.992]] }
         }},
 
         { id: 'hp5', name: 'HP5 PLUS', color: '#8d8d8d', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.012, contrast: 0.11, saturation: -1.0, noise: 0.175, vignette: 0.07,
-            curves: { red: [[0, 0.016], [0.25, 0.226], [0.75, 0.782], [1, 0.992]], green: [[0, 0.016], [0.25, 0.226], [0.75, 0.782], [1, 0.992]], blue: [[0, 0.016], [0.25, 0.226], [0.75, 0.782], [1, 0.992]] }
+            brightness: 0.012, contrast: 0.11, saturation: -1.0, noise: 0.175, curves: { red: [[0, 0.016], [0.25, 0.226], [0.75, 0.782], [1, 0.992]], green: [[0, 0.016], [0.25, 0.226], [0.75, 0.782], [1, 0.992]], blue: [[0, 0.016], [0.25, 0.226], [0.75, 0.782], [1, 0.992]] }
         }},
 
         { id: 'bwsoft', name: 'B&W SOFT', color: '#bdbdbd', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.024, contrast: -0.028, saturation: -1.0, fade: 0.08, vignette: 0.035, darks: 0.12, lights: -0.08, bloomStrength: 0.03, bloomSize: 0.5, bloomRange: 0.5,
+            brightness: 0.024, contrast: -0.028, saturation: -1.0, fade: 0.08, darks: 0.12, lights: -0.08, bloomStrength: 0.03, bloomSize: 0.5, bloomRange: 0.5,
             curves: { red: [[0, 0.024], [0.5, 0.516], [1, 0.984]], green: [[0, 0.024], [0.5, 0.516], [1, 0.984]], blue: [[0, 0.024], [0.5, 0.516], [1, 0.984]] }
         }},
 
         { id: 'bwhard', name: 'B&W HARD', color: '#616161', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.248, saturation: -1.0, noise: 0.14, vignette: 0.21, unsharp: 0.21, texture: 0.12, blacks: -0.16,
+            contrast: 0.248, saturation: -1.0, noise: 0.14, unsharp: 0.21, texture: 0.12, blacks: -0.16,
             curves: { red: [[0, 0], [0.25, 0.186], [0.75, 0.822], [1, 1]], green: [[0, 0], [0.25, 0.186], [0.75, 0.822], [1, 1]], blue: [[0, 0], [0.25, 0.186], [0.75, 0.822], [1, 1]] }
         }},
 
         { id: 'bwmatte', name: 'B&W MATTE', color: '#9e9e9e', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.028, saturation: -1.0, fade: 0.28, noise: 0.084, vignette: 0.07,
-            curves: { red: [[0, 0.016], [0.5, 0.5], [1, 0.96]], green: [[0, 0.016], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.016], [0.5, 0.5], [1, 0.96]] }
+            contrast: 0.028, saturation: -1.0, fade: 0.28, noise: 0.084, curves: { red: [[0, 0.016], [0.5, 0.5], [1, 0.96]], green: [[0, 0.016], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.016], [0.5, 0.5], [1, 0.96]] }
         }},
 
         { id: 'bwred', name: 'B&W RED', color: '#c62828', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.11, saturation: -1.0, noise: 0.07, vignette: 0.105,
-            curves: { red: [[0, 0], [0.5, 0.596], [1, 1]], green: [[0, 0], [0.5, 0.484], [1, 1]], blue: [[0, 0], [0.5, 0.34], [1, 0.92]] }
+            contrast: 0.11, saturation: -1.0, noise: 0.07, curves: { red: [[0, 0], [0.5, 0.596], [1, 1]], green: [[0, 0], [0.5, 0.484], [1, 1]], blue: [[0, 0], [0.5, 0.34], [1, 0.92]] }
         }},
 
         { id: 'bwwarm', name: 'MONO WARM', color: '#bcaaa4', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.066, saturation: -1.0, sepia: 0.2, noise: 0.105, vignette: 0.105,
-            curves: { red: [[0, 0.016], [0.5, 0.5], [1, 0.984]], green: [[0, 0.016], [0.5, 0.5], [1, 0.984]], blue: [[0, 0.016], [0.5, 0.5], [1, 0.984]] }
+            contrast: 0.066, saturation: -1.0, sepia: 0.2, noise: 0.105, curves: { red: [[0, 0.016], [0.5, 0.5], [1, 0.984]], green: [[0, 0.016], [0.5, 0.5], [1, 0.984]], blue: [[0, 0.016], [0.5, 0.5], [1, 0.984]] }
         }},
 
         { id: 'bwport', name: 'B&W PORT', color: '#e0e0e0', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, saturation: -1.0, darks: 0.08, vignette: 0.056, bloomStrength: 0.03, bloomSize: 0.5, bloomRange: 0.5,
+            contrast: 0.055, saturation: -1.0, darks: 0.08, bloomStrength: 0.03, bloomSize: 0.5, bloomRange: 0.5,
             curves: { red: [[0, 0], [0.5, 0.54], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0], [0.5, 0.46], [1, 1]] }
         }},
 
         { id: 'portra', name: 'PORTRA', color: '#e5bda1', isPro: true, glfx: { 
             ...defaultSettings,
-            brightness: 0.048, contrast: -0.028, saturation: -0.09, sepia: 0.08, hue: -0.012, unsharp: 0.06, noise: 0.175, vignette: 0.07,
-            curves: { red: [[0, 0.04], [0.5, 0.5], [1, 0.96]], green: [[0, 0], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.12], [0.5, 0.42], [1, 0.88]] }
+            brightness: 0.048, contrast: -0.028, saturation: -0.09, sepia: 0.08, hue: -0.012, unsharp: 0.06, noise: 0.175, curves: { red: [[0, 0.04], [0.5, 0.5], [1, 0.96]], green: [[0, 0], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.12], [0.5, 0.42], [1, 0.88]] }
         }},
 
         { id: 'fuji', name: 'FUJI 400', color: '#a5d6a7', isPro: true, glfx: { 
             ...defaultSettings,
-            brightness: 0, contrast: 0.083, saturation: 0.06, hue: 0.06, unsharp: 0.12, noise: 0.105, vignette: 0.14, vibrance: -0.03,
+            brightness: 0, contrast: 0.083, saturation: 0.06, hue: 0.06, unsharp: 0.12, noise: 0.105, vibrance: -0.03,
             curves: { red: [[0, 0], [0.5, 0.46], [1, 0.92]], green: [[0, 0.04], [0.5, 0.54], [1, 0.96]], blue: [[0, 0.04], [0.5, 0.5], [1, 1]] }
         }},
 
         { id: 'noir', name: 'NOIR', color: '#424242', isPro: false, glfx: { 
             ...defaultSettings,
-            brightness: 0, contrast: 0.165, saturation: -1.0, unsharp: 0.24, noise: 0.21, vignette: 0.28,
-            curves: { red: [[0, 0.04], [0.5, 0.5], [1, 0.96]], green: [[0, 0.04], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.04], [0.5, 0.5], [1, 0.96]] }
+            brightness: 0, contrast: 0.165, saturation: -1.0, unsharp: 0.24, noise: 0.21, curves: { red: [[0, 0.04], [0.5, 0.5], [1, 0.96]], green: [[0, 0.04], [0.5, 0.5], [1, 0.96]], blue: [[0, 0.04], [0.5, 0.5], [1, 0.96]] }
         }},
 
         { id: 'tealorange', name: 'TEAL&ORG', color: '#00acc1', isPro: true, glfx: { 
             ...defaultSettings,
-            brightness: -0.03, contrast: 0.11, saturation: 0.09, unsharp: 0.12, vignette: 0.21, vibrance: 0.12,
+            brightness: -0.03, contrast: 0.11, saturation: 0.09, unsharp: 0.12, vibrance: 0.12,
             curves: { red: [[0, 0], [0.5, 0.54], [1, 1]], green: [[0, 0], [0.5, 0.46], [1, 1]], blue: [[0, 0.08], [0.5, 0.42], [1, 0.92]] }
         }},
         
         { id: 'g3', name: 'G3', color: '#cddc39', isPro: false, glfx: { ...defaultSettings, brightness: 0, contrast: 0.055, saturation: 0.12 } },
 
-        { id: 'hb2', name: 'HB2', color: '#90caf9', isPro: false, glfx: { ...defaultSettings, brightness: -0.03, contrast: 0.11, saturation: -0.12, vignette: 0.21 } },
+        { id: 'hb2', name: 'HB2', color: '#90caf9', isPro: false, glfx: { ...defaultSettings, brightness: -0.03, contrast: 0.11, saturation: -0.12 } },
 
-        { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { ...defaultSettings, brightness: 0, contrast: 0.11, saturation: -0.24, hue: 0.06, sepia: 0.16, vignette: 0.07 } },
+        { id: 'm5', name: 'M5 PRO', color: '#4db6ac', isPro: true, glfx: { ...defaultSettings, brightness: 0, contrast: 0.11, saturation: -0.24, hue: 0.06, sepia: 0.16 } },
         
         // ===================== PRO-пресеты (плёнки, кино, настроение) =====================
         { id: 'kgold', name: 'KODAK GOLD', color: '#ffca28', isPro: true, glfx: {
             ...defaultSettings,
-            brightness: 0.02, contrast: 0.05, saturation: 0.05, vibrance: 0.04, wbTemp: 0.07, wbTint: 0.02, fade: 0.05, noise: 0.1, vignette: 0.08, lights: -0.05,
+            brightness: 0.02, contrast: 0.05, saturation: 0.05, vibrance: 0.04, wbTemp: 0.07, wbTint: 0.02, fade: 0.05, noise: 0.1, lights: -0.05,
             curves: { red: [[0, 0.03], [0.5, 0.53], [1, 0.99]], green: [[0, 0.02], [0.5, 0.5], [1, 0.97]], blue: [[0, 0.05], [0.5, 0.45], [1, 0.9]] }
         }, fx: { gAmt: 14, gSize: 35, gRough: 55, gShadow: 60, hiH: 40, hiS: 8 } },
 
         { id: 'ektar', name: 'EKTAR 100', color: '#ef5350', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.09, saturation: 0.1, vibrance: 0.05, wbTemp: 0.02, unsharp: 0.08, noise: 0.05, vignette: 0.06, darks: 0.03, blacks: -0.03,
+            contrast: 0.09, saturation: 0.1, vibrance: 0.05, wbTemp: 0.02, unsharp: 0.08, noise: 0.05, darks: 0.03, blacks: -0.03,
             curves: { red: [[0, 0], [0.5, 0.52], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0.01], [0.5, 0.49], [1, 0.98]] }
         }, fx: { gAmt: 6, gSize: 25, gRough: 40, gShadow: 40 } },
 
         { id: 'portra160', name: 'PORTRA 160', color: '#f2c9a8', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: -0.02, saturation: -0.04, vibrance: 0.05, fade: 0.06, wbTemp: 0.04, wbTint: 0.02, noise: 0.07, vignette: 0.05, lights: -0.06, darks: 0.06,
+            contrast: -0.02, saturation: -0.04, vibrance: 0.05, fade: 0.06, wbTemp: 0.04, wbTint: 0.02, noise: 0.07, lights: -0.06, darks: 0.06,
             curves: { red: [[0, 0.03], [0.5, 0.52], [1, 0.98]], green: [[0, 0.02], [0.5, 0.5], [1, 0.98]], blue: [[0, 0.05], [0.5, 0.47], [1, 0.93]] }
         }, fx: { gAmt: 8, gSize: 30, shH: 200, shS: 6, hiH: 35, hiS: 8 } },
 
         { id: 'cine800', name: 'CINE 800T', color: '#4dd0e1', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.06, saturation: 0.02, wbTemp: -0.06, noise: 0.12, vignette: 0.1, darks: 0.05, lights: -0.05,
+            contrast: 0.06, saturation: 0.02, wbTemp: -0.06, noise: 0.12, darks: 0.05, lights: -0.05,
             bloomStrength: 0.025, bloomSize: 0.5, bloomRange: 0.5, halationStrength: 0.04, halationSize: 0.09, halationRange: 0.23,
             curves: { red: [[0, 0], [0.5, 0.51], [1, 1]], green: [[0, 0.01], [0.5, 0.5], [1, 0.99]], blue: [[0, 0.03], [0.5, 0.5], [1, 0.94]] }
         }, fx: { gAmt: 22, gSize: 40, gRough: 60, gShadow: 50, shH: 195, shS: 14, hiH: 25, hiS: 10 } },
 
         { id: 'velvia', name: 'VELVIA 50', color: '#ab47bc', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.12, saturation: 0.16, vibrance: 0.06, unsharp: 0.1, noise: 0.04, vignette: 0.1, blacks: -0.04, lights: -0.03,
+            contrast: 0.12, saturation: 0.16, vibrance: 0.06, unsharp: 0.1, noise: 0.04, blacks: -0.04, lights: -0.03,
             curves: { red: [[0, 0], [0.5, 0.51], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0], [0.5, 0.49], [1, 0.99]] }
         }, fx: { gAmt: 4, gSize: 20 } },
 
@@ -1014,58 +1004,53 @@
 
         { id: 'superia', name: 'SUPERIA', color: '#66bb6a', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.06, saturation: 0.06, wbTemp: 0.01, wbTint: -0.03, fade: 0.03, noise: 0.12, vignette: 0.08,
-            curves: { red: [[0, 0.01], [0.5, 0.49], [1, 0.98]], green: [[0, 0.02], [0.5, 0.53], [1, 1]], blue: [[0, 0.03], [0.5, 0.48], [1, 0.95]] }
+            contrast: 0.06, saturation: 0.06, wbTemp: 0.01, wbTint: -0.03, fade: 0.03, noise: 0.12, curves: { red: [[0, 0.01], [0.5, 0.49], [1, 0.98]], green: [[0, 0.02], [0.5, 0.53], [1, 1]], blue: [[0, 0.03], [0.5, 0.48], [1, 0.95]] }
         }, fx: { gAmt: 16, gSize: 35, gRough: 60, gShadow: 55 } },
 
         { id: 'delta', name: 'DELTA 100', color: '#9e9e9e', isPro: false, glfx: {
             ...defaultSettings,
-            saturation: -1, contrast: 0.1, unsharp: 0.09, noise: 0.07, vignette: 0.07, darks: 0.03, blacks: -0.03
+            saturation: -1, contrast: 0.1, unsharp: 0.09, noise: 0.07, darks: 0.03, blacks: -0.03
         }},
 
         { id: 'polaroid', name: 'POLAROID', color: '#ffcc80', isPro: true, glfx: {
             ...defaultSettings,
-            brightness: 0.03, contrast: -0.04, saturation: -0.05, fade: 0.14, wbTemp: 0.05, noise: 0.08, vignette: 0.12,
-            curves: { red: [[0, 0.06], [0.5, 0.54], [1, 0.97]], green: [[0, 0.05], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.1], [0.5, 0.46], [1, 0.88]] }
+            brightness: 0.03, contrast: -0.04, saturation: -0.05, fade: 0.14, wbTemp: 0.05, noise: 0.08, curves: { red: [[0, 0.06], [0.5, 0.54], [1, 0.97]], green: [[0, 0.05], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.1], [0.5, 0.46], [1, 0.88]] }
         }, fx: { sfAmt: 8, sfSize: 30, gAmt: 10 } },
 
         { id: 'kchrome', name: 'KODACHROME', color: '#d32f2f', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.1, saturation: 0.08, vibrance: 0.05, wbTemp: 0.06, noise: 0.06, vignette: 0.12,
-            curves: { red: [[0, 0], [0.5, 0.54], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 0.99]], blue: [[0, 0.01], [0.5, 0.46], [1, 0.95]] }
+            contrast: 0.1, saturation: 0.08, vibrance: 0.05, wbTemp: 0.06, noise: 0.06, curves: { red: [[0, 0], [0.5, 0.54], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 0.99]], blue: [[0, 0.01], [0.5, 0.46], [1, 0.95]] }
         }, fx: { gAmt: 8, gSize: 28 } },
 
         { id: 'agfa', name: 'AGFA VISTA', color: '#f06292', isPro: true, glfx: {
             ...defaultSettings,
-            brightness: 0.02, contrast: 0.06, saturation: 0.04, wbTemp: 0.05, wbTint: 0.04, fade: 0.04, noise: 0.1, vignette: 0.09,
-            curves: { red: [[0, 0.02], [0.5, 0.54], [1, 1]], green: [[0, 0.01], [0.5, 0.49], [1, 0.97]], blue: [[0, 0.03], [0.5, 0.46], [1, 0.94]] }
+            brightness: 0.02, contrast: 0.06, saturation: 0.04, wbTemp: 0.05, wbTint: 0.04, fade: 0.04, noise: 0.1, curves: { red: [[0, 0.02], [0.5, 0.54], [1, 1]], green: [[0, 0.01], [0.5, 0.49], [1, 0.97]], blue: [[0, 0.03], [0.5, 0.46], [1, 0.94]] }
         }, fx: { gAmt: 13, hiH: 20, hiS: 6 } },
 
         { id: 'arri', name: 'ARRI SOFT', color: '#bcaaa4', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.03, saturation: -0.02, fade: 0.02, noise: 0.04, vignette: 0.06, lights: -0.1, darks: 0.06, blacks: -0.02,
+            contrast: 0.03, saturation: -0.02, fade: 0.02, noise: 0.04, lights: -0.1, darks: 0.06, blacks: -0.02,
             curves: { red: [[0, 0.015], [0.25, 0.24], [0.75, 0.77], [1, 0.985]], green: [[0, 0.015], [0.25, 0.245], [0.75, 0.765], [1, 0.985]], blue: [[0, 0.02], [0.25, 0.25], [0.75, 0.75], [1, 0.975]] }
         }, fx: { shH: 210, shS: 5, hiH: 40, hiS: 6, gAmt: 8 } },
 
         { id: 'cineteal', name: 'CINE TEAL', color: '#26a69a', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.07, saturation: 0.02, vignette: 0.1, darks: 0.04, lights: -0.04
+            contrast: 0.07, saturation: 0.02, darks: 0.04, lights: -0.04
         }, fx: { shH: 190, shS: 22, hiH: 30, hiS: 16, gAmt: 8 } },
 
         { id: 'bluehour', name: 'BLUE HOUR', color: '#5c6bc0', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.05, saturation: -0.02, wbTemp: -0.12, fade: 0.03, darks: 0.05, vignette: 0.08,
-            bloomStrength: 0.02, bloomSize: 0.5, bloomRange: 0.5
+            contrast: 0.05, saturation: -0.02, wbTemp: -0.12, fade: 0.03, darks: 0.05, bloomStrength: 0.02, bloomSize: 0.5, bloomRange: 0.5
         }, fx: { shH: 225, shS: 14, hiH: 215, hiS: 6, gAmt: 10 } },
 
         { id: 'goldenhr', name: 'GOLDEN HR', color: '#ffb74d', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.05, saturation: 0.05, vibrance: 0.05, wbTemp: 0.12, lights: -0.06, darks: 0.06, vignette: 0.09
+            contrast: 0.05, saturation: 0.05, vibrance: 0.05, wbTemp: 0.12, lights: -0.06, darks: 0.06
         }, fx: { hiH: 38, hiS: 14, shH: 20, shS: 6, sfAmt: 6, sfSize: 35 } },
 
         { id: 'forest', name: 'FOREST', color: '#2e7d32', isPro: true, glfx: {
             ...defaultSettings,
-            brightness: -0.02, contrast: 0.1, saturation: -0.04, wbTemp: -0.02, wbTint: -0.03, fade: 0.03, blacks: -0.06, lights: -0.06, vignette: 0.18
+            brightness: -0.02, contrast: 0.1, saturation: -0.04, wbTemp: -0.02, wbTint: -0.03, fade: 0.03, blacks: -0.06, lights: -0.06
         }, fx: { shH: 160, shS: 12, hiH: 70, hiS: 6, gAmt: 8 } },
 
         { id: 'fog', name: 'FOG', color: '#b0bec5', isPro: true, glfx: {
@@ -1075,22 +1060,22 @@
 
         { id: 'urban', name: 'URBAN', color: '#757575', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.18, saturation: -0.12, texture: 0.1, clarity: 0.08, unsharp: 0.15, noise: 0.1, vignette: 0.15, blacks: -0.08
+            contrast: 0.18, saturation: -0.12, texture: 0.1, clarity: 0.08, unsharp: 0.15, noise: 0.1, blacks: -0.08
         }, fx: { shH: 200, shS: 8, gAmt: 14, gRough: 70 } },
 
         { id: 'portraitc', name: 'PORTRAIT', color: '#ffab91', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.02, contrast: 0.02, saturation: 0.02, vibrance: 0.05, wbTemp: 0.03, unsharp: 0.03, vignette: 0.04, lights: -0.04, darks: 0.05
+            brightness: 0.02, contrast: 0.02, saturation: 0.02, vibrance: 0.05, wbTemp: 0.03, unsharp: 0.03, lights: -0.04, darks: 0.05
         }},
 
         { id: 'matte', name: 'MATTE', color: '#90a4ae', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.03, saturation: -0.08, fade: 0.22, lights: -0.05, vignette: 0.05
+            contrast: 0.03, saturation: -0.08, fade: 0.22, lights: -0.05
         }, fx: { shH: 215, shS: 8, hiH: 30, hiS: 5 } },
 
         { id: 'travel', name: 'TRAVEL', color: '#4fc3f7', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.07, saturation: 0.08, vibrance: 0.08, wbTemp: 0.04, unsharp: 0.07, vignette: 0.05, lights: -0.05, darks: 0.05,
+            contrast: 0.07, saturation: 0.08, vibrance: 0.08, wbTemp: 0.04, unsharp: 0.07, lights: -0.05, darks: 0.05,
             curves: { red: [[0, 0], [0.5, 0.5], [1, 1]], green: [[0, 0], [0.5, 0.5], [1, 1]], blue: [[0, 0], [0.5, 0.515], [1, 1]] }
         }},
 
@@ -1101,61 +1086,55 @@
 
         { id: 'winter', name: 'WINTER', color: '#b3e5fc', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.03, contrast: 0.04, saturation: -0.03, wbTemp: -0.09, lights: -0.04, vignette: 0.04
+            brightness: 0.03, contrast: 0.04, saturation: -0.03, wbTemp: -0.09, lights: -0.04
         }},
 
         { id: 'desert', name: 'DESERT', color: '#d4a76a', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.07, saturation: 0.03, wbTemp: 0.1, wbTint: 0.02, fade: 0.04, vignette: 0.1,
-            curves: { red: [[0, 0.02], [0.5, 0.53], [1, 1]], green: [[0, 0.01], [0.5, 0.5], [1, 0.98]], blue: [[0, 0.02], [0.5, 0.46], [1, 0.94]] }
+            contrast: 0.07, saturation: 0.03, wbTemp: 0.1, wbTint: 0.02, fade: 0.04, curves: { red: [[0, 0.02], [0.5, 0.53], [1, 1]], green: [[0, 0.01], [0.5, 0.5], [1, 0.98]], blue: [[0, 0.02], [0.5, 0.46], [1, 0.94]] }
         }, fx: { hiH: 40, hiS: 12, shH: 15, shS: 8 } },
 
         { id: 'vintage70', name: 'VINTAGE 70s', color: '#d98e04', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: -0.02, saturation: -0.04, sepia: 0.06, fade: 0.12, wbTemp: 0.08, wbTint: 0.03, noise: 0.16, vignette: 0.18,
-            curves: { red: [[0, 0.04], [0.5, 0.52], [1, 0.97]], green: [[0, 0.03], [0.5, 0.49], [1, 0.94]], blue: [[0, 0.09], [0.5, 0.44], [1, 0.86]] }
+            contrast: -0.02, saturation: -0.04, sepia: 0.06, fade: 0.12, wbTemp: 0.08, wbTint: 0.03, noise: 0.16, curves: { red: [[0, 0.04], [0.5, 0.52], [1, 0.97]], green: [[0, 0.03], [0.5, 0.49], [1, 0.94]], blue: [[0, 0.09], [0.5, 0.44], [1, 0.86]] }
         }, fx: { lkAmt: 12, lkStyle: 0, lkHue: 25, lkPos: 80, dust: 10, scr: 6, gAmt: 14 } },
 
         { id: 'y2k', name: 'Y2K', color: '#e1bee7', isPro: true, glfx: {
             ...defaultSettings,
-            brightness: 0.03, contrast: 0.08, saturation: 0.06, unsharp: 0.18, noise: 0.1, vignette: 0.12
+            brightness: 0.03, contrast: 0.08, saturation: 0.06, unsharp: 0.18, noise: 0.1
         }, fx: { ca: 8, gAmt: 8, gShadow: 20, sfAmt: 5, dsOn: 1, dsFmt: 0, dsCol: 0, dsPos: 3, dsSize: 45 } },
 
         // ===================== ВИНТАЖ: 3 бесплатных + 2 Premium (День / Ночь строятся автоматически) =====================
         // FREE: no effects layer (grain = "noise", vignette, fade, curves only)
         { id: 'album80', name: 'ALBUM 80s', color: '#e8a87c', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.02, contrast: -0.05, saturation: 0.03, fade: 0.12, wbTemp: 0.09, wbTint: 0.035, noise: 0.09, vignette: 0.12,
-            highlights: -0.05, lights: -0.03, blacks: 0.02, hsl0s: 0.05, hsl1s: 0.04, hsl3s: -0.1, hsl4s: -0.06,
+            brightness: 0.02, contrast: -0.05, saturation: 0.03, fade: 0.12, wbTemp: 0.09, wbTint: 0.035, noise: 0.09, highlights: -0.05, lights: -0.03, blacks: 0.02, hsl0s: 0.05, hsl1s: 0.04, hsl3s: -0.1, hsl4s: -0.06,
             curves: { red: [[0, 0.04], [0.5, 0.54], [1, 0.99]], green: [[0, 0.03], [0.5, 0.47], [1, 0.95]], blue: [[0, 0.06], [0.5, 0.47], [1, 0.9]] }
         }},
 
         { id: 'minilab90', name: 'ONE HOUR 90s', color: '#7fbf9a', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.09, saturation: 0.1, vibrance: 0.03, wbTemp: -0.02, wbTint: -0.05, unsharp: 0.1, noise: 0.1, vignette: 0.1,
-            darks: 0.02, blacks: -0.02, highlights: -0.04, hsl0s: 0.04, hsl1s: 0.03, hsl3s: 0.06, hsl4s: 0.05,
+            contrast: 0.09, saturation: 0.1, vibrance: 0.03, wbTemp: -0.02, wbTint: -0.05, unsharp: 0.1, noise: 0.1, darks: 0.02, blacks: -0.02, highlights: -0.04, hsl0s: 0.04, hsl1s: 0.03, hsl3s: 0.06, hsl4s: 0.05,
             curves: { red: [[0, 0.01], [0.5, 0.49], [1, 0.98]], green: [[0, 0.02], [0.5, 0.52], [1, 1]], blue: [[0, 0.04], [0.5, 0.5], [1, 0.97]] }
         }},
 
         { id: 'postcard50', name: 'POSTCARD 50s', color: '#c9b79c', isPro: false, glfx: {
             ...defaultSettings,
-            brightness: 0.03, contrast: -0.06, saturation: -0.18, sepia: 0.18, fade: 0.2, wbTemp: 0.06, noise: 0.12, vignette: 0.2,
-            highlights: -0.08, lights: -0.04, blacks: 0.03,
+            brightness: 0.03, contrast: -0.06, saturation: -0.18, sepia: 0.18, fade: 0.2, wbTemp: 0.06, noise: 0.12, highlights: -0.08, lights: -0.04, blacks: 0.03,
             curves: { red: [[0, 0.07], [0.5, 0.53], [1, 0.97]], green: [[0, 0.06], [0.5, 0.5], [1, 0.94]], blue: [[0, 0.08], [0.5, 0.45], [1, 0.88]] }
         }},
 
         // PREMIUM: effects layer (light leaks, dust, scratches, grain, split-tone, date stamp)
         { id: 'super8', name: 'SUPER 8', color: '#ff9e40', isPro: true, glfx: {
             ...defaultSettings,
-            contrast: 0.07, saturation: 0.04, fade: 0.1, wbTemp: 0.1, wbTint: 0.02, noise: 0.2, vignette: 0.28,
-            lights: -0.06, darks: 0.05, blacks: 0.03,
+            contrast: 0.07, saturation: 0.04, fade: 0.1, wbTemp: 0.1, wbTint: 0.02, noise: 0.2, lights: -0.06, darks: 0.05, blacks: 0.03,
             bloomStrength: 0.02, bloomSize: 0.5, bloomRange: 0.4, halationStrength: 0.05, halationSize: 0.1, halationRange: 0.25,
             curves: { red: [[0, 0.03], [0.5, 0.55], [1, 1]], green: [[0, 0.02], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.06], [0.5, 0.43], [1, 0.82]] }
         }, fx: { shH: 190, shS: 10, hiH: 38, hiS: 14, lkAmt: 20, lkStyle: 0, lkHue: 18, lkPos: 20, dust: 22, scr: 16, gAmt: 26, gSize: 45, gRough: 55, gShadow: 60, sfAmt: 6, sfSize: 30 } },
 
         { id: 'dispo98', name: 'DISPOSABLE', color: '#ffd166', isPro: true, glfx: {
             ...defaultSettings,
-            brightness: 0.03, contrast: 0.12, saturation: 0.1, vibrance: 0.04, wbTemp: 0.05, wbTint: -0.03, fade: 0.05, noise: 0.16, vignette: 0.2, unsharp: 0.08,
+            brightness: 0.03, contrast: 0.12, saturation: 0.1, vibrance: 0.04, wbTemp: 0.05, wbTint: -0.03, fade: 0.05, noise: 0.16, unsharp: 0.08,
             lights: -0.04, darks: 0.02, blacks: -0.02, hsl0s: 0.06, hsl2s: 0.05, hsl3s: 0.04,
             curves: { red: [[0, 0.02], [0.5, 0.53], [1, 1]], green: [[0, 0.03], [0.5, 0.52], [1, 0.98]], blue: [[0, 0.04], [0.5, 0.45], [1, 0.9]] }
         }, fx: { lkAmt: 10, lkStyle: 0, lkHue: 25, lkPos: 85, dust: 8, gAmt: 18, gSize: 35, gRough: 60, gShadow: 55, ca: 5, dsOn: 1, dsFmt: 0, dsCol: 0, dsPos: 3, dsSize: 45 } },
@@ -1164,33 +1143,39 @@
         // TEAL CINE: teal-green cross-process on cine film. Milky green-teal blacks, creamy warm highlights, warm skin, pale cyan-green sky, strong glow.
         { id: 'cinedenim', name: 'TEAL CINE', color: '#2bb3a0', isPro: true, glfx: {
             ...defaultSettings,
-            brightness: 0.02, contrast: 0.05, saturation: 0.02, vibrance: 0.05, fade: 0.1, wbTemp: 0.05, wbTint: -0.06, noise: 0.05, vignette: 0.14,
-            highlights: -0.04, lights: 0.03, blacks: 0.03,
+            brightness: 0.02, contrast: 0.05, saturation: 0.02, vibrance: 0.05, fade: 0.1, wbTemp: 0.05, wbTint: -0.06, noise: 0.05, highlights: -0.04, lights: 0.03, blacks: 0.03,
             bloomStrength: 0.05, bloomSize: 0.5, bloomRange: 0.45, halationStrength: 0.04, halationSize: 0.1, halationRange: 0.25,
-            hsl1s: 0.06, hsl1l: 0.04, hsl3s: 0.1, hsl3l: -0.04, hsl4h: -0.15, hsl4s: -0.1, hsl4l: 0.08,
+            hsl1s: 0.06, hsl1l: 0.04, hsl3s: 0.1, hsl3l: -0.04, hsl4h: -0.6, hsl4s: -0.1, hsl4l: 0.08,
             curves: { red: [[0, 0], [0.25, 0.2], [0.5, 0.5], [0.75, 0.8], [1, 1]], green: [[0, 0.05], [0.25, 0.3], [0.5, 0.55], [0.75, 0.8], [1, 1]], blue: [[0, 0.06], [0.25, 0.27], [0.5, 0.47], [0.75, 0.7], [1, 0.9]] }
         }, fx: { shH: 168, shS: 16, hiH: 48, hiS: 10, gAmt: 12, gSize: 35, gRough: 55, gShadow: 55, ca: 3 } },
 
         // VELVET PLATE: dark, dense, sepia-toned early colour plate. Milky brown blacks, low saturation, pale cream top end, heavy grain, dust and scratches.
         { id: 'velvetplate', name: 'VELVET PLATE', color: '#8d6e63', isPro: true, glfx: {
             ...defaultSettings,
-            exposure: -0.16, luminance: -0.05, contrast: 0.1, saturation: -0.3, sepia: 0.08, fade: 0.08, wbTemp: 0.08, wbTint: 0.02, noise: 0.2, vignette: 0.3,
-            highlights: -0.15, lights: -0.08, darks: -0.05, blacks: 0.05,
+            exposure: -0.16, luminance: -0.05, contrast: 0.1, saturation: -0.3, sepia: 0.08, fade: 0.08, wbTemp: 0.08, wbTint: 0.02, noise: 0.2, highlights: -0.15, lights: -0.08, darks: -0.05, blacks: 0.05,
             curves: { red: [[0, 0.07], [0.25, 0.25], [0.5, 0.53], [0.75, 0.79], [1, 0.96]], green: [[0, 0.06], [0.25, 0.22], [0.5, 0.48], [0.75, 0.73], [1, 0.9]], blue: [[0, 0.07], [0.25, 0.2], [0.5, 0.43], [0.75, 0.65], [1, 0.83]] }
         }, fx: { shH: 22, shS: 14, hiH: 40, hiS: 18, gAmt: 40, gSize: 50, gRough: 70, gShadow: 70, dust: 20, scr: 10, sfAmt: 6, sfSize: 35 } },
 
         // BROWNSTONE: moody and rich. About -1 stop, pulled highlights, crushed blacks, deep burgundy reds, deep navy sky, warm skin. Clean, no grain.
         { id: 'brownstone', name: 'BROWNSTONE', color: '#7b3f2a', isPro: true, glfx: {
             ...defaultSettings,
-            exposure: -0.22, contrast: 0.12, saturation: 0.1, vibrance: 0.06, wbTemp: 0.07, vignette: 0.12,
-            highlights: -0.2, lights: -0.1, darks: -0.04, blacks: -0.06, whites: -0.1,
+            exposure: -0.22, contrast: 0.12, saturation: 0.1, vibrance: 0.06, wbTemp: 0.07, highlights: -0.2, lights: -0.1, darks: -0.04, blacks: -0.06, whites: -0.1,
             hsl0s: 0.1, hsl0l: -0.08, hsl1s: 0.05, hsl1l: -0.04, hsl3s: -0.1, hsl3l: -0.08, hsl4s: 0.04, hsl4l: -0.18,
             curves: { red: [[0, 0], [0.25, 0.235], [0.5, 0.52], [0.75, 0.77], [1, 0.99]], green: [[0, 0], [0.25, 0.22], [0.5, 0.48], [0.75, 0.73], [1, 0.97]], blue: [[0, 0.01], [0.25, 0.2], [0.5, 0.44], [0.75, 0.68], [1, 0.92]] }
         }, fx: { shH: 215, shS: 8, hiH: 38, hiS: 8, gAmt: 6, gSize: 30, gRough: 50, gShadow: 55 } },
 
+        // SEAFOAM PASTEL: pastel, symmetrical-poster look. Blue sky and sea pushed to seafoam teal, mustard grass, creamy-minty whites, salmon reds, gently lifted blacks.
+        { id: 'seafoam', name: 'SEAFOAM PASTEL', color: '#7fcdb4', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.03, contrast: 0.04, saturation: -0.04, vibrance: 0.04, fade: 0.08, wbTemp: 0.04, wbTint: -0.06, noise: 0.04,
+            highlights: -0.04, blacks: 0.03, bloomStrength: 0.02, bloomSize: 0.5, bloomRange: 0.4,
+            hsl0h: 0.2, hsl0s: -0.05, hsl0l: 0.1, hsl1s: 0.08, hsl2h: -0.2, hsl2s: 0.12, hsl4h: -0.9, hsl4s: -0.15, hsl4l: 0.1,
+            curves: { red: [[0, 0.02], [0.25, 0.24], [0.5, 0.5], [0.75, 0.77], [1, 0.99]], green: [[0, 0.03], [0.25, 0.27], [0.5, 0.53], [0.75, 0.79], [1, 1]], blue: [[0, 0.03], [0.25, 0.25], [0.5, 0.47], [0.75, 0.71], [1, 0.93]] }
+        }, fx: { shH: 175, shS: 10, hiH: 50, hiS: 8, gAmt: 6, gSize: 30, gRough: 50, gShadow: 50 } },
+
         { id: 'flash', name: 'FLASH', color: '#ffe082', isPro: true, glfx: {
             ...defaultSettings,
-            brightness: 0.03, contrast: 0.12, saturation: 0.08, noise: 0.13, vignette: 0.2
+            brightness: 0.03, contrast: 0.12, saturation: 0.08, noise: 0.13
         }, fx: { gAmt: 20, hiH: 55, hiS: 10 } },
 
         { id: 'nightcity', name: 'NIGHT CITY', color: '#7e57c2', isPro: true, glfx: {
@@ -1202,62 +1187,52 @@
         // ===================== цветные пресеты =====================
         { id: 'cpurple', name: 'PURPLE', color: '#ba68c8', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.1, 0.02, 0.22], high: [0.88, 0.7, 1.0] }
+            contrast: 0.055, duotone: { shadow: [0.1, 0.02, 0.22], high: [0.88, 0.7, 1.0] }
         }},
 
         { id: 'cpink', name: 'PINK', color: '#f06292', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.22, 0.03, 0.12], high: [1.0, 0.78, 0.88] }
+            contrast: 0.055, duotone: { shadow: [0.22, 0.03, 0.12], high: [1.0, 0.78, 0.88] }
         }},
 
         { id: 'cblue', name: 'BLUE', color: '#42a5f5', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.02, 0.06, 0.25], high: [0.72, 0.86, 1.0] }
+            contrast: 0.055, duotone: { shadow: [0.02, 0.06, 0.25], high: [0.72, 0.86, 1.0] }
         }},
 
         { id: 'cteal', name: 'TEAL', color: '#26c6da', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.0, 0.1, 0.14], high: [0.7, 1.0, 0.95] }
+            contrast: 0.055, duotone: { shadow: [0.0, 0.1, 0.14], high: [0.7, 1.0, 0.95] }
         }},
 
         { id: 'cgreen', name: 'GREEN', color: '#66bb6a', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.02, 0.12, 0.04], high: [0.8, 1.0, 0.78] }
+            contrast: 0.055, duotone: { shadow: [0.02, 0.12, 0.04], high: [0.8, 1.0, 0.78] }
         }},
 
         { id: 'cgold', name: 'GOLD', color: '#ffd54f', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.16, 0.09, 0.0], high: [1.0, 0.9, 0.62] }
+            contrast: 0.055, duotone: { shadow: [0.16, 0.09, 0.0], high: [1.0, 0.9, 0.62] }
         }},
 
         { id: 'corange', name: 'ORANGE', color: '#ff9800', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.2, 0.05, 0.0], high: [1.0, 0.78, 0.5] }
+            contrast: 0.055, duotone: { shadow: [0.2, 0.05, 0.0], high: [1.0, 0.78, 0.5] }
         }},
 
         { id: 'cred', name: 'RED', color: '#ef5350', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.22, 0.0, 0.02], high: [1.0, 0.72, 0.7] }
+            contrast: 0.055, duotone: { shadow: [0.22, 0.0, 0.02], high: [1.0, 0.72, 0.7] }
         }},
 
         { id: 'csunset', name: 'SUNSET', color: '#ff7043', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.15, 0.03, 0.3], high: [1.0, 0.65, 0.35] }
+            contrast: 0.055, duotone: { shadow: [0.15, 0.03, 0.3], high: [1.0, 0.65, 0.35] }
         }},
 
         { id: 'cneon', name: 'NEON', color: '#e040fb', isPro: false, glfx: {
             ...defaultSettings,
-            contrast: 0.055, vignette: 0.07,
-            duotone: { shadow: [0.04, 0.02, 0.35], high: [1.0, 0.35, 0.85] }
+            contrast: 0.055, duotone: { shadow: [0.04, 0.02, 0.35], high: [1.0, 0.35, 0.85] }
         }}
     ];
 
@@ -1638,7 +1613,7 @@
         const PRO_FLASH_DAY = { flash: 0.45, y2k: 0.4, polaroid: 0.4, dispo98: 0.45 };          // the flash-culture presets keep a visible fill flash in daylight
         // premium two-mask: Pro flash presets also lift the person through the effects mask (auto-aimed at the matte)
         const NIGHT_FLASH_CUT = { canonr10: 0.50, ricohgr: 0.45, canonr7: 0.50, canon7d: 0.45, fujix100: 0.40, fuji: 0.55, kgold: 0.45, superia: 0.50, polaroid: 0.55, agfa: 0.50, vintage70: 0.60, y2k: 0.55, flash: 0.45, minilab90: 0.50, dispo98: 0.45 };   // night flash reduction (fraction)
-        const NIGHT_HUES = { cinedenim: [172, 50], velvetplate: [22, 40], brownstone: [220, 34] };      // [shadow hue, highlight hue] kept in the night variant
+        const NIGHT_HUES = { cinedenim: [172, 50], velvetplate: [22, 40], brownstone: [220, 34], seafoam: [175, 44] };      // [shadow hue, highlight hue] kept in the night variant
         const MASK_NIGHT = { mType: 2, mX: 50, mY: 54, mSize: 41, mFeather: 74, mInv: 0, mExp: 14, mSat: 0, mTemp: 0, mAuto: true };
 
         // ---- DAY signatures: how each brand "draws" colour. HSL slots: 0 red, 1 orange(skin), 2 yellow, 3 green, 4 blue, 5 purple.
@@ -1657,7 +1632,7 @@
             fujicam: { add: { fade: 0.012, hsl0s: 0.05, hsl1s: -0.04, hsl2s: -0.03, hsl3h: 0.05, hsl3s: -0.05, hsl3l: -0.06, hsl4h: -0.04, hsl4s: -0.03, hsl4l: -0.1 },
                      cast: [0.004, 0, -0.01], fx: { shH: 185, shS: 10, hiH: 42, hiS: 6, gAmt: 8, gSize: 30, gRough: 50, gShadow: 55 }, nsH: 190, nhH: 34 },
             // Leica: deep, dense, micro-contrast; rich reds, darker blues, restrained olive greens, tight vignette and fine grain
-            leica: { add: { contrast: 0.015, blacks: -0.02, whites: 0.02, clarity: 0.03, vignette: 0.02, hsl0s: 0.07, hsl0l: -0.05, hsl1s: -0.02, hsl2s: -0.04, hsl3h: -0.03, hsl3s: -0.08, hsl3l: -0.05, hsl4s: -0.05, hsl4l: -0.1 },
+            leica: { add: { contrast: 0.015, blacks: -0.02, whites: 0.02, clarity: 0.03, hsl0s: 0.07, hsl0l: -0.05, hsl1s: -0.02, hsl2s: -0.04, hsl3h: -0.03, hsl3s: -0.08, hsl3l: -0.05, hsl4s: -0.05, hsl4l: -0.1 },
                      cast: [0.004, 0, -0.004], fx: { shH: 215, shS: 6, hiH: 40, hiS: 5, gAmt: 7, gSize: 28, gRough: 55, gShadow: 60 }, nsH: 230, nhH: 36 },
             // Medium format (Hasselblad / Fuji GFX / Pentax / Phase One): natural colour, long smooth tonal roll-off, faint glow
             medium: { add: { highlights: -0.03, lights: -0.02, darks: 0.02, vibrance: 0.01, texture: 0.01, hsl0s: 0.02, hsl1s: 0.02, hsl1l: 0.04, hsl3s: -0.02, hsl4s: 0.02, bloomStrength: 0.012, bloomSize: 0.5, bloomRange: 0.5 },
@@ -1693,8 +1668,8 @@
         function nightOf(day, dayFx, fam, useFx, native, prof) {
             const mo = fam === 'bw';
             let g = layer(day, mo
-                ? { shadows: 0.1, highlights: -0.18, lights: -0.05, whites: -0.02, blacks: -0.08, contrast: 0.03, unsharp: 0.04, clarity: 0.03, texture: 0.02, vignette: 0.05, noise: 0.01, bloomStrength: 0.008 }
-                : { exposure: 0.02, shadows: 0.14, darks: 0.06, highlights: -0.22, lights: -0.08, whites: -0.03, blacks: -0.06, dehaze: 0.04, saturation: -0.02, vibrance: 0.04, vignette: 0.04, unsharp: 0.04, clarity: 0.02, texture: 0.02, noise: 0.008, bloomStrength: 0.008, halationStrength: 0.008,
+                ? { shadows: 0.1, highlights: -0.18, lights: -0.05, whites: -0.02, blacks: -0.08, contrast: 0.03, unsharp: 0.04, clarity: 0.03, texture: 0.02, noise: 0.01, bloomStrength: 0.008 }
+                : { exposure: 0.02, shadows: 0.14, darks: 0.06, highlights: -0.22, lights: -0.08, whites: -0.03, blacks: -0.06, dehaze: 0.04, saturation: -0.02, vibrance: 0.04, unsharp: 0.04, clarity: 0.02, texture: 0.02, noise: 0.008, bloomStrength: 0.008, halationStrength: 0.008,
                     hsl1s: -0.04, hsl1l: 0.1, hsl2s: -0.05, hsl2l: 0.04, hsl3l: -0.06, hsl4s: -0.03, hsl4l: -0.12, hsl5s: 0.04, hsl5l: 0.03 });
             if (g.bloomStrength > 0) { g.bloomSize = g.bloomSize || 0.5; g.bloomRange = g.bloomRange || 0.4; }
             if (g.halationStrength > 0) { g.halationSize = g.halationSize || 0.09; g.halationRange = g.halationRange || 0.23; }
@@ -1710,7 +1685,7 @@
         }
         // DAY twin of an already-night preset: same grade, more open, no flash
         function dayOfNight(night, nightFx) {
-            const g = layer(night, { exposure: 0.08, shadows: 0.05, darks: -0.02, blacks: 0.03, vignette: -0.04, saturation: 0.02 });
+            const g = layer(night, { exposure: 0.08, shadows: 0.05, darks: -0.02, blacks: 0.03, saturation: 0.02 });
             ['bloomStrength', 'halationStrength'].forEach(k => { if (g[k]) g[k] = r4(g[k] * 0.5); });
             delete g.flashStrength; delete g.flashTuning; delete g.flashAuto;
             return { glfx: g, fx: { ...nightFx } };
@@ -1738,7 +1713,7 @@
                     exposure: -0.1, luminance: -0.02, brightness: 0.012, contrast: 0.07,
                     highlights: -0.26, shadows: 0.2, lights: -0.14, darks: 0.05, blacks: -0.06, whites: 0.18,
                     saturation: -0.02, vibrance: 0.08, wbTemp: 0.02, wbTint: 0.008,
-                    unsharp: 0.04, texture: 0.02, clarity: 0.02, noise: 0.008, vignette: 0.05, dehaze: 0.02,
+                    unsharp: 0.04, texture: 0.02, clarity: 0.02, noise: 0.008, dehaze: 0.02,
                     hsl1s: 0.03, hsl1l: 0.08, hsl2s: 0, hsl3s: 0.02, hsl4h: -0.06, hsl4s: 0.06, hsl4l: -0.08,
                     bloomStrength: 0.014, bloomSize: 0.4, bloomRange: 0.3,
                     ...flashLook(0.3, { cast: 0.12, ambient: 0.08, gain: 1.25, falloff: 2.0, shoulder: 0.26, white: 2.4, contrast: 0.14, bgDark: 0.1, glow: 0.28 }),
@@ -1771,6 +1746,7 @@
                 if (NIGHT_FLASH_CUT[p.id] && nightG.flashStrength) nightG.flashStrength = r4(nightG.flashStrength * (1 - NIGHT_FLASH_CUT[p.id]));
                 if (NIGHT_HUES[p.id] && nightFx) { nightFx.shH = NIGHT_HUES[p.id][0]; nightFx.hiH = NIGHT_HUES[p.id][1]; }
             }
+            dayG.vignette = 0; nightG.vignette = 0;                                              // no vignette in any preset
             p.variants = { day: { glfx: dayG, fx: dayFx }, night: { glfx: nightG, fx: nightFx } };
             Object.defineProperty(p, 'glfx', { get() { const g = this.variants[presetVariant].glfx; return g.flashAuto ? autoFlash(g) : g; }, enumerable: true, configurable: true });
             Object.defineProperty(p, 'fx',   { get() { const f = this.variants[presetVariant].fx; return f.mAuto ? autoMask(f) : f; },   enumerable: true, configurable: true });
