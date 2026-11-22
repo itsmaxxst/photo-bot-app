@@ -1121,6 +1121,45 @@
             brightness: 0.03, contrast: 0.08, saturation: 0.06, unsharp: 0.18, noise: 0.1, vignette: 0.12
         }, fx: { ca: 8, gAmt: 8, gShadow: 20, sfAmt: 5, dsOn: 1, dsFmt: 0, dsCol: 0, dsPos: 3, dsSize: 45 } },
 
+        // ===================== ВИНТАЖ: 3 бесплатных + 2 Premium (День / Ночь строятся автоматически) =====================
+        // FREE: no effects layer (grain = "noise", vignette, fade, curves only)
+        { id: 'album80', name: 'ALBUM 80s', color: '#e8a87c', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.02, contrast: -0.05, saturation: 0.03, fade: 0.12, wbTemp: 0.09, wbTint: 0.035, noise: 0.09, vignette: 0.12,
+            highlights: -0.05, lights: -0.03, blacks: 0.02, hsl0s: 0.05, hsl1s: 0.04, hsl3s: -0.1, hsl4s: -0.06,
+            curves: { red: [[0, 0.04], [0.5, 0.54], [1, 0.99]], green: [[0, 0.03], [0.5, 0.47], [1, 0.95]], blue: [[0, 0.06], [0.5, 0.47], [1, 0.9]] }
+        }},
+
+        { id: 'minilab90', name: 'ONE HOUR 90s', color: '#7fbf9a', isPro: false, glfx: {
+            ...defaultSettings,
+            contrast: 0.09, saturation: 0.1, vibrance: 0.03, wbTemp: -0.02, wbTint: -0.05, unsharp: 0.1, noise: 0.1, vignette: 0.1,
+            darks: 0.02, blacks: -0.02, highlights: -0.04, hsl0s: 0.04, hsl1s: 0.03, hsl3s: 0.06, hsl4s: 0.05,
+            curves: { red: [[0, 0.01], [0.5, 0.49], [1, 0.98]], green: [[0, 0.02], [0.5, 0.52], [1, 1]], blue: [[0, 0.04], [0.5, 0.5], [1, 0.97]] }
+        }},
+
+        { id: 'postcard50', name: 'POSTCARD 50s', color: '#c9b79c', isPro: false, glfx: {
+            ...defaultSettings,
+            brightness: 0.03, contrast: -0.06, saturation: -0.18, sepia: 0.18, fade: 0.2, wbTemp: 0.06, noise: 0.12, vignette: 0.2,
+            highlights: -0.08, lights: -0.04, blacks: 0.03,
+            curves: { red: [[0, 0.07], [0.5, 0.53], [1, 0.97]], green: [[0, 0.06], [0.5, 0.5], [1, 0.94]], blue: [[0, 0.08], [0.5, 0.45], [1, 0.88]] }
+        }},
+
+        // PREMIUM: effects layer (light leaks, dust, scratches, grain, split-tone, date stamp)
+        { id: 'super8', name: 'SUPER 8', color: '#ff9e40', isPro: true, glfx: {
+            ...defaultSettings,
+            contrast: 0.07, saturation: 0.04, fade: 0.1, wbTemp: 0.1, wbTint: 0.02, noise: 0.2, vignette: 0.28,
+            lights: -0.06, darks: 0.05, blacks: 0.03,
+            bloomStrength: 0.02, bloomSize: 0.5, bloomRange: 0.4, halationStrength: 0.05, halationSize: 0.1, halationRange: 0.25,
+            curves: { red: [[0, 0.03], [0.5, 0.55], [1, 1]], green: [[0, 0.02], [0.5, 0.5], [1, 0.95]], blue: [[0, 0.06], [0.5, 0.43], [1, 0.82]] }
+        }, fx: { shH: 190, shS: 10, hiH: 38, hiS: 14, lkAmt: 20, lkStyle: 0, lkHue: 18, lkPos: 20, dust: 22, scr: 16, gAmt: 26, gSize: 45, gRough: 55, gShadow: 60, sfAmt: 6, sfSize: 30 } },
+
+        { id: 'dispo98', name: 'DISPOSABLE', color: '#ffd166', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.03, contrast: 0.12, saturation: 0.1, vibrance: 0.04, wbTemp: 0.05, wbTint: -0.03, fade: 0.05, noise: 0.16, vignette: 0.2, unsharp: 0.08,
+            lights: -0.04, darks: 0.02, blacks: -0.02, hsl0s: 0.06, hsl2s: 0.05, hsl3s: 0.04,
+            curves: { red: [[0, 0.02], [0.5, 0.53], [1, 1]], green: [[0, 0.03], [0.5, 0.52], [1, 0.98]], blue: [[0, 0.04], [0.5, 0.45], [1, 0.9]] }
+        }, fx: { lkAmt: 10, lkStyle: 0, lkHue: 25, lkPos: 85, dust: 8, gAmt: 18, gSize: 35, gRough: 60, gShadow: 55, ca: 5, dsOn: 1, dsFmt: 0, dsCol: 0, dsPos: 3, dsSize: 45 } },
+
         { id: 'flash', name: 'FLASH', color: '#ffe082', isPro: true, glfx: {
             ...defaultSettings,
             brightness: 0.03, contrast: 0.12, saturation: 0.08, noise: 0.13, vignette: 0.2
@@ -1245,7 +1284,7 @@
             if (id === 'om1') return 'om';
             if (id === 'sigmafp') return 'sigma';
             if (id === 'alexa35' || id === 'arri') return 'alexa';
-            if (/^(portra|portra160|fuji|kgold|ektar|cine800|velvia|pro400h|superia|polaroid|kchrome|agfa)$/.test(id)) return 'film';
+            if (/^(portra|portra160|fuji|kgold|ektar|cine800|velvia|pro400h|superia|polaroid|kchrome|agfa|album80|minilab90|postcard50|super8|dispo98)$/.test(id)) return 'film';
             return 'mood';
         };
 
@@ -1563,14 +1602,14 @@
             sep:       { night: null, day: null }
         };
         // real built-in flashes: Canon 7D / R10 / R7 pop-up, Fuji X100 leaf-shutter flash, Ricoh GR snapshot flash; flash-culture presets: compact / disposable / instant cameras, digicam Y2K, flashbulb 70s
-        const DIRECT = /^(canon7d|canonr10|canonr7|fujix100|ricohgr|flash|y2k|polaroid|kgold|fuji|superia|agfa|vintage70)$/;
+        const DIRECT = /^(canon7d|canonr10|canonr7|fujix100|ricohgr|flash|y2k|polaroid|kgold|fuji|superia|agfa|vintage70|minilab90|dispo98)$/;
         // pro bodies that live with a hot-shoe Speedlite / SB / HVL
         const SPEEDLITE = /^(canon1dx|canon5d|canon5ds|canon6d|canonr3|canonr5|canonr6|canonr8|nikond5|nikond850|nikonz6|nikonz7|nikonz8|nikonz9|sonya1|sonya7|sonya7iv|sonya7r5|sonya9|sonya7s3|fujixt5|fujixh2|fujixpro)$/;
         const SEPARATION = /^(leica|hbx2d|h6d|gfx100|pentax645|phaseone|lumix|om1|sigmafp|alexa35|arri|trix|hp5|bw|noir|delta|cine800|cineteal)/;
         const profileOf = p => DIRECT.test(p.id) ? 'direct' : SPEEDLITE.test(p.id) ? 'speedlite' : SEPARATION.test(p.id) ? 'sep' : 'speedlite';
-        const PRO_FLASH_DAY = { flash: 0.45, y2k: 0.4, polaroid: 0.4 };          // the flash-culture presets keep a visible fill flash in daylight
+        const PRO_FLASH_DAY = { flash: 0.45, y2k: 0.4, polaroid: 0.4, dispo98: 0.45 };          // the flash-culture presets keep a visible fill flash in daylight
         // premium two-mask: Pro flash presets also lift the person through the effects mask (auto-aimed at the matte)
-        const NIGHT_FLASH_CUT = { canonr10: 0.50, ricohgr: 0.45, canonr7: 0.50, canon7d: 0.45, fujix100: 0.40, fuji: 0.55, kgold: 0.45, superia: 0.50, polaroid: 0.55, agfa: 0.50, vintage70: 0.60, y2k: 0.55, flash: 0.45 };   // night flash reduction (fraction)
+        const NIGHT_FLASH_CUT = { canonr10: 0.50, ricohgr: 0.45, canonr7: 0.50, canon7d: 0.45, fujix100: 0.40, fuji: 0.55, kgold: 0.45, superia: 0.50, polaroid: 0.55, agfa: 0.50, vintage70: 0.60, y2k: 0.55, flash: 0.45, minilab90: 0.50, dispo98: 0.45 };   // night flash reduction (fraction)
         const MASK_NIGHT = { mType: 2, mX: 50, mY: 54, mSize: 41, mFeather: 74, mInv: 0, mExp: 14, mSat: 0, mTemp: 0, mAuto: true };
 
         // ---- DAY signatures: how each brand "draws" colour. HSL slots: 0 red, 1 orange(skin), 2 yellow, 3 green, 4 blue, 5 purple.
