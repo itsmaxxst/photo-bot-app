@@ -1643,6 +1643,12 @@
                 // NIGHT = your original configuration (it was a night/flash look), now auto-aimed at the detected subject, with a darker background mask and skin glow.
                 nightG = { ...base, flashAuto: true, flashTuning: { ...base.flashTuning, gain: 1.1, falloff: 2.0, bgDark: 0.8, glow: 0.25, subjRX: 0.3, subjRY: 0.45, nsExp: 0.5 } };
                 nightFx = { ...baseFx, mExp: 34, mAuto: true };
+                // NIGHT was too strong at 100%: bake in exactly what the intensity slider does at 50% (every number x0.5, curves halfway to neutral,
+                // mask/colour-grade amounts x0.5; hues, mask position / size and flashTuning stay as they are, same as the slider).
+                { const K = 0.5;
+                  for (const k in nightG) if (typeof nightG[k] === 'number') nightG[k] = r4(nightG[k] * K);
+                  if (nightG.curves) { const c = {}; ['red', 'green', 'blue'].forEach(ch => { c[ch] = nightG.curves[ch].map(([x, y]) => [x, r4(x + (y - x) * K)]); }); nightG.curves = c; }
+                  ['mExp', 'mSat', 'mTemp', 'shS', 'hiS', 'bal'].forEach(k => { if (typeof nightFx[k] === 'number') nightFx[k] = r4(nightFx[k] * K); }); }
                 // DAY = same Canon character rewritten for daylight: natural exposure, protected sky, clean skin, a light fill-flash pop on the subject.
                 const hs = {}; HSL_COLORS.forEach((c, i) => HSL_CHANNELS.forEach(ch => { const k = 'hsl' + i + ch; hs[k] = r4((base[k] || 0) * 0.5); }));
                 dayG = {
