@@ -1557,7 +1557,7 @@
         const profileOf = p => DIRECT.test(p.id) ? 'direct' : SPEEDLITE.test(p.id) ? 'speedlite' : SEPARATION.test(p.id) ? 'sep' : 'speedlite';
         const PRO_FLASH_DAY = { flash: 0.45, y2k: 0.4, polaroid: 0.4 };          // the flash-culture presets keep a visible fill flash in daylight
         // premium two-mask: Pro flash presets also lift the person through the effects mask (auto-aimed at the matte)
-        const NIGHT_FLASH_CUT = { canonr10: 0.50, ricohgr: 0.15, canonr7: 0.30, canon7d: 0.20, fujix100: 0.25, fuji: 0.20, kgold: 0.30, superia: 0.25, polaroid: 0.35, agfa: 0.40, vintage70: 0.30, y2k: 0.30, flash: 0.25 };   // night flash reduction (fraction)
+        const NIGHT_FLASH_CUT = { canonr10: 0.50, ricohgr: 0.45, canonr7: 0.50, canon7d: 0.45, fujix100: 0.40, fuji: 0.55, kgold: 0.45, superia: 0.50, polaroid: 0.55, agfa: 0.50, vintage70: 0.60, y2k: 0.55, flash: 0.45 };   // night flash reduction (fraction)
         const MASK_NIGHT = { mType: 2, mX: 50, mY: 54, mSize: 41, mFeather: 74, mInv: 0, mExp: 14, mSat: 0, mTemp: 0, mAuto: true };
 
         // ---- DAY signatures: how each brand "draws" colour. HSL slots: 0 red, 1 orange(skin), 2 yellow, 3 green, 4 blue, 5 purple.
@@ -4042,6 +4042,7 @@
     }
     let fxs = fxDefaults();
     let presetK = 1;          // интенсивность пресета 0…1
+    let presetFlashOv = null; // ручная сила вспышки пресета: { id, v, val } — val в единицах настроек (UI = val × FLASH_BASE_UNIT)
     let fxMaskShow = false;   // показывать маску красным, пока открыта панель маски
     let fxId = null, fxBackup = null;
 
@@ -4668,6 +4669,7 @@
 
     // ---------- интенсивность пресета ----------
     function fxScalePreset(b) {
+        if (presetFlashOv && presetFlashOv.id === activePresetId && presetFlashOv.v === presetVariant && b && (b.flashStrength || 0) > 0) b = { ...b, flashStrength: presetFlashOv.val };
         if (presetK >= 1) return b;
         const o = {};
         for (const key in b) {
@@ -4842,7 +4844,7 @@
         fxBuild(); updatePhotoFilter();
     }
     function fxClose(revert) {
-        if (revert && fxBackup) { if (fxId === 'k') { presetK = parseFloat(fxBackup); presetFxScale(); } else fxs = JSON.parse(fxBackup); }
+        if (revert && fxBackup) { if (fxId === 'k') { const kb = JSON.parse(fxBackup); presetK = kb.k; presetFlashOv = kb.fo; presetFxScale(); } else fxs = JSON.parse(fxBackup); }
         fxMaskShow = false; fxId = null;
         fxPanel.classList.remove('active');
         selectionPanel.classList.remove('hidden');
@@ -4852,7 +4854,7 @@
     document.getElementById('fx-apply').onclick = () => fxClose(false);
     document.getElementById('fx-reset').onclick = () => {
         if (!fxId) return;
-        if (fxId === 'k') { presetK = 1; presetFxScale(); kBuild(); updatePhotoFilter(); return; }
+        if (fxId === 'k') { presetK = 1; presetFlashOv = null; presetFxScale(); kBuild(); updatePhotoFilter(); return; }
         const d = fxDefaults(), def = FXT[fxId];
         if (def.custom === 'curves') fxs.curves = d.curves;
         else def.keys.forEach(k => { fxs[k] = d[k]; });
@@ -4886,22 +4888,36 @@
     function kSync() { kIconSync(); }
     function kBuild() {
         const v = Math.round(presetK * 100);
+        const baseFl = (presetSettings && presetSettings.flashStrength) || 0;                    // the preset's own flash (only presets that include one get the slider)
+        const hasFl = activePresetId && activePresetId !== 'none' && baseFl > 0;
+        const curFl = (presetFlashOv && presetFlashOv.id === activePresetId && presetFlashOv.v === presetVariant) ? presetFlashOv.val : baseFl;
+        const flUi = Math.round(Math.max(0, Math.min(FLASH_UI_MAX, curFl * FLASH_BASE_UNIT)) * 10);   // 0…250, same scale as the Flash tool
+        const flTxt = n => '+' + (n / 10).toFixed(1).replace('.', ',');
         fxBody.innerHTML = `<div class="fx-grid" style="grid-template-columns:1fr;max-height:none"><div>
-            <div class="fx-lab" style="justify-content:flex-end"><span id="k-val">${v}%</span></div>
-            <input type="range" id="k-input" min="0" max="100" value="${v}"></div></div>`;
+            <div class="fx-lab"><span>Интенсивность</span><span id="k-val">${v}%</span></div>
+            <input type="range" id="k-input" min="0" max="100" value="${v}"></div>` + (hasFl ? `<div>
+            <div class="fx-lab"><span>Вспышка</span><span id="kf-val">${flTxt(flUi)}</span></div>
+            <input type="range" id="kf-input" min="0" max="${Math.round(FLASH_UI_MAX * 10)}" step="1" value="${flUi}"></div>` : '') + `</div>`;
         const inp = document.getElementById('k-input'), val = document.getElementById('k-val');
         inp.addEventListener('input', () => { presetK = parseFloat(inp.value) / 100; val.textContent = inp.value + '%'; presetFxScale(); updatePhotoFilter(); });
+        const fi = document.getElementById('kf-input'), fv = document.getElementById('kf-val');
+        if (fi) fi.addEventListener('input', () => {
+            const n = parseFloat(fi.value);
+            fv.textContent = flTxt(n);
+            presetFlashOv = Math.abs(n - Math.round(baseFl * FLASH_BASE_UNIT * 10)) <= 0 ? null : { id: activePresetId, v: presetVariant, val: (n / 10) / FLASH_BASE_UNIT };
+            updatePhotoFilter();
+        });
     }
     function kOpen() {
         if (!fxTexture) return;
-        fxId = 'k'; fxBackup = String(presetK);
+        fxId = 'k'; fxBackup = JSON.stringify({ k: presetK, fo: presetFlashOv });
         selectionPanel.classList.add('hidden');
         fxPanel.classList.add('active');
         fxTitle.parentElement.style.display = 'none';
         kBuild();
     }
     const _fxApplyPreset = window.applyPreset;
-    window.applyPreset = function (id) { presetK = 1; _fxApplyPreset(id); kIconSync(); };
+    window.applyPreset = function (id) { presetK = 1; presetFlashOv = null; _fxApplyPreset(id); kIconSync(); };
     const _fxRenderPresets = renderPresets;
     renderPresets = function (t) { _fxRenderPresets(t); kIconSync(); };
 
@@ -4926,7 +4942,7 @@
     // ---------- отмена / повтор ----------
     const undoBtn = document.getElementById('btn-undo'), redoBtn = document.getElementById('btn-redo');
     let undoStack = [], redoStack = [], lastSnap = null;
-    const fxSnap = () => JSON.stringify({ cs: currentSettings, ps: presetSettings, id: activePresetId, fx: fxs, k: presetK });
+    const fxSnap = () => JSON.stringify({ cs: currentSettings, ps: presetSettings, id: activePresetId, fx: fxs, k: presetK, fo: presetFlashOv });
     function histBtns() { undoBtn.disabled = !undoStack.length; redoBtn.disabled = !redoStack.length; }
     function histReset() { undoStack = []; redoStack = []; lastSnap = fxSnap(); histBtns(); }
     function histCommit() {
@@ -4939,7 +4955,7 @@
     function histRestore(str) {
         const s = JSON.parse(str);
         closeSlider();
-        currentSettings = s.cs; presetSettings = s.ps; activePresetId = s.id; fxs = s.fx; presetK = s.k; kSync();
+        currentSettings = s.cs; presetSettings = s.ps; activePresetId = s.id; fxs = s.fx; presetK = s.k; presetFlashOv = s.fo || null; kSync();
         document.querySelectorAll('.preset-item').forEach(el => el.classList.toggle('selected', el.dataset.id === activePresetId));
         kIconSync();
         lastSnap = str;
@@ -4954,7 +4970,7 @@
     }, true));
     upload.addEventListener('change', () => setTimeout(histReset, 0));
     const _fxResetEditor = resetEditor;
-    resetEditor = function () { _fxResetEditor(); fxs = fxDefaults(); presetK = 1; kSync(); histReset(); updateLockState(); };
+    resetEditor = function () { _fxResetEditor(); fxs = fxDefaults(); presetK = 1; presetFlashOv = null; kSync(); histReset(); updateLockState(); };
     histReset();
 
 
@@ -5515,7 +5531,7 @@
             if (!name) name = T('Пресет ' + (userPresets.length + 1));
             const p = { id: 'u_' + Date.now().toString(36), name, color: upColor, ...upSnapshot() };
             userPresets.push(p); upSaveLocal(); upCloudSave(p);
-            activePresetId = p.id; presetSettings = upClone(p.ps); presetK = 1;     // вид не меняется, пресет становится активным
+            activePresetId = p.id; presetSettings = upClone(p.ps); presetK = 1; presetFlashOv = null;     // вид не меняется, пресет становится активным
             upClose(); renderPresets('mine'); updateLockState();
             const sel = itemsContainer.querySelector('.preset-item.selected'); if (sel && sel.scrollIntoView) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
             toast('Пресет «' + name + '» сохранён'); clipHaptic();
@@ -5532,7 +5548,7 @@
         if (!fxTexture) { toast('Сначала загрузите фото'); return; }
         Object.assign(p, upSnapshot());
         upSaveLocal(); upCloudSave(p);
-        if (activePresetId === p.id) { presetSettings = upClone(p.ps); presetK = 1; }
+        if (activePresetId === p.id) { presetSettings = upClone(p.ps); presetK = 1; presetFlashOv = null; }
         upClose(); renderPresets(currentTab); updateLockState(); toast('Пресет обновлён'); clipHaptic();
     };
     upEl('up-del').onclick = () => {
@@ -5551,7 +5567,7 @@
         if (!String(id).startsWith('u_')) return _upApply(id);
         if (!fxTexture) { if (tg.showAlert) tg.showAlert('Сначала загрузите фото!'); else alert('Сначала загрузите фото!'); return; }
         const p = userPresets.find(x => x.id === id); if (!p) return;
-        activePresetId = id; presetK = 1;
+        activePresetId = id; presetK = 1; presetFlashOv = null;
         presetSettings = upClone(p.ps); currentSettings = upClone(p.cs);
         fxs = { ...fxDefaults(), ...upClone(p.fx), dsDate: fxs.dsDate };
         if (window.subjectAim) {      // re-aim the flash / mask at the subject of THIS photo
