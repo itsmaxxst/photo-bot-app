@@ -2581,6 +2581,7 @@
             c *= (1.0 - amb * (1.0 - fpOnly * 0.7)) + uTune1.z * k * light;
             float kk = min(k, 1.25);
             c *= 1.0 - uTune3.x * kk * (1.0 - max(subj, fp * 0.85));  // background darkens; the first plan hardly
+            c *= 1.0 + 0.15 * fpOnly * min(k, 1.0);                    // first plan: +15% brighter (scales with the flash strength)
             c *= 1.0 + uTune3.y * kk * subj * 0.6;   // first plan: direct flash lift
             float lm = dot(c, vec3(0.2126, 0.7152, 0.0722));
             vec3 cc = clamp(c, 0.0, 1.0);                               // (unclamped, c > 1 made this term negative → the bright shirt flipped to cyan)
