@@ -1557,6 +1557,7 @@
         const profileOf = p => DIRECT.test(p.id) ? 'direct' : SPEEDLITE.test(p.id) ? 'speedlite' : SEPARATION.test(p.id) ? 'sep' : 'speedlite';
         const PRO_FLASH_DAY = { flash: 0.45, y2k: 0.4, polaroid: 0.4 };          // the flash-culture presets keep a visible fill flash in daylight
         // premium two-mask: Pro flash presets also lift the person through the effects mask (auto-aimed at the matte)
+        const NIGHT_FLASH_CUT = { canonr10: 0.40, ricohgr: 0.05, canonr7: 0.20, canon7d: 0.10, fujix100: 0.15, fuji: 0.10, kgold: 0.20, superia: 0.15, polaroid: 0.25, agfa: 0.30, vintage70: 0.20, y2k: 0.20, flash: 0.15 };   // night flash reduction (fraction)
         const MASK_NIGHT = { mType: 2, mX: 50, mY: 54, mSize: 41, mFeather: 74, mInv: 0, mExp: 14, mSat: 0, mTemp: 0, mAuto: true };
 
         // ---- DAY signatures: how each brand "draws" colour. HSL slots: 0 red, 1 orange(skin), 2 yellow, 3 green, 4 blue, 5 purple.
@@ -1685,6 +1686,8 @@
                     if (!native) Object.assign(dayG, flashLook(PRO_FLASH_DAY[p.id] || FLASH_PROFILES.direct.day[0], FLASH_PROFILES.direct.day[1]));   // daylight fill flash
                     if (useFx) nightFx = { ...nightFx, ...MASK_NIGHT };                                                                      // Pro: + subject mask
                 }
+                // NIGHT flash toned down per preset (only the Flash strength; everything else in the night look stays as is)
+                if (NIGHT_FLASH_CUT[p.id] && nightG.flashStrength) nightG.flashStrength = r4(nightG.flashStrength * (1 - NIGHT_FLASH_CUT[p.id]));
             }
             p.variants = { day: { glfx: dayG, fx: dayFx }, night: { glfx: nightG, fx: nightFx } };
             Object.defineProperty(p, 'glfx', { get() { const g = this.variants[presetVariant].glfx; return g.flashAuto ? autoFlash(g) : g; }, enumerable: true, configurable: true });
