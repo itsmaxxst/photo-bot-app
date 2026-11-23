@@ -1140,17 +1140,19 @@
         }, fx: { lkAmt: 10, lkStyle: 0, lkHue: 25, lkPos: 85, dust: 8, gAmt: 18, gSize: 35, gRough: 60, gShadow: 55, ca: 5, dsOn: 1, dsFmt: 0, dsCol: 0, dsPos: 3, dsSize: 45 } },
 
         // ===================== ПРЕМИУМ-ЛУКИ ПО РЕФЕРЕНСАМ (День / Ночь строятся автоматически) =====================
-        // TEAL CINE: teal-green cross-process on cine film. Milky green-teal blacks, creamy warm highlights, warm skin, pale cyan-green sky, strong glow.
-        // Day look = the previous TEAL CINE at 40% strength + these tool settings on top (so the preset at 100% matches that recipe):
-        //   Lights +10, Whites +15, Blacks -85, Saturation +32, Vibrance +21, White balance (Temp +2.7, Tint 0.0), Temperature -13,
-        //   Bloom (Strength 1.3, Size 2.7, Range 2.8), Highlights +1, Blur 17.   [bloom / white-balance sliders are on a 0…12 scale → /12]
+        // TEAL CINE: teal-green cross-process on cine film. Milky green-teal shadows, creamy warm highlights, warm skin, pale cyan-green sky, soft glow.
+        // v1 = the old TEAL CINE at 40% + Lights +10, Whites +15, Blacks -85, Saturation +32, Vibrance +21, WB (Temp +2.7, Tint 0), Temperature -13,
+        //      Bloom (1.3 / 2.7 / 2.8), Highlights +1, Blur 17.
+        // v2 = tuned against the reference render (cooler background, inky blacks). Changes vs v1:
+        //      Bloom Range 2.8 -> 2.5 (UI; the wide glow was lifting every black), Blacks -0.838 -> -1.0, Darks 0 -> -0.12, Lights 0.112 -> 0.06,
+        //      Whites 0.15 -> -0.01, Contrast 0.02 -> 0.11, WB Temp 0.245 -> 0.21, Temperature -0.13 -> -0.15, curves: a little less red / more blue in shadows and mids.
         { id: 'cinedenim', name: 'TEAL CINE', color: '#2bb3a0', isPro: true, glfx: {
             ...defaultSettings,
-            brightness: 0.008, contrast: 0.02, saturation: 0.328, vibrance: 0.23, fade: 0.04, wbTemp: 0.245, wbTint: -0.024, temperature: -0.13, noise: 0.02, blur: 0.17,
-            highlights: -0.006, lights: 0.112, whites: 0.15, blacks: -0.838,
-            bloomStrength: 0.1283, bloomSize: 0.425, bloomRange: 0.4133, halationStrength: 0.016, halationSize: 0.04, halationRange: 0.1,
+            brightness: 0.008, contrast: 0.11, saturation: 0.328, vibrance: 0.23, fade: 0.04, wbTemp: 0.21, wbTint: -0.024, temperature: -0.15, noise: 0.02, blur: 0.17,
+            highlights: -0.006, lights: 0.06, darks: -0.12, whites: -0.01, blacks: -1,
+            bloomStrength: 0.1283, bloomSize: 0.425, bloomRange: 0.21, halationStrength: 0.016, halationSize: 0.04, halationRange: 0.1,
             hsl1s: 0.024, hsl1l: 0.016, hsl3s: 0.04, hsl3l: -0.016, hsl4h: -0.24, hsl4s: -0.04, hsl4l: 0.032,
-            curves: { red: [[0, 0], [0.25, 0.23], [0.5, 0.5], [0.75, 0.77], [1, 1]], green: [[0, 0.02], [0.25, 0.27], [0.5, 0.52], [0.75, 0.77], [1, 1]], blue: [[0, 0.024], [0.25, 0.258], [0.5, 0.488], [0.75, 0.73], [1, 0.96]] }
+            curves: { red: [[0, 0], [0.25, 0.21], [0.5, 0.49], [0.75, 0.77], [1, 1]], green: [[0, 0.02], [0.25, 0.25], [0.5, 0.525], [0.75, 0.77], [1, 1]], blue: [[0, 0.014], [0.25, 0.293], [0.5, 0.508], [0.75, 0.735], [1, 0.96]] }
         }, fx: { shH: 168, shS: 6.4, hiH: 48, hiS: 4, gAmt: 4.8, gSize: 32, gRough: 52, gShadow: 52, ca: 1.2 } },
 
         // VELVET PLATE: dark, dense, sepia-toned early colour plate. Milky brown blacks, low saturation, pale cream top end, heavy grain, dust and scratches.
