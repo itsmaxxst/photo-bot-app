@@ -42,6 +42,14 @@
         .sub-tabs::-webkit-scrollbar { display: none; }
         .sub-tab { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); padding: 6px 12px; border-radius: 4px; cursor: pointer; }
         .sub-tab.active { background: white; color: black; }
+        .sub-tab.srch-btn { display: flex; align-items: center; justify-content: center; flex: none; padding: 6px 8px; }
+        .srch-box { display: flex; align-items: center; flex: none; gap: 6px; height: 26px; padding: 0 10px; box-sizing: border-box; background: #1c1c1e; border: 1px solid #3a3a3c; border-radius: 16px; color: var(--text-muted); }
+        .srch-box input { width: 128px; min-width: 0; background: transparent; border: 0; outline: 0; padding: 0; color: #fff; font: inherit; font-size: 16px; text-transform: none; }   /* 16px: iOS does not zoom the page on focus */
+        .srch-box input::placeholder { color: #636366; }
+        .srch-x { flex: none; cursor: pointer; font-size: 12px; line-height: 1; padding: 4px 2px 4px 4px; color: #8e8e93; }
+        .sub-sep { flex: none; align-self: center; width: 1px; height: 18px; background: #333; margin: 0 -3px; }
+        .sub-tab.cat { flex: none; padding: 6px 10px; }
+        .sub-tab.cat.active { background: transparent; color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
         .items-scroll { display: flex; gap: 15px; padding: 20px 15px; overflow-x: auto; white-space: nowrap; min-height: 80px; align-items: flex-end; }
         .items-scroll::-webkit-scrollbar { display: none; }
         .preset-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; position: relative; }
@@ -5686,15 +5694,63 @@
         }
     };
 
-    // ---------- вкладки ПРЕСЕТЫ / МОИ / ИЗБРАННОЕ ----------
-    renderPresets = function (tab = 'presets') {
-        currentTab = tab;
-        const t = (id, label) => `<div class="sub-tab ${tab === id ? 'active' : ''}" onclick="renderPresets('${id}')">${label}</div>`;
-        subTabsContainer.innerHTML = t('presets', 'ПРЕСЕТЫ') + t('mine', 'МОИ') + t('favorites', 'ИЗБРАННОЕ') + (tab === 'mine' ? '' : variantToggleHTML());
+    // ---------- вкладки ПРЕСЕТЫ / МОИ / ИЗБРАННОЕ + КАТЕГОРИИ + ПОИСК ----------
+    // Row (scrolls sideways):  [🔍]  ПРЕСЕТЫ  МОИ  ИЗБРАННОЕ  [ДЕНЬ|НОЧЬ]  |  ВСЕ  КАМЕРЫ  ПЛЁНКА  Ч/Б  КИНО  ВИНТАЖ  АТМОСФЕРА  СЦЕНЫ  ЦВЕТ
+    // The 🔍 icon turns into a text box. The search is case-insensitive ("teal" finds TEAL CINE) and looks through all presets, whatever tab / category is open.
+    const PRESET_CATS = [['all', 'ВСЕ'], ['cameras', 'КАМЕРЫ'], ['film', 'ПЛЁНКА'], ['bw', 'Ч/Б'], ['cinema', 'КИНО'], ['vintage', 'ВИНТАЖ'], ['mood', 'АТМОСФЕРА'], ['scenes', 'СЦЕНЫ'], ['color', 'ЦВЕТ']];
+    const PRESET_CAT_IDS = {
+        cameras: 'canon7d3 canonr5 canon5d canonr6 canon6d canonr10 canonr3 nikonz9 sonya7 fujixt5 leicam11 hbx2d lumixs5 ricohgr leicaq3 leicasl3 sonya1 sonya7iv nikonz8 nikond850 gfx100 h6d canon1dx pentax645 phaseone canonr8 canonr7 canon5ds canon7d nikonz6 nikonz7 nikond5 sonya7r5 sonya9 sonya7s3 fujix100 fujixh2 fujixpro leicam10 leicam6 lumixs1r lumixgh6 om1 sigmafp alexa35 g3 hb2 m5',
+        film: 'portra portra160 fuji kgold ektar velvia pro400h superia kchrome agfa polaroid',
+        bw: 'leicamono trix hp5 bwsoft bwhard bwmatte bwred bwwarm bwport noir delta',
+        cinema: 'cine800 arri cineteal tealorange cinedenim browncine',
+        vintage: 'vintage70 y2k album80 minilab90 postcard50 super8 dispo98 velvetplate',
+        mood: 'bluehour goldenhr fog matte brownstone seafoam nightcity flash',
+        scenes: 'portraitc travel food winter desert forest urban',
+        color: 'cpurple cpink cblue cteal cgreen cgold corange cred csunset cneon'
+    };
+    const presetCatMap = {};
+    Object.keys(PRESET_CAT_IDS).forEach(k => PRESET_CAT_IDS[k].split(' ').forEach(id => { presetCatMap[id] = k; }));
+    const presetCatOf = id => presetCatMap[id] || 'other';          // a preset without a category still shows up under ВСЕ and in the search
+    let presetCat = 'all', presetQuery = '', presetSearchOpen = false;
+    const presetTr = s => (window.T ? window.T(s) : s);
+    const presetCatLabel = k => { const c = PRESET_CATS.find(x => x[0] === k); return c ? c[1] : ''; };
+    const normQ = s => String(s == null ? '' : s).toLowerCase().replace(/ё/g, 'е');
+    const squashQ = s => s.replace(/[^a-z0-9а-яіїєґ]/g, '');
+    const escAttr = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const PRESET_CAT_WORDS = { cameras: ['камеры', 'камера', 'cameras', 'camera'], film: ['плёнка', 'пленка', 'film'], bw: ['ч/б', 'чб', 'bw', 'mono'], cinema: ['кино', 'cinema'],
+        vintage: ['винтаж', 'vintage'], mood: ['атмосфера', 'mood'], scenes: ['сцены', 'scenes'], color: ['цвет', 'color', 'colour'] };       // category names (RU / EN) the search understands
+    function presetMatches(p, q) {                                 // every word of the query must be found in: name, id or category (any case)
+        const hay = normQ(p.name + ' ' + p.id), hs = squashQ(hay), cw = (PRESET_CAT_WORDS[presetCatOf(p.id)] || []).concat([normQ(presetTr(presetCatLabel(presetCatOf(p.id))))]);
+        return q.split(/\s+/).every(w => hay.includes(w) || hs.includes(squashQ(w)) ||            // "tri x" / "trix" / "b&w" / "bw" all work
+            cw.some(c => c === w || (w.length >= 5 && c.startsWith(w))));                          // "vintage" lists the whole VINTAGE category, but "cine" does not pull in all CINEMA
+    }
+    const SRCH_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+    window.presetNav = (tab, cat) => {                              // tapping a tab or a category leaves the search
+        presetSearchOpen = false; presetQuery = '';
+        if (cat) presetCat = cat;
+        renderPresets(tab || currentTab);
+        if (cat) {
+            const a = subTabsContainer.querySelector('.sub-tab.cat.active');
+            if (a) subTabsContainer.scrollLeft = a.getBoundingClientRect().left - subTabsContainer.getBoundingClientRect().left + subTabsContainer.scrollLeft - (subTabsContainer.clientWidth - a.offsetWidth) / 2;
+        }
+    };
+    window.presetSearchToggle = open => {
+        presetSearchOpen = !!open; if (!open) presetQuery = '';
+        renderPresets(currentTab);
+        if (open) { subTabsContainer.scrollLeft = 0; const i = document.getElementById('preset-search'); if (i) i.focus(); }      // focus inside the tap → the keyboard opens on iOS
+    };
+    window.presetSearchInput = el => { presetQuery = el.value; itemsContainer.scrollLeft = 0; renderPresetItems(); };
+    document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-tab]')) { presetSearchOpen = false; presetQuery = ''; } }, true);   // bottom bar: leave the search
+
+    function renderPresetItems() {
+        const tab = currentTab, q = normQ(presetQuery).trim();
         itemsContainer.innerHTML = '';
-        let list = presetsData;
-        if (tab === 'mine') {
-            itemsContainer.innerHTML = `
+        let list = presetsData, head = '';
+        if (presetSearchOpen && q) {
+            list = [...presetsData, ...userPresets].filter(p => presetMatches(p, q));
+            if (!list.length) { itemsContainer.innerHTML = '<div style="color: #888; font-size: 12px; margin: auto;">Ничего не найдено</div>'; kIconSync(); return; }
+        } else if (tab === 'mine') {
+            head = `
                 <div class="preset-item" onclick="uPresetCreate()">
                     <div class="preset-thumb" style="display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:1.5px dashed #666;background:#1c1c1e;color:#bbb;font-size:36px;font-weight:300;line-height:1">+</div>
                     <div class="preset-label" style="background-color:#3a3a3c;color:#ddd">СОЗДАТЬ</div>
@@ -5703,8 +5759,10 @@
         } else if (tab === 'favorites') {
             list = [...presetsData, ...userPresets].filter(p => favoritePresets.includes(p.id));
             if (!list.length) { itemsContainer.innerHTML = '<div style="color: #888; font-size: 12px; margin: auto;">Нет избранных пресетов</div>'; kIconSync(); return; }
+        } else if (presetCat !== 'all') {
+            list = presetsData.filter(p => p.id === 'none' || presetCatOf(p.id) === presetCat);                // ORIG stays first in every category
         }
-        let html = itemsContainer.innerHTML;
+        let html = head;
         list.forEach(p => {
             const user = String(p.id).startsWith('u_'), isLocked = p.isPro && !isPremium, isFav = favoritePresets.includes(p.id);
             const favIcon = p.id !== 'none' ? `<div class="fav-icon" onclick="toggleFavorite(event, '${p.id}')">${isFav ? '★' : '☆'}</div>` : '';
@@ -5721,6 +5779,22 @@
         });
         itemsContainer.innerHTML = html;
         kIconSync();
+    }
+
+    renderPresets = function (tab = 'presets') {
+        const box = document.getElementById('preset-search');
+        if (presetSearchOpen && box && document.activeElement === box && tab === currentTab) { renderPresetItems(); return; }     // typing: keep the box (and caret) alive, only refresh the list
+        const keep = subTabsContainer.scrollLeft;
+        currentTab = tab;
+        const t = (id, label) => `<div class="sub-tab ${tab === id ? 'active' : ''}" onclick="presetNav('${id}')">${label}</div>`;
+        const srch = presetSearchOpen
+            ? `<div class="srch-box">${SRCH_SVG}<input id="preset-search" type="text" value="${escAttr(presetQuery)}" placeholder="Поиск пресета" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" oninput="presetSearchInput(this)" onkeydown="if(event.key==='Enter')this.blur()"><span class="srch-x" onclick="presetSearchToggle(false)" aria-label="Закрыть поиск">✕</span></div>`
+            : `<div class="sub-tab srch-btn" onclick="presetSearchToggle(true)" aria-label="Поиск">${SRCH_SVG}</div>`;
+        const searching = presetSearchOpen && normQ(presetQuery).trim();
+        const cats = tab === 'presets' ? '<div class="sub-sep"></div>' + PRESET_CATS.map(([k, l]) => `<div class="sub-tab cat ${presetCat === k && !searching ? 'active' : ''}" onclick="presetNav('presets','${k}')">${l}</div>`).join('') : '';
+        subTabsContainer.innerHTML = srch + t('presets', 'ПРЕСЕТЫ') + t('mine', 'МОИ') + t('favorites', 'ИЗБРАННОЕ') + (tab === 'mine' ? '' : variantToggleHTML()) + cats;
+        subTabsContainer.scrollLeft = keep;
+        renderPresetItems();
     };
 
     // ==================================================================================
@@ -6205,6 +6279,19 @@
 Своб.|Free|Віл.
 Эффект Premium. Сохранение недоступно.|Premium effect. Saving is unavailable.|Ефект Premium. Збереження недоступне.
 ПРЕСЕТЫ|PRESETS|ПРЕСЕТИ
+ВСЕ|ALL|УСІ
+КАМЕРЫ|CAMERAS|КАМЕРИ
+ПЛЁНКА|FILM|ПЛІВКА
+Ч/Б|B&W|Ч/Б
+КИНО|CINEMA|КІНО
+ВИНТАЖ|VINTAGE|ВІНТАЖ
+АТМОСФЕРА|MOOD|АТМОСФЕРА
+СЦЕНЫ|SCENES|СЦЕНИ
+ЦВЕТ|COLOR|КОЛІР
+Поиск|Search|Пошук
+Поиск пресета|Search presets|Пошук пресета
+Закрыть поиск|Close search|Закрити пошук
+Ничего не найдено|Nothing found|Нічого не знайдено
 МОИ|MINE|МОЇ
 ИЗБРАННОЕ|FAVORITES|ОБРАНЕ
 ВСЕ ИНСТРУМЕНТЫ|ALL TOOLS|УСІ ІНСТРУМЕНТИ
