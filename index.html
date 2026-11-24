@@ -1157,12 +1157,25 @@
             curves: { red: [[0, 0], [0.15, 0.113], [0.3, 0.246], [0.45, 0.447], [0.6, 0.611], [0.75, 0.78], [1, 1]], green: [[0, 0.018], [0.15, 0.174], [0.3, 0.297], [0.45, 0.496], [0.6, 0.649], [0.75, 0.779], [1, 1]], blue: [[0, 0.014], [0.15, 0.205], [0.3, 0.368], [0.45, 0.516], [0.6, 0.605], [0.75, 0.746], [1, 0.96]] }
         }, fx: { shH: 168, shS: 6.4, hiH: 48, hiS: 4, gAmt: 4.8, gSize: 32, gRough: 52, gShadow: 52, ca: 1.2 } },
 
-        // VELVET PLATE: dark, dense, sepia-toned early colour plate. Milky brown blacks, low saturation, pale cream top end, heavy grain, dust and scratches.
+        // BROWN CINE: same recipe as TEAL CINE (blur 17, bloom, blacks -1, darks -0.12, contrast .11, soft glow), but brown instead of teal-green:
+        // red up / blue down through shadows and mids (warm brown, neutral cream highlights), muted blues and greens, brown split-tone, no green tint.
+        { id: 'browncine', name: 'BROWN CINE', color: '#8b5a3c', isPro: true, glfx: {
+            ...defaultSettings,
+            brightness: 0.008, contrast: 0.11, saturation: 0.05, vibrance: 0.1, fade: 0.04, wbTemp: 0.04, wbTint: 0.03, temperature: -0.03, noise: 0.02, blur: 0.17,
+            highlights: -0.006, lights: 0.06, darks: -0.12, whites: -0.01, blacks: -1,
+            bloomStrength: 0.1283, bloomSize: 0.425, bloomRange: 0.21, halationStrength: 0.016, halationSize: 0.04, halationRange: 0.1,
+            hsl1s: 0.024, hsl1l: 0.016, hsl3h: -0.5, hsl3s: -0.15, hsl3l: -0.04, hsl4s: -0.4, hsl4l: -0.05,
+            curves: { red: [[0, 0.012], [0.15, 0.17], [0.3, 0.32], [0.45, 0.475], [0.6, 0.61], [0.75, 0.76], [1, 1]], green: [[0, 0.008], [0.15, 0.145], [0.3, 0.29], [0.45, 0.44], [0.6, 0.59], [0.75, 0.745], [1, 1]], blue: [[0, 0], [0.15, 0.11], [0.3, 0.25], [0.45, 0.4], [0.6, 0.55], [0.75, 0.715], [1, 0.93]] }
+        }, fx: { shH: 28, shS: 8, hiH: 44, hiS: 6, gAmt: 4.8, gSize: 32, gRough: 52, gShadow: 52, ca: 1.2 } },
+
+        // VELVET PLATE: toned antique print. Measured on the reference's before/after frames: almost monochrome (duotone), matte lifted blacks, flat shadows,
+        // steep contrast through the mids, warm cream highlights, soft focus, heavy grain, dust and scratches. No vignette.
         { id: 'velvetplate', name: 'VELVET PLATE', color: '#8d6e63', isPro: true, glfx: {
             ...defaultSettings,
-            exposure: -0.16, luminance: -0.05, contrast: 0.1, saturation: -0.3, sepia: 0.08, fade: 0.08, wbTemp: 0.08, wbTint: 0.02, noise: 0.2, highlights: -0.15, lights: -0.08, darks: -0.05, blacks: 0.05,
-            curves: { red: [[0, 0.07], [0.25, 0.25], [0.5, 0.53], [0.75, 0.79], [1, 0.96]], green: [[0, 0.06], [0.25, 0.22], [0.5, 0.48], [0.75, 0.73], [1, 0.9]], blue: [[0, 0.07], [0.25, 0.2], [0.5, 0.43], [0.75, 0.65], [1, 0.83]] }
-        }, fx: { shH: 22, shS: 14, hiH: 40, hiS: 18, gAmt: 40, gSize: 50, gRough: 70, gShadow: 70, dust: 20, scr: 10, sfAmt: 6, sfSize: 35 } },
+            brightness: 0.022, contrast: 0.255, blur: 0.104, noise: 0.2,
+            duotone: { shadow: [0.13, 0.124, 0.121], high: [0.999, 0.888, 0.825] },
+            curves: { red: [[0, 0.108], [0.15, 0.116], [0.3, 0.204], [0.45, 0.394], [0.6, 0.59], [0.75, 0.76], [1, 1]], green: [[0, 0.108], [0.15, 0.116], [0.3, 0.204], [0.45, 0.394], [0.6, 0.59], [0.75, 0.76], [1, 1]], blue: [[0, 0.108], [0.15, 0.116], [0.3, 0.204], [0.45, 0.394], [0.6, 0.59], [0.75, 0.76], [1, 1]] }
+        }, fx: { gAmt: 40, gSize: 50, gRough: 70, gShadow: 70, dust: 20, scr: 10, sfAmt: 6, sfSize: 35 } },
 
         // BROWNSTONE: moody and rich. About -1 stop, pulled highlights, crushed blacks, deep burgundy reds, deep navy sky, warm skin. Clean, no grain.
         { id: 'brownstone', name: 'BROWNSTONE', color: '#7b3f2a', isPro: true, glfx: {
@@ -1621,7 +1634,7 @@
         const PRO_FLASH_DAY = { flash: 0.45, y2k: 0.4, polaroid: 0.4, dispo98: 0.45 };          // the flash-culture presets keep a visible fill flash in daylight
         // premium two-mask: Pro flash presets also lift the person through the effects mask (auto-aimed at the matte)
         const NIGHT_FLASH_CUT = { canonr10: 0.50, ricohgr: 0.45, canonr7: 0.50, canon7d: 0.45, fujix100: 0.40, fuji: 0.55, kgold: 0.45, superia: 0.50, polaroid: 0.55, agfa: 0.50, vintage70: 0.60, y2k: 0.55, flash: 0.45, minilab90: 0.50, dispo98: 0.45 };   // night flash reduction (fraction)
-        const NIGHT_HUES = { cinedenim: [172, 50], velvetplate: [22, 40], brownstone: [220, 34], seafoam: [175, 44] };      // [shadow hue, highlight hue] kept in the night variant
+        const NIGHT_HUES = { cinedenim: [172, 50], velvetplate: [22, 40], brownstone: [220, 34], seafoam: [175, 44], browncine: [28, 44] };      // [shadow hue, highlight hue] kept in the night variant
         const MASK_NIGHT = { mType: 2, mX: 50, mY: 54, mSize: 41, mFeather: 74, mInv: 0, mExp: 14, mSat: 0, mTemp: 0, mAuto: true };
 
         // ---- DAY signatures: how each brand "draws" colour. HSL slots: 0 red, 1 orange(skin), 2 yellow, 3 green, 4 blue, 5 purple.
