@@ -42,14 +42,14 @@
         .sub-tabs::-webkit-scrollbar { display: none; }
         .sub-tab { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); padding: 6px 12px; border-radius: 4px; cursor: pointer; }
         .sub-tab.active { background: white; color: black; }
-        .sub-tab.srch-btn { display: flex; align-items: center; justify-content: center; flex: none; padding: 6px 8px; }
+        .sub-tab.srch-btn, .sub-tab.fav-btn { display: flex; align-items: center; justify-content: center; flex: none; padding: 6px 8px; }
         .srch-box { display: flex; align-items: center; flex: none; gap: 6px; height: 26px; padding: 0 10px; box-sizing: border-box; background: #1c1c1e; border: 1px solid #3a3a3c; border-radius: 16px; color: var(--text-muted); }
         .srch-box input { width: 128px; min-width: 0; background: transparent; border: 0; outline: 0; padding: 0; color: #fff; font: inherit; font-size: 16px; text-transform: none; }   /* 16px: iOS does not zoom the page on focus */
         .srch-box input::placeholder { color: #636366; }
         .srch-x { flex: none; cursor: pointer; font-size: 12px; line-height: 1; padding: 4px 2px 4px 4px; color: #8e8e93; }
         .sub-sep { flex: none; align-self: center; width: 1px; height: 18px; background: #333; margin: 0 -3px; }
         .sub-tab.cat { flex: none; padding: 6px 10px; }
-        .sub-tab.cat.active { background: transparent; color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
+        .sub-tab.cat.active { background: white; color: black; }
         .items-scroll { display: flex; gap: 15px; padding: 20px 15px; overflow-x: auto; white-space: nowrap; min-height: 80px; align-items: flex-end; }
         .items-scroll::-webkit-scrollbar { display: none; }
         .preset-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; position: relative; }
@@ -222,7 +222,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .tool-item .edit-dot { position: absolute; top: -3px; left: 10px; width: 9px; height: 9px; border-radius: 50%; background: #4dd0e1; box-shadow: 0 0 0 2px #000; display: none; }
         .tool-item.edited .edit-dot { display: block; }
-        .dn-toggle { margin-left: auto; display: flex; flex: none; gap: 2px; padding: 2px; background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 16px; align-items: center; }
+        .dn-toggle { margin-left: 0; display: flex; flex: none; gap: 2px; padding: 2px; background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 16px; align-items: center; }
         .dn-seg { display: flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 13px; font-size: 10px; font-weight: 700; letter-spacing: .4px; color: #8e8e93; cursor: pointer; transition: background .15s, color .15s; }
         .dn-seg.on { background: #fff; color: #000; }
         .dn-seg { position: relative; }
@@ -5695,7 +5695,8 @@
     };
 
     // ---------- вкладки ПРЕСЕТЫ / МОИ / ИЗБРАННОЕ + КАТЕГОРИИ + ПОИСК ----------
-    // Row (scrolls sideways):  [🔍]  ПРЕСЕТЫ  МОИ  ИЗБРАННОЕ  [ДЕНЬ|НОЧЬ]  |  ВСЕ  КАМЕРЫ  ПЛЁНКА  Ч/Б  КИНО  ВИНТАЖ  АТМОСФЕРА  СЦЕНЫ  ЦВЕТ
+    // Row (scrolls sideways):  🔍  ★  [ДЕНЬ|НОЧЬ]  МОИ  |  ВСЕ  КАМЕРЫ  ПЛЁНКА  Ч/Б  КИНО  ВИНТАЖ  АТМОСФЕРА  СЦЕНЫ  ЦВЕТ
+    // ★ = ИЗБРАННОЕ (icon only), МОИ = your own presets, the categories replace the old ПРЕСЕТЫ tab (ВСЕ = every built-in preset).
     // The 🔍 icon turns into a text box. The search is case-insensitive ("teal" finds TEAL CINE) and looks through all presets, whatever tab / category is open.
     const PRESET_CATS = [['all', 'ВСЕ'], ['cameras', 'КАМЕРЫ'], ['film', 'ПЛЁНКА'], ['bw', 'Ч/Б'], ['cinema', 'КИНО'], ['vintage', 'ВИНТАЖ'], ['mood', 'АТМОСФЕРА'], ['scenes', 'СЦЕНЫ'], ['color', 'ЦВЕТ']];
     const PRESET_CAT_IDS = {
@@ -5725,6 +5726,7 @@
             cw.some(c => c === w || (w.length >= 5 && c.startsWith(w))));                          // "vintage" lists the whole VINTAGE category, but "cine" does not pull in all CINEMA
     }
     const SRCH_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+    const STAR_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5L2.6 9.6l6.5-.9z"/></svg>';
     window.presetNav = (tab, cat) => {                              // tapping a tab or a category leaves the search
         presetSearchOpen = false; presetQuery = '';
         if (cat) presetCat = cat;
@@ -5786,13 +5788,14 @@
         if (presetSearchOpen && box && document.activeElement === box && tab === currentTab) { renderPresetItems(); return; }     // typing: keep the box (and caret) alive, only refresh the list
         const keep = subTabsContainer.scrollLeft;
         currentTab = tab;
-        const t = (id, label) => `<div class="sub-tab ${tab === id ? 'active' : ''}" onclick="presetNav('${id}')">${label}</div>`;
         const srch = presetSearchOpen
             ? `<div class="srch-box">${SRCH_SVG}<input id="preset-search" type="text" value="${escAttr(presetQuery)}" placeholder="Поиск пресета" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" oninput="presetSearchInput(this)" onkeydown="if(event.key==='Enter')this.blur()"><span class="srch-x" onclick="presetSearchToggle(false)" aria-label="Закрыть поиск">✕</span></div>`
             : `<div class="sub-tab srch-btn" onclick="presetSearchToggle(true)" aria-label="Поиск">${SRCH_SVG}</div>`;
         const searching = presetSearchOpen && normQ(presetQuery).trim();
-        const cats = tab === 'presets' ? '<div class="sub-sep"></div>' + PRESET_CATS.map(([k, l]) => `<div class="sub-tab cat ${presetCat === k && !searching ? 'active' : ''}" onclick="presetNav('presets','${k}')">${l}</div>`).join('') : '';
-        subTabsContainer.innerHTML = srch + t('presets', 'ПРЕСЕТЫ') + t('mine', 'МОИ') + t('favorites', 'ИЗБРАННОЕ') + (tab === 'mine' ? '' : variantToggleHTML()) + cats;
+        const fav = `<div class="sub-tab fav-btn ${tab === 'favorites' ? 'active' : ''}" onclick="presetNav('favorites')" aria-label="ИЗБРАННОЕ">${STAR_SVG}</div>`;
+        const mine = `<div class="sub-tab ${tab === 'mine' ? 'active' : ''}" onclick="presetNav('mine')">МОИ</div>`;
+        const cats = '<div class="sub-sep"></div>' + PRESET_CATS.map(([k, l]) => `<div class="sub-tab cat ${tab === 'presets' && presetCat === k && !searching ? 'active' : ''}" onclick="presetNav('presets','${k}')">${l}</div>`).join('');
+        subTabsContainer.innerHTML = srch + fav + (tab === 'mine' ? '' : variantToggleHTML()) + mine + cats;
         subTabsContainer.scrollLeft = keep;
         renderPresetItems();
     };
@@ -6199,7 +6202,7 @@
         const STEPS = [
             ['Загрузите фото', 'Нажмите на область фото, перетащите файл или вставьте картинку из буфера обмена. Корзина сверху удаляет фото, чтобы выбрать другое.', '.placeholder-text svg'],
             ['Пресеты', 'Первая вкладка — готовые стили. Нажмите на пресет, чтобы применить его. ☆ добавляет в избранное, во вкладке МОИ можно сохранить свой стиль. Значок с ползунками на выбранной карточке меняет силу пресета.', '.nav-item[data-tab="presets"] svg'],
-            ['День и ночь', 'Справа от вкладок пресетов — переключатель ☀ ДЕНЬ / ☾ НОЧЬ. Выберите пресет, а затем его версию под ваше фото: дневную для снимков при свете дня или ночную для тёмных сцен. В ночной версии человек на первом плане подсвечивается, как вспышкой, а фон темнеет. Ваши ручные правки при переключении сохраняются. Зелёная точка на переключателе показывает версию, которая подходит вашему фото; при загрузке фото она выбирается автоматически.', '.dn-toggle svg, .nav-item[data-tab="presets"] svg'],
+            ['День и ночь', 'Рядом со звёздочкой — переключатель ☀ ДЕНЬ / ☾ НОЧЬ. Выберите пресет, а затем его версию под ваше фото: дневную для снимков при свете дня или ночную для тёмных сцен. В ночной версии человек на первом плане подсвечивается, как вспышкой, а фон темнеет. Ваши ручные правки при переключении сохраняются. Зелёная точка на переключателе показывает версию, которая подходит вашему фото; при загрузке фото она выбирается автоматически.', '.dn-toggle svg, .nav-item[data-tab="presets"] svg'],
             ['Инструменты', 'Экспозиция, цвет, детали и кисти. Кнопка «?» внутри инструмента объясняет, как им пользоваться. Точка на иконке значит, что инструмент изменён, а «СБРОСИТЬ ВСЕ» обнуляет все настройки.', '.nav-item[data-tab="tools"] svg'],
             ['Эффекты', 'Кривые, зерно, засветы, рамки, VHS и другое. Работают так же, как инструменты, и тоже отмечаются точкой.', '.nav-item[data-tab="fx"] svg'],
             ['Сравнение и сохранение', 'Удерживайте фото, чтобы увидеть оригинал. Стрелки сверху отменяют и повторяют действия, значок буфера копирует настройки. Кнопка со стрелкой вверх сохраняет фото; формат и размер выбираются слева. Значок 🔒 — Premium, с ним на фото будет водяной знак.', '#btn-save svg']
@@ -6489,7 +6492,7 @@ WebGL не поддерживается вашим браузером|WebGL isn'
 Пресеты|Presets|Пресети
 Первая вкладка — готовые стили. Нажмите на пресет, чтобы применить его. ☆ добавляет в избранное, во вкладке МОИ можно сохранить свой стиль. Значок с ползунками на выбранной карточке меняет силу пресета.|The first tab has ready-made styles. Tap a preset to apply it. ☆ adds it to favorites, and the MINE tab lets you save your own style. The sliders icon on the selected card changes the preset strength.|Перша вкладка — готові стилі. Натисніть на пресет, щоб застосувати його. ☆ додає в обране, у вкладці МОЇ можна зберегти свій стиль. Значок із повзунками на вибраній картці змінює силу пресета.
 День и ночь|Day and night|День і ніч
-Справа от вкладок пресетов — переключатель ☀ ДЕНЬ / ☾ НОЧЬ. Выберите пресет, а затем его версию под ваше фото: дневную для снимков при свете дня или ночную для тёмных сцен. В ночной версии человек на первом плане подсвечивается, как вспышкой, а фон темнеет. Ваши ручные правки при переключении сохраняются. Зелёная точка на переключателе показывает версию, которая подходит вашему фото; при загрузке фото она выбирается автоматически.|To the right of the preset tabs is the ☀ DAY / ☾ NIGHT switch. Pick a preset, then choose its version for your photo: day for daylight shots or night for dark scenes. In the night version the person in the foreground is lit as if by a flash while the background gets darker. Your manual edits are kept when you switch. A green dot on the switch shows the version that suits your photo; it is selected automatically when you load a photo.|Праворуч від вкладок пресетів — перемикач ☀ ДЕНЬ / ☾ НІЧ. Оберіть пресет, а потім його версію під ваше фото: денну для знімків при денному світлі або нічну для темних сцен. У нічній версії людина на першому плані підсвічується, як спалахом, а тло темніє. Ваші ручні правки під час перемикання зберігаються. Зелена точка на перемикачі показує версію, яка підходить вашому фото; під час завантаження фото вона обирається автоматично.
+Рядом со звёздочкой — переключатель ☀ ДЕНЬ / ☾ НОЧЬ. Выберите пресет, а затем его версию под ваше фото: дневную для снимков при свете дня или ночную для тёмных сцен. В ночной версии человек на первом плане подсвечивается, как вспышкой, а фон темнеет. Ваши ручные правки при переключении сохраняются. Зелёная точка на переключателе показывает версию, которая подходит вашему фото; при загрузке фото она выбирается автоматически.|Next to the star is the ☀ DAY / ☾ NIGHT switch. Pick a preset, then choose its version for your photo: day for daylight shots or night for dark scenes. In the night version the person in the foreground is lit as if by a flash while the background gets darker. Your manual edits are kept when you switch. A green dot on the switch shows the version that suits your photo; it is selected automatically when you load a photo.|Поруч із зірочкою — перемикач ☀ ДЕНЬ / ☾ НІЧ. Оберіть пресет, а потім його версію під ваше фото: денну для знімків при денному світлі або нічну для темних сцен. У нічній версії людина на першому плані підсвічується, як спалахом, а тло темніє. Ваші ручні правки під час перемикання зберігаються. Зелена точка на перемикачі показує версію, яка підходить вашому фото; під час завантаження фото вона обирається автоматично.
 ДЕНЬ|DAY|ДЕНЬ
 НОЧЬ|NIGHT|НІЧ
 Загружаем распознавание людей…|Loading person detection…|Завантажуємо розпізнавання людей…
