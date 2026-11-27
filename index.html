@@ -1003,7 +1003,7 @@
                 blue:  [[0, 0], [0.15, 0.082], [0.30, 0.205], [0.50, 0.435], [0.75, 0.715], [1, 0.965]]
             }
         }, fx: {
-            trcAmt: 100,
+            trcAmt: 75,
             hiH: 28, hiS: 6,
             ca: 4,
             gAmt: 10, gSize: 28, gRough: 48, gShadow: 45
@@ -1796,7 +1796,7 @@
                 dayG = { ...base };
                 dayFx = { ...baseFx };
                 nightG = layer(base, { highlights: -0.10, lights: -0.04, bloomStrength: 0.010, halationStrength: 0.012 });
-                nightFx = { ...baseFx, trcAmt: 108 };
+                nightFx = { ...baseFx, trcAmt: 81 };
             } else {
                 const fam = famOf(p), S = SIG[fam] || SIG.mood, useFx = !!p.isPro, prof = profileOf(p);   // free presets stay effect-free so they never trigger the Premium lock
                 let g = { ...base };
